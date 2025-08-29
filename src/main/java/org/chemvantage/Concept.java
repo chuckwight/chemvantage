@@ -32,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.annotation.Entity;
@@ -56,23 +57,16 @@ public class Concept implements Serializable {
 	String getSummary() {
 		if (summary == null) {
 			try {
-				JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-				api_request.addProperty("model",Subject.getGPTModel());
-				
-				JsonArray messages = new JsonArray();
-				JsonObject m1 = new JsonObject();
-				m1.addProperty("role", "system");
-				m1.addProperty("content", "You are a tutor for a student in a General Chemistry class.");
-				messages.add(m1);
-				JsonObject m2 = new JsonObject();  // api request message
-				m2.addProperty("role", "user");
-				m2.addProperty("content", "Write a brief summary of this key concept: " + this.title + ".\n"
-						+ "Format the response for MathJax using delimiters \\( and \\) for inline expressions"
-						+ "and \\[ and \\] for display mode.");
-				messages.add(m2);
+				JsonObject api_request = new JsonObject();
+				api_request.addProperty("model", Subject.getGPTModel());
+				JsonObject prompt = new JsonObject();
+				prompt.addProperty("id", "pmpt_68b1042b8a8481909fad9e65e35b00a7058a5345b5584798");
+				JsonObject variables = new JsonObject();
+				variables.addProperty("key_concept", this.title);
+				prompt.add("variables", variables);
+				api_request.add("prompt", prompt);
 
-				api_request.add("messages", messages);
-				URL u = new URL("https://api.openai.com/v1/chat/completions");
+				URL u = new URL("https://api.openai.com/v1/responses");
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				uc.setRequestMethod("POST");
 				uc.setDoInput(true);
@@ -85,18 +79,39 @@ public class Concept implements Serializable {
 				os.write(json_bytes, 0, json_bytes.length);           
 				os.close();
 
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-				reader.close();
+				int response_code = uc.getResponseCode();
 				
-				String content = json.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-				content.replaceAll("\\n", "<br/>");
-				
-				// save this summary in the datastore
-				this.summary = content;
-				ofy().save().entity(this);
-				
-				return content;
+				JsonObject api_response = null;
+				BufferedReader reader = null;
+				if (response_code/100==2) {
+					reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					api_response = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
+				} else {
+					reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+					reader.close();
+				}
+
+				// Find the output text buried in the response JSON:
+				JsonArray output = api_response.get("output").getAsJsonArray();
+				JsonObject message = null;
+				JsonObject output_text = null;
+				for (JsonElement element0 : output) {
+					message = element0.getAsJsonObject();
+					if (message.has("content")) {
+						JsonArray content = message.get("content").getAsJsonArray();
+						for (JsonElement element1 : content) {
+							output_text = element1.getAsJsonObject();
+							if (output_text.has("text")) {
+								this.summary = output_text.get("text").getAsString();
+								ofy().save().entity(this);
+								break;
+							}
+						}
+						break;
+					}
+				}
+				return this.summary;
 			} catch (Exception e) {
 				return "Sorry, Sage is unable to provide a summary of this concepot at the moment.<p>"
 						+ e.getMessage()==null?e.toString():e.getMessage();
