@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Random;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
@@ -230,6 +231,65 @@ public class Sage extends HttpServlet {
 	static String askSage(User user, Long conceptId, int score, String userPrompt) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 
+		JsonObject api_request = new JsonObject();
+		api_request.addProperty("model", Subject.getGPTModel());
+		JsonObject prompt = new JsonObject();
+		prompt.addProperty("id", "pmpt_68b211507be881969a8a3e68371ff61e0f2a0de4d11aa01f");
+		JsonObject variables = new JsonObject();
+		variables.addProperty("student_question", userPrompt);
+		variables.addProperty("key_concept", conceptMap.get(conceptId).title);
+		prompt.add("variables", variables);
+		api_request.add("prompt", prompt);
+
+		URL u = new URL("https://api.openai.com/v1/responses");
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+		OutputStream os = uc.getOutputStream();
+		byte[] json_bytes = api_request.toString().getBytes("utf-8");
+		os.write(json_bytes, 0, json_bytes.length);           
+		os.close();
+
+		int response_code = uc.getResponseCode();
+		
+		JsonObject api_response = null;
+		BufferedReader reader = null;
+		if (response_code/100==2) {
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		} else {
+			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+			api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			throw new Exception(api_response.toString());
+		}
+
+		// Find the output text buried in the response JSON:
+		JsonArray output = api_response.get("output").getAsJsonArray();
+		JsonObject message = null;
+		JsonObject output_text = null;
+		String sage_answer = null;
+		for (JsonElement element0 : output) {
+			message = element0.getAsJsonObject();
+			if (message.has("content")) {
+				JsonArray content = message.get("content").getAsJsonArray();
+				for (JsonElement element1 : content) {
+					output_text = element1.getAsJsonObject();
+					if (output_text.has("text")) {
+						sage_answer = output_text.get("text").getAsString();
+						break;
+					}
+				}
+				break;
+			}
+		}
+		
+		/*
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
@@ -262,15 +322,15 @@ public class Sage extends HttpServlet {
 		reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 		JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
 		reader.close();
+*/
+		//String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
 
-		String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-
-		if (content==null || content.isEmpty()) throw new Exception("It appears that the Sage was stumped!");
+		if (sage_answer==null || sage_answer.isEmpty()) throw new Exception("It appears that the Sage was stumped!");
 		
 		buf.append("<h1>Sage Response</h1>");
 
 		buf.append("<div style='width:800px;' >");
-		buf.append("<img src=/images/sage.png alt='Confucius Parrot' style='margin-left:20px;float:right;' />" + content);	
+		buf.append("<img src=/images/sage.png alt='Confucius Parrot' style='margin-left:20px;float:right;' />" + sage_answer);	
 		buf.append("</div>");
 		buf.append("<div id=helpful>"
 				+ "<span><b>Was this answer helpful?</b></span> " 
@@ -342,7 +402,66 @@ public class Sage extends HttpServlet {
 	
 	static String getHelp(Question q) throws Exception {
 		if (q.sageAdvice != null) return q.sageAdvice; // stored AI response
+
+		JsonObject api_request = new JsonObject();
+		api_request.addProperty("model", Subject.getGPTModel());
+		JsonObject prompt = new JsonObject();
+		prompt.addProperty("id", "pmpt_68b2145d09f0819793b40a1d0bec756d0c302820e63a43bd");
+		JsonObject variables = new JsonObject();
+		variables.addProperty("question_item", q.printForSage());
+		prompt.add("variables", variables);
+		api_request.add("prompt", prompt);
+
+		URL u = new URL("https://api.openai.com/v1/responses");
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+		OutputStream os = uc.getOutputStream();
+		byte[] json_bytes = api_request.toString().getBytes("utf-8");
+		os.write(json_bytes, 0, json_bytes.length);           
+		os.close();
+
+		int response_code = uc.getResponseCode();
 		
+		JsonObject api_response = null;
+		BufferedReader reader = null;
+		if (response_code/100==2) {
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		} else {
+			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+			api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			return api_response.toString();
+		}
+
+		// Find the output text buried in the response JSON:
+		JsonArray output = api_response.get("output").getAsJsonArray();
+		JsonObject message = null;
+		JsonObject output_text = null;
+		String sage_answer = null;
+		for (JsonElement element0 : output) {
+			message = element0.getAsJsonObject();
+			if (message.has("content")) {
+				JsonArray content = message.get("content").getAsJsonArray();
+				for (JsonElement element1 : content) {
+					output_text = element1.getAsJsonObject();
+					if (output_text.has("text")) {
+						sage_answer = output_text.get("text").getAsString();
+						break;
+					}
+				}
+				break;
+			}
+		}
+		
+		
+		/*
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
@@ -373,16 +492,15 @@ public class Sage extends HttpServlet {
 		reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 		JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
 		reader.close();
-		
-		String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+		 */
 		
 		// Save the response for the next time a user needs help with this question
 		if (!q.requiresParser()) {
-			q.sageAdvice = content;
+			q.sageAdvice = sage_answer;
 			ofy().save().entity(q);
 		}
 		
-		return content;
+		return sage_answer;
 	}
 
 	static Long getNewQuestionId(SageTransaction st, Long conceptId) throws Exception {
@@ -819,6 +937,64 @@ public class Sage extends HttpServlet {
 	
 	static JsonObject scoreEssayQuestion(String questionText, String studentAnswer) throws Exception {
 		if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
+		
+		JsonObject api_request = new JsonObject();
+		api_request.addProperty("model", Subject.getGPTModel());
+		JsonObject prompt = new JsonObject();
+		prompt.addProperty("id", "pmpt_68b05dd3c7e88190b02ec3c4a41e412003d177cd13da4c5d");
+		JsonObject variables = new JsonObject();
+		variables.addProperty("question_item", questionText);
+		variables.addProperty("student_answer", studentAnswer);
+		prompt.add("variables", variables);
+		api_request.add("prompt", prompt);
+
+		URL u = new URL("https://api.openai.com/v1/responses");
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+		OutputStream os = uc.getOutputStream();
+		byte[] json_bytes = api_request.toString().getBytes("utf-8");
+		os.write(json_bytes, 0, json_bytes.length);           
+		os.close();
+
+		int response_code = uc.getResponseCode();
+		
+		JsonObject api_response = null;
+		BufferedReader reader = null;
+		if (response_code/100==2) {
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		} else {
+			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+			reader.close();
+		}
+
+		// Find the output text buried in the response JSON:
+		JsonArray output = api_response.get("output").getAsJsonArray();
+		JsonObject message = null;
+		JsonObject output_text = null;
+		JsonObject essay_score = new JsonObject();
+		for (JsonElement element0 : output) {
+			message = element0.getAsJsonObject();
+			if (message.has("content")) {
+				JsonArray content = message.get("content").getAsJsonArray();
+				for (JsonElement element1 : content) {
+					output_text = element1.getAsJsonObject();
+					if (output_text.has("text")) {
+						essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
+						break;
+					}
+				}
+				break;
+			}
+		}
+		
+		/*
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
 		JsonObject m = new JsonObject();  // api request message
@@ -859,7 +1035,9 @@ public class Sage extends HttpServlet {
 			api_score.addProperty("score", 0);
 			api_score.addProperty("feedback", "Sorry, an error occurred: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
-		return api_score;
+		*/
+		
+		return essay_score;
 	}
 	
 	static String showSummary(User user,Assignment a) {
