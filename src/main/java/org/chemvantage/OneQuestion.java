@@ -64,9 +64,13 @@ public class OneQuestion extends HttpServlet {
 				if (parameter == null) parameter = new Date().getTime();
 				q.setParameters(parameter);
 
-				buf.append("<br/><br/><form method=post action=/item onsubmit=waitForScore(); >"
+				buf.append("<br/><br/><div style='max-width:700px'>"
+						+ "<img src=https://www.chemvantage.org/images/thoughtful_parrot.png alt='thoughtful parrot' style='float:right;padding:10px;height:200px;vertical-align:text-top;' />"
+						+ "<form method=post action=/item onsubmit=waitForScore(); >"
 						+ "<input type=hidden name=p value=" + parameter + " />"
-						+ q.print() + "<input id=SubmitButton type=submit value='Submit' />" + "</form>");
+						+ q.print() + "<input id=SubmitButton type=submit value='Submit' class=btn />" 
+						+ "</form>"
+						+ "</div>");
 				buf.append("<SCRIPT>"
 						+ "function waitForScore() {"
 						+ " let b = document.getElementById('SubmitButton');"
@@ -79,12 +83,12 @@ public class OneQuestion extends HttpServlet {
 			}
 		}
 		buf.append("<br/><br/>");  // Put some space at the bottom
-		response.getWriter().println(Subject.header() + "<h1>Question Item</h1>" + buf.toString() + Subject.footer);
+		response.getWriter().println(Subject.header() + buf.toString() + Subject.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String signature = new User().getTokenSignature();
-		StringBuffer buf = new StringBuffer(Subject.header() + "<h1>Question Item</h1>" + ajaxJavaScript(signature));
+		StringBuffer buf = new StringBuffer(Subject.header() + ajaxJavaScript(signature));
 		try {
 			long qid=0L;
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
@@ -134,7 +138,7 @@ public class OneQuestion extends HttpServlet {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
 						+ q.print() + "<br/><input type=submit />" + "</form><br/><br/>");
-				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
+				//buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			} else {
 				switch (q.getQuestionType()) {
 				case 5:  // Numeric question
@@ -248,12 +252,14 @@ public class OneQuestion extends HttpServlet {
 					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				}
 			}
+			/*
 			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",q.conceptId).keys().list();
 			int i = new Random().nextInt(questionKeys.size());
 			long questionId = questionKeys.get(i).getId();
 			buf.append("<a class=btn href='/item?q=" + questionId + "'>Try another question on this concept.</a>");
 			buf.append("&nbsp;&nbsp;");
-			buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
+			*/
+			//buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Failed. " + e.getMessage());
 		}
