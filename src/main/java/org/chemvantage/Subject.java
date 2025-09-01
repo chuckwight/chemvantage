@@ -151,7 +151,7 @@ public class Subject {
 		try {
 			if (s==null) refresh();
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
-        	byte[] bytes = md.digest((userId + s.salt).getBytes("UTF_8"));
+        	byte[] bytes = md.digest((userId + s.salt).getBytes("UTF-8"));
         	StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
                 sb.append(String.format("%02x", b));
@@ -264,11 +264,11 @@ public class Subject {
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "</main>"
-			+ "<footer id=footer><div style='max-width:700px'><hr/>"
+			+ "<footer id=footer><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
-			+ "<a href=/copyright.html>Copyright</a></div></footer>"
+			+ "<a href=/copyright.html>Copyright</a></footer>"
 			+ "</body>\n</html>";
 
 }
