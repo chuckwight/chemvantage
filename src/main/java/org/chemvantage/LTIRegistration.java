@@ -143,6 +143,7 @@ public class LTIRegistration extends HttpServlet {
 					debug.append("Registration Response:<br/>"+registrationResponse.toString()+"br/>");
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					debug.append("Deployment created: " + d.platform_deployment_id);
+					if ("canvas".equals(d.lms_type) && d.getDeploymentId().isEmpty()) throw new Exception("Missing Deployment ID");
 					sendApprovalEmail(d,request);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
