@@ -29,6 +29,7 @@ import java.io.OutputStream;
  */
 import java.io.Serializable;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 
 import com.google.gson.JsonArray;
@@ -66,7 +67,7 @@ public class Concept implements Serializable {
 				prompt.add("variables", variables);
 				api_request.add("prompt", prompt);
 
-				URL u = new URL("https://api.openai.com/v1/responses");
+				URL u = new URI("https://api.openai.com/v1/responses").toURL();
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				uc.setRequestMethod("POST");
 				uc.setDoInput(true);

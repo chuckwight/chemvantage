@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 import java.util.Map;
@@ -257,7 +258,7 @@ public class Feedback extends HttpServlet {
 		try {
 			String queryString = "secret=" + Subject.getReCaptchaSecret() + "&response=" 
 					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+			URL u = new URI("https://www.google.com/recaptcha/api/siteverify").toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setRequestMethod("POST");

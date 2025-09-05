@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 import java.util.Enumeration;
@@ -123,7 +124,7 @@ public class Token extends HttpServlet {
 		String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
 		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);  // strip any trailing / from platform_id
 
-		URL platform = new URL(platform_id);
+		URL platform = new URI(platform_id).toURL();
 		if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
 
 		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;

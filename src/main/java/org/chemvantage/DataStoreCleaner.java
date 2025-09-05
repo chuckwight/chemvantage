@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
@@ -637,7 +638,7 @@ public class DataStoreCleaner extends HttpServlet {
 
 	String getLineitemsUrl(String lineitem_url, String lms_type) {
 		try {
-			URL lineitemUrl = new URL(lineitem_url);  // just test to see if this  is a valid URL
+			URL lineitemUrl = new URI(lineitem_url).toURL();  // just test to see if this  is a valid URL
 			String query = lineitemUrl.getQuery();			
 			String lineitems_url;
 			

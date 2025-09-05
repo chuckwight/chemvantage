@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.Signature;
@@ -170,7 +171,7 @@ public class LTIDeepLinks extends HttpServlet {
 			// validate the id_token signature:
 			// retrieve the public Java Web Key from the platform to verify the signature
 			if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
-			URL jwks_url = new URL(d.well_known_jwks_url);
+			URL jwks_url = new URI(d.well_known_jwks_url).toURL();
 			JwkProvider provider = new UrlJwkProvider(jwks_url);
 			if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
 			Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one

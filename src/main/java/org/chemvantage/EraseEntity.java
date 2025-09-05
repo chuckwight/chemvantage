@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,7 +67,7 @@ public class EraseEntity extends HttpServlet {
 		String domain = request.getParameter("Domain");
 		if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
 			try {
-				new URL(domain);  // throws Exception if this is a BLTIConsumer
+				new URI(domain).toURL();  // throws Exception if this is a BLTIConsumer
 				ofy().delete().key(key(Deployment.class,domain));
 			} catch (Exception e) {
 			}

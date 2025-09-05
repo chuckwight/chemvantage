@@ -41,20 +41,20 @@ public class Deployment implements java.lang.Cloneable {
 		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
 		if (deployment_id == null) deployment_id = "";
 		
-		URL platform = new URL(platform_id);
+		URL platform = new URI(platform_id).toURL();
 		if (!platform.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
 		this.platformId = platform_id;
 		this.platform_deployment_id = platform_id + "/" + deployment_id;
 		
-		URL auth = new URL(oidc_auth_url);
+		URL auth = new URI(oidc_auth_url).toURL();
 		if (!auth.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
 		this.oidc_auth_url = auth.toString();
 		
-		URL token = new URL(oauth_access_token_url);
+		URL token = new URI(oauth_access_token_url).toURL();
 		if (!token.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
 		this.oauth_access_token_url = token.toString();		
 		
-		URL jwks = new URL(well_known_jwks_url);
+		URL jwks = new URI(well_known_jwks_url).toURL();
 		if (!jwks.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
 		this.well_known_jwks_url = jwks.toString();
 		

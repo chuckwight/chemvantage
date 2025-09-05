@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -777,7 +778,7 @@ public class Homework extends HttpServlet {
 					prompt.add("variables", variables);
 					api_request.add("prompt", prompt);
 
-					URL u = new URL("https://api.openai.com/v1/responses");
+					URL u = new URI("https://api.openai.com/v1/responses").toURL();
 					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 					uc.setRequestMethod("POST");
 					uc.setDoInput(true);

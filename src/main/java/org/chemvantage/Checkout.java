@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.text.DateFormat;
 import java.util.Base64;
@@ -217,7 +218,7 @@ public class Checkout extends HttpServlet {
 			String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
 			String body = "grant_type=client_credentials";
 
-			URL u = new URL(baseUrl + "/v1/oauth2/token");
+			URL u = new URI(baseUrl + "/v1/oauth2/token").toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
@@ -267,7 +268,7 @@ public class Checkout extends HttpServlet {
 		
 		String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
 		
-		URL u = new URL(baseUrl + "/v2/checkout/orders");
+		URL u = new URI(baseUrl + "/v2/checkout/orders").toURL();
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 		uc.setRequestMethod("POST");
 		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
@@ -296,7 +297,7 @@ public class Checkout extends HttpServlet {
 		Deployment deployment = ofy().load().type(Deployment.class).id(order.platform_deployment_id).now();
 		String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
 		
-		URL u = new URL(baseUrl + "/v2/checkout/orders/" + order_id + "/capture");
+		URL u = new URI(baseUrl + "/v2/checkout/orders/" + order_id + "/capture").toURL();
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 		uc.setRequestMethod("POST");
 		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
