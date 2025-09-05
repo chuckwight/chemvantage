@@ -50,7 +50,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	static Map<String,String> authTokens = new HashMap<String,String>();
 	
 	static String getAccessToken(String platformDeploymentId,String scope) throws IOException {
-		
+
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
@@ -58,37 +58,41 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		Date in5Min = new Date(now.getTime() + 300000L);  // 5 minutes from now
 		Date in15Min = new Date(now.getTime() + 900000L);  // 15 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
-		
+
 		DataOutputStream wr = null;
 		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
 			if (d==null) debug.append("Deployment unknown<br/>");
 			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
-			
+
 			if (!d.scope.contains(scope)) return null;  // must be authorized
 			debug.append("Scope OK.<br/>");
-			
+
 			String authToken = authTokens.get(platformDeploymentId);
 			if (authToken != null) {  //found a cached authToken; check the expiration and use it
+				debug.append("Found cached authToken:" + authToken + "<br/>Expires: ");
 				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
-				if (in5Min.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();
-				debug.append("Using cached authToken:" + authToken + "<br/>");
+				debug.append(new Date(jAuthToken.get("exp").getAsLong()));
+				if (in5Min.before(new Date(jAuthToken.get("exp").getAsLong()))) {
+					//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Cached AuthToken Request",debug.toString() + "<br/>" );
+					return jAuthToken.get("access_token").getAsString();
+				} //else Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Stale AuthToken Request",debug.toString() + "<br/>" );
 			} else debug.append("No cached authToken found.<br/>");
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
 			String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
-			
+
 			String aud = d.oauth_access_token_url;
 			String sub = d.client_id;
-			
+
 			if ("brightspace".equals(d.lms_type) || "desire2learn".equals(d.lms_type)) {
 				iss = sub;
 				aud = "https://api.brightspace.com/auth/token";
 			}
-			
+
 			String token = JWT.create()
 					.withIssuer(iss)
 					.withSubject(sub)
@@ -98,14 +102,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
-			
+
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
 					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
 			debug.append("Body: " + body + "<br/>");
-			
-			URL u = new URL(d.oauth_access_token_url);
+
+			URL u = new URI(d.oauth_access_token_url).toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
@@ -119,18 +123,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			wr = new DataOutputStream(uc.getOutputStream());
 			wr.writeBytes(body);
 			wr.close();
-			
+
 			int responseCode = uc.getResponseCode();
 			debug.append("ResponseCode: " + responseCode + "<br/>Content: ");
-			debug.append(uc.getContent().toString() + "<br/>");
-			
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			debug.append("Response: " + json.toString() + "<br/>");
 
-			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED || responseCode == HttpURLConnection.HTTP_ACCEPTED) { // 200m or 201 or 202
-				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
+			if (responseCode/100 == 2) { // response is OK
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+				reader.close();
 				String access_token = json.get("access_token").getAsString();
 				long expires_in = json.get("expires_in").getAsLong();  // number of seconds from now, typically 3600
 				long exp = new Date().getTime() + expires_in*1000L;
@@ -141,9 +141,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				cached_token.addProperty("exp", exp);
 				authTokens.put(d.platform_deployment_id, cached_token.toString());
 
-				// return the access_token only
 				return access_token;
-			} else throw new Exception("response code " + responseCode);
+			} else {
+				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+				reader.close();
+				debug.append("Error Stream: " + json.toString());
+				throw new Exception("Failed AuthToken Request");
+			}
 		} catch (Exception e) {
 			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
 			if (Subject.getProjectId().equals("chem-vantage-hrd"))
@@ -151,7 +156,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    
 	}
-   
+
     static JsonObject getLineItem(Deployment d,String resourceLinkId,String lti_ags_lineitems_url) throws Exception {   	
     	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";    	
     	try {
@@ -175,7 +180,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
-    		URL u = new URL(lti_ags_lineitem_url);
+    		URL u = new URI(lti_ags_lineitem_url).toURL();
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     		uc.setDoInput(true);
     		uc.setRequestMethod("GET");
@@ -212,7 +217,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		String bearerAuth = "Bearer " + accessToken;
     		String next_url = lti_ags_lineitems_url;
     		while (next_url != null) {
-    			URL u = new URL(next_url);
+    			URL u = new URI(next_url).toURL();
     			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     			uc.setDoInput(true);
     			uc.setRequestMethod("GET");
@@ -244,7 +249,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		if (accessToken == null) return "Access token not granted: " + accessToken;
     		String bearerAuth = "Bearer " + accessToken;
 
-    		URL u = new URL(lti_ags_lineitems_url + "?resource_link_id=" + resourceLinkId);
+    		URL u = new URI(lti_ags_lineitems_url + "?resource_link_id=" + resourceLinkId).toURL();
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     		uc.setDoInput(true);
     		uc.setRequestMethod("GET");
@@ -302,7 +307,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String json = j.toString();
 			debug.append("Lineitem JSON: " + json);
 			
-			URL u = new URL(lti_ags_lineitems_url);
+			URL u = new URI(lti_ags_lineitems_url).toURL();
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
@@ -364,7 +369,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			URL u = null;
 			while (next_url != null) {
-				u = new URL(next_url);
+				u = new URI(next_url).toURL();
 
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				uc.setDoInput(true);
@@ -424,13 +429,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			case "moodle":
 				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.indexOf("?")) + "/results";
 				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.indexOf("?"));
-				u = new URL(base_url + query + "&user_id=" + user_id + "&userId=" + user_id);
+				u = new URI(base_url + query + "&user_id=" + user_id + "&userId=" + user_id).toURL();
 				break;
 			case "schoology":
-				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id.substring(0,user_id.indexOf(":")));
+				u = new URI(a.lti_ags_lineitem_url + "/results?user_id=" + user_id.substring(0,user_id.indexOf(":"))).toURL();
 				break;
 			default:
-				u = new URL(a.lti_ags_lineitem_url + "/results?userId=" + user_id + "&user_id=" + user_id);				
+				u = new URI(a.lti_ags_lineitem_url + "/results?userId=" + user_id + "&user_id=" + user_id).toURL();				
 			}
 			
 			debug.append("0");
@@ -510,7 +515,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
 			URL u = null;
 			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
-			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i));
+			u = new URI(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i)).toURL();
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
@@ -578,7 +583,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String next_url = a.lti_nrps_context_memberships_url;
 
 			while (next_url != null) {
-				URL u = new URL(next_url);
+				URL u = new URI(next_url).toURL();
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				//uc.setDoOutput(true);
 				uc.setDoInput(true);
@@ -633,7 +638,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String next_url = a.lti_nrps_context_memberships_url;
     		
 			while (next_url != null) {
-				URL u = new URL(next_url);
+				URL u = new URI(next_url).toURL();
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				//uc.setDoOutput(true);
 				uc.setDoInput(true);
