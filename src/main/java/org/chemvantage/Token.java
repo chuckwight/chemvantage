@@ -201,7 +201,26 @@ public class Token extends HttpServlet {
 				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
 				for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
 				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Automatic Blackboard Registration",message);
-				return d;	
+				return d;
+			} else if (platform_id != null && (platform_id.contains("desire2learn.com") || platform_id.contains("brightspace.com"))) {
+				String client_id = request.getParameter("client_id");
+				String oidc_auth_url = platform_id + "/d2l/lti/authenticate";
+				String well_known_jwks_url = platform_id + "/d2l/.well-known/jwks";
+				String oauth_access_token_url = "https://auth.brightspace.com/core/connect/token";
+				String contact_name = null;
+				String email = null;
+				String organization = null;
+				String org_url = null;
+				String lms = "brightspace";
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
+				d.status = "auto";
+				d.nLicensesRemaining = 0;
+				ofy().save().entity(d).now();
+				Map<String,String[]> params = request.getParameterMap();
+				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
+				for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
+				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Automatic Brightspace Registration",message);
+				return d;
 			} else {
 				throw new Exception("Deployment Not Found");
 			}
@@ -210,7 +229,8 @@ public class Token extends HttpServlet {
 			Map<String,String[]> params = request.getParameterMap();
 			String message = "<h3>Deployment Not Found</h3>Query parameters:<br/>";
 			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
-			if (Subject.getProjectId().equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
+			//if (Subject.getProjectId().equals("chem-vantage-hrd")) 
+				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
 		}
 		return d;
 }
