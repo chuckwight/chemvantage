@@ -1,5 +1,12 @@
 runtime: java17
 instance_class: F1
+
+inbound_services:
+- warmup
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+
 #default_expiration: 1m
 
 # The following handlers cause appengine to upload copies of the static files to Gooogle Cloud Storage and serve them from there
