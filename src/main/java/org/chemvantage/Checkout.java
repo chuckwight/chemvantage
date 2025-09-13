@@ -265,7 +265,8 @@ public class Checkout extends HttpServlet {
 		    subscription.add("amount", amount);
 		 purchaseUnits.add(subscription);
 		order_data.add("purchase_units", purchaseUnits);
-		
+		  JsonObject paymentSource = JsonParser.parseString("{'paypal':{'experience_context':{'shipping_preference':'NO_SHIPPING'}}}").getAsJsonObject();
+		order_data.add("payment_source", paymentSource);
 		String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
 		
 		URL u = new URI(baseUrl + "/v2/checkout/orders").toURL();
