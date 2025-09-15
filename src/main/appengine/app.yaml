@@ -1,8 +1,8 @@
 runtime: java17
 instance_class: F1
 
-#inbound_services:
-#- warmup
+inbound_services:
+- warmup
 #automatic_scaling:
 #  min_instances: 1
 #  max_instances: 10
