@@ -32,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
@@ -141,8 +142,15 @@ public class LTIRegistration extends HttpServlet {
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					debug.append("Valid<br/>");
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					debug.append("Registration Response:<br/>"+registrationResponse.toString()+"br/>");
-					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
+					debug.append("Registration Response:<br/>"+registrationResponse.toString()+"<br/>");
+					
+					Enumeration<String> enumeration = request.getParameterNames();
+					while(enumeration.hasMoreElements()){
+			            String parameterName = enumeration.nextElement();
+			            debug.append(parameterName + ": " + request.getParameter(parameterName) + "<br/>");
+			        }
+					
+			        Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					debug.append("Deployment created: " + d.platform_deployment_id);
 					if ("canvas".equals(d.lms_type) && d.getDeploymentId().isEmpty()) throw new Exception("Missing Deployment ID");
 					sendApprovalEmail(d,request);
@@ -508,31 +516,40 @@ public class LTIRegistration extends HttpServlet {
 		String well_known_jwks_url = request.getParameter("JWKSUrl");
 		
 		if (client_id==null) throw new Exception("Client ID value is required.");
-		if (deployment_id==null) throw new Exception("Deployment ID value is required.");
+		//if (deployment_id==null) throw new Exception("Deployment ID value is required.");
 		if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
 		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
 		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
 		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
-			
-		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
-		d.status = "pending";
-		d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 		
-		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
-		
-		String msg = "<h2>Congratulations. Registration is complete.</h2>"
-				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
+		if (deployment_id != null) {
+			Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+			d.status = "pending";
+			d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 
+			Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 
-		if (prior!=null) {  // this is a repeat registration
-			d.status = prior.status==null?"pending":prior.status;
-			if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
-			else msg += "<p>Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+			String msg = "<h2>Congratulations. Registration is complete.</h2>"
+					+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
+
+			if (prior!=null) {  // this is a repeat registration
+				d.status = prior.status==null?"pending":prior.status;
+				if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
+				else msg += "<p>Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+			}
+
+			ofy().save().entity(d).now();  // registration is now complete
+			return msg;
+		} else {  // this path is used by Canvas, which doesn't send the deployment_id until the first launch
+			ProvisionalDeployment pd = new ProvisionalDeployment(platform_id,client_id,client_name,email,organization,org_url);
+			String msg = "<h2>Congratulations. Registration was successful.</h2>"
+					+ "You should now create a deployment (developer key) using the client_id " + client_id + ". The deployment_id will be sent to ChemVantage automatically "
+					+ "with the first launch. If you have a sandbox course, please create a test assignment to be sure that everything is working.<p>"
+					+ "Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
+			ofy().save().entity(pd).now();
+			return msg;
 		}
-		
-		ofy().save().entity(d).now();  // registration is now complete
-		return msg;
-	}	
+	}
 
 	String getConfigurationJson(String iss,String lms) {
 		String domain = null;

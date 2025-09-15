@@ -152,6 +152,19 @@ public class Token extends HttpServlet {
 				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
 				d.status = "auto";
 				d.nLicensesRemaining = 0;
+				
+				/* New section to handle provisional deployments created by Canvas Dynamic registration */
+				ProvisionalDeployment pd = ofy().load().type(ProvisionalDeployment.class).filter("client_id",client_id).first().now();
+				if (pd != null && pd.platformId.equals(d.platformId)) {
+					d.contact_name = pd.contact_name;
+					d.email = pd.email;
+					d.organization = pd.organization;
+					d.org_url = pd.org_url;
+					d.status = "pending";
+					ofy().delete().entity(pd);
+				}
+				/* End of new section */
+				
 				ofy().save().entity(d).now();
 				String message = "<h3>Deployment Registration</h3>";
 				try {
