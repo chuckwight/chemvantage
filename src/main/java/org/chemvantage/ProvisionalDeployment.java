@@ -11,7 +11,7 @@ import com.googlecode.objectify.annotation.Index;
 public class ProvisionalDeployment implements java.lang.Cloneable {
 	@Id 	Long id;
 	@Index	String client_id;
-			String platformId;
+	@Index	String platformId;
 			String email;
 			String contact_name;
 			String organization;

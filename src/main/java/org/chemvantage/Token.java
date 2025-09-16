@@ -154,8 +154,8 @@ public class Token extends HttpServlet {
 				d.nLicensesRemaining = 0;
 				
 				/* New section to handle provisional deployments created by Canvas Dynamic registration */
-				ProvisionalDeployment pd = ofy().load().type(ProvisionalDeployment.class).filter("client_id",client_id).first().now();
-				if (pd != null && pd.platformId.equals(d.platformId)) {
+				ProvisionalDeployment pd = ofy().load().type(ProvisionalDeployment.class).filter("platformId",platform_id).filter("client_id",client_id).first().now();
+				if (pd != null) {
 					d.contact_name = pd.contact_name;
 					d.email = pd.email;
 					d.organization = pd.organization;
