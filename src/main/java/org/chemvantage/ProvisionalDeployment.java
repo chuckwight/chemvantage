@@ -3,9 +3,11 @@ package org.chemvantage;
 import java.net.URI;
 import java.net.URL;
 
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+@Entity
 public class ProvisionalDeployment implements java.lang.Cloneable {
 	@Id 	Long id;
 	@Index	String client_id;
