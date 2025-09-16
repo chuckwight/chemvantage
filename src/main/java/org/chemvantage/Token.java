@@ -165,7 +165,8 @@ public class Token extends HttpServlet {
 				}
 				/* End of new section */
 				
-				ofy().save().entity(d).now();
+				if (deployment_id != null && !deployment_id.isEmpty()) ofy().save().entity(d).now();
+				
 				String message = "<h3>Deployment Registration</h3>";
 				try {
 					String token = request.getParameter("lti_message_hint");
