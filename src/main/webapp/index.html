@@ -1,400 +1,471 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="ChemVantage is an LTI app that works with yur LMS for teaching and learning college-level General Chemistry." />
-    <link rel="icon" href="images/logo_sq.png" />
-    <link rel="canonical" href="https://www.chemvantage.org" />
-    <!-- Fav-Icon -->
-    <title>ChemVantage</title>
-    <!-- Title -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <!-- Font Family -->
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Main Style Sheet -->
-    <link rel="stylesheet" href="css/responsive.css">
-    <!-- Responsive Style Sheet -->
-
-    <!-- Calendly badge widget begin -->
-    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
-    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async=true></script>
-    <script type="text/javascript">window.onload = function() { Calendly.initBadgeWidget({ url: 'https://calendly.com/richkingsford/30m', text: 'Schedule a setup', color: '#0069FF', textColor: '#FFFFFF', branding: undefined }); }</script>
-    <!-- Calendly badge widget end -->
+  <meta charset="UTF-8">
+  <title>ChemVantage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChemVantage provides standards-aligned homework, quizzes, and exams for General Chemistry with automatic grading and seamless LMS integration using LTI 1.3 Advantage.">
+  <link rel="icon" href="/images/logo_sq.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">  
+  <style>
+    body { font-family: 'Poppins', Arial, sans-serif; }
+    .icon-bullet {
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      background: #0d6efd;
+      display: inline-block;
+      margin-right: .5rem;
+    }
+    .bg-gradient-primary {
+      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);
+    }
+    .section-heading + p.lead {
+      max-width: 56rem;
+    }
+    /* Ensure visible focus for keyboard users on minimal devices */
+    :focus-visible {
+      outline: 3px solid #fd7e14;
+      outline-offset: 2px;
+    }
+  </style>
 </head>
-<body>
-    <a href=#main class="skip-to-main-content-link">Skip to main content</a>
-    <!-- Webpage Header Start -->
-    <header class="webpage-header">
-        <div class="container">
-            <div class="d-flex justify-between align-center">
-                <div class="w-0">
-                    <a href="/">
-                        <img src="images/logo.png" class="webpage-logo" alt="ChemVantage logo"/>
-                    </a>
-                </div>
-                <div class="w-80">
-                    <nav class="header-nav d-flex flex-end align-center gap-3">
-                        <div class="nav-list">
-                            <ul>
-                                <li class="active">
-                                    <a href="./index.html" class="nav-link">Home</a>
-                                </li>
-                                <li>
-                                    <a href="./about.html" class="nav-link">About Us</a>
-                                </li>
-                                <li>
-                                    <a href="#placement" class="nav-link">Placement Exam</a>
-                                </li>
-                                <li>
-                                    <a href="#assignments" class="nav-link">Assignments</a>
-                                </li>
-                                <li>
-                                    <a href="#pricing" class="nav-link">Pricing</a>
-                                </li>
-                            </ul>
-                            <button class="close">&times;</button>
-                        </div>
-                        <button onclick="Calendly.showPopupWidget('https://calendly.com/chemvantage/install-chemvantage');" class="btn btn-two">
-                            Schedule a Setup
-                        </button>
-                        <button class="solid-bar">&#9776;</button>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </header>
-    <!-- Webpage Header End -->
-	
-	<!-- Webpage HeroArea Start -->
-    <main id="main">
-    <section id="home" class="webpage-heroarea webpage-section">
-        <div class="chemistry-icon left">
-            <img src="images/glycine.gif" alt="chemistry-icon"/>
-        </div>
-       
-		<div class="container">
-            <div class="heroarea-content d-flex justify-center flex-wrap">
-                <div class="w-60 text-center">
-                    <h1 style="color:#000080;">ChemVantage</h1>
-                    <h2 style="font-size: 1em">An Open Educational Resource for General Chemistry</h2>
-                </div>
-                <div class="w-80 text-center">
-                    <p>
-                        <b>ChemVantage</b> was founded in 2010 on the idea that the most effective learning 
-							takes place during repeated intermittent engagement with the subject material. 
-							Our LTI app connects to your class LMS and provides computer-scored assignments 
-							that give students immediate feedback to keep them progressing through the course.
-                    </p>
-                    <p></p>
-                    <ul class="d-flex gap-3 justify-center">
-                        <li>
-                            <button onclick="Calendly.showPopupWidget('https://calendly.com/chemvantage/install-chemvantage');" class="btn btn-two">
-                                Schedule a Setup
-                            </button> or 
-                            <a href="/install.html" target="_blank" aria-label="Opens a new tab" class="btn btn-two">
-                        		DIY Installation
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <br/>
-            
-           <div class="section-heading">
-           <h3>Introducing Sage - an intelligent tutor for General Chemistry</h3>
-           </div>
-           <br/>
-           <img src=https://sage.chemvantage.org/images/sage.png alt='Confucius Parrot' style='float:right'>
-           <p>
-           		ChemVantage is pleased to introduce Sage, an AI-powered tutoring program for General Chemistry. 
-           		Sage guides students through 146 key concepts taught in most Gen Chem courses, posing 
-           		questions, providing help when necessary, scoring the answers, and providing detailed solutions.
-           		Questions are generally easier when a concept is first introduced, but get 
-           		progressively more difficult until students are judged to have mastered each concept. 
-           		Students are invited to ask Sage open-ended questions about each topic to ensure their understanding.</p>
-           	<p> 
-           		Sage is included in the ChemVantage suite of 8 different assignment types. For a limited time, you can try a
-           		<a href="https://sage.chemvantage.org" target="_blank" aria-label="Opens a new tab">free stand-alone version of Sage.</a> 
-           		If you are an instructor, you should <a href="/install.html" target="_blank" aria-label="Opens a new tab" class="btn btn-two">install ChemVantage free.</a>
-           	</p>
-           		<p>&nbsp;</p>
-           	
-           
-           <div class="section-heading">
-           <h3>Browse the Question Item Bank</h3>
-           </div>
-           <br/>
-             <p>
-                    More than 5000 ChemVantage question items are free to use under the terms of a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" aria-label="Opens a new tab">Creative Commons CC-BY License</a>.
-                    Instructors can access the correct answers and full solutions through their campus LMS. <a href="/lti/registration" target="_blank" aria-label="Opens a new tab">Registration is free.</a>
-                </p>
-                <div class="form-elements">
-                        <form onsubmit="return false;">
-                            <div class="d-flex gap-1 align-end">
-                                <div class="w-50">
-                                    <label for="topic" class="form-label">Topic <span>*</span></label>
-                                    <select name="Topic" id="topic" class="form-select"></select>
-                                </div>
-                                <script src="/js/itembank.js"></script>
-                                <div class="w-30">
-                                    <label for="type" class="form-label">Assignment Type <span>*</span></label>
-                                    <select name="type" id="type" class="form-select">
-                                        <option value="">Select a type</option>
-                                        <option value="Quiz">Quiz</option>
-                                        <option value="Homework">Homework</option>
-                                    </select>
-                                </div>
-                                <div class="w-20">
-                                    <button class="btn btn-two w-100" onclick="getItems();">View Items</button>
-                                </div>
-                            </div>
-                        </form>
-                        <div id="itemViewBox"></div>  
-                        <!--  this is where 3 sample question items are displayed  -->
-                </div>
-        </div>
-    </section>
-    <!-- Webpage HeroArea End -->
+<body class="bg-white text-body">
+  <a href="#main-content" class="visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2 bg-light rounded text-dark">Skip to main content</a>
 
-    <!-- Webpage BTT Start -->
-    <div class="btt">
-        <img src="images/up-arrow.png" alt="up-arrow"/>
+  <header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" aria-label="Primary">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="#home" aria-label="ChemVantage home">
+          <img src="/images/CVLogo_thumb.png" alt="ChemVantage logo" height="35px" />
+          <span class="fw-bold">ChemVantage</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#primaryNav" aria-controls="primaryNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="primaryNav">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a class="nav-link" href="#students">Students</a></li>
+            <li class="nav-item"><a class="nav-link" href="#instructors">Instructors</a></li>
+            <li class="nav-item"><a class="nav-link" href="#admins">Administrators</a></li>
+            <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+            <li class="nav-item"><a class="nav-link" href="#faq">FAQ</a></li>
+            <li class="nav-item"><a class="nav-link" href="#privacy-accessibility">Privacy & Accessibility</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <section id="home" class="bg-gradient-primary text-white">
+      <div class="container py-5">
+        <div class="row align-items-center g-4 py-lg-4">
+          <div class="col-lg-7">
+            <h1 class="display-5 fw-semibold mb-3">ChemVantage</h1>
+            <p class="lead mb-4">Standards‑aligned homework, quizzes, and exams for General Chemistry with automatic grading and seamless LMS integration using LTI 1.3 Advantage.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="#students" class="btn btn-outline-light btn-lg" role="button" aria-label="Information for students">For Students</a>
+              <a href="#instructors" class="btn btn-outline-light btn-lg" role="button" aria-label="Information for instructors">For Instructors</a>
+              <a href="#admins" class="btn btn-outline-light btn-lg" role="button" aria-label="Information for LMS administrators">For Administrators</a>
+            </div>
+            <p class="mt-4 mb-0 small">Access ChemVantage directly from your LMS course (Canvas, Blackboard, Brightspace, Moodle, Sakai, Schoology and others) via LTI 1.3 Advantage.</p>
+          </div>
+          <div class="col-lg-5">
+            <div class="bg-white text-dark rounded-3 shadow-sm p-4">
+              <h2 class="h4 fw-semibold">What is ChemVantage?</h2>
+              <p class="mb-3">ChemVantage is an open educational resource that provides high‑quality question banks and auto‑graded assessments for introductory general chemistry courses.</p>
+              <ul class="list-unstyled mb-0">
+                <li class="d-flex align-items-start mb-2">
+                  <span class="icon-bullet flex-shrink-0 mt-1" aria-hidden="true"></span>
+                  <span>Large, diverse item banks with randomized parameters</span>
+                </li>
+                <li class="d-flex align-items-start mb-2">
+                  <span class="icon-bullet flex-shrink-0 mt-1" aria-hidden="true"></span>
+                  <span>Automatic scoring with grade passback to your LMS</span>
+                </li>
+                <li class="d-flex align-items-start">
+                  <span class="icon-bullet flex-shrink-0 mt-1" aria-hidden="true"></span>
+                  <span>Designed for accessibility and equitable learning</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <main id="main-content">
+    <section id="students" class="py-5 bg-light">
+      <div class="container">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-6">
+            <h2 class="section-heading h1 fw-semibold">For Students</h2>
+            <p class="lead">Do your chemistry homework, quizzes, and practice directly inside your course LMS. No separate account needed.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="h-100 p-4 bg-white border rounded-3">
+                  <h3 class="h5">How you access</h3>
+                  <ul class="mb-0">
+                    <li>Open your LMS course</li>
+                    <li>Select the ChemVantage assignment</li>
+                    <li>Launch and submit your work</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="h-100 p-4 bg-white border rounded-3">
+                  <h3 class="h5">What you get</h3>
+                  <ul class="mb-0">
+                    <li>Instant feedback and scoring</li>
+                    <li>Multiple attempts when enabled</li>
+                    <li>Practice aligned to your course</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <p class="mt-4 mb-0">If you don’t see ChemVantage in your course, ask your instructor how to get access.</p>
+          </div>
+          <div class="col-lg-6">
+            <div class="p-4 p-lg-5 bg-white border rounded-3 h-100">
+              <h3 class="h5 fw-semibold">Topics commonly covered</h3>
+              <div class="row">
+                <div class="col-6">
+                  <ul class="mb-3">
+                    <li>Measurement & units</li>
+                    <li>Atomic structure</li>
+                    <li>Periodic trends</li>
+                    <li>Chemical bonding</li>
+                    <li>Stoichiometry</li>
+                  </ul>
+                </div>
+                <div class="col-6">
+                  <ul class="mb-3">
+                    <li>Gases & solutions</li>
+                    <li>Thermochemistry</li>
+                    <li>Kinetics</li>
+                    <li>Equilibrium & acids/bases</li>
+                    <li>Electrochemistry</li>
+                  </ul>
+                </div>
+              </div>
+              <p class="small text-muted mb-0">Actual topics and settings are determined by your instructor.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="instructors" class="py-5">
+      <div class="container">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-6">
+            <h2 class="section-heading h1 fw-semibold">For Instructors</h2>
+            <p class="lead">Save time with ready‑to‑use, auto‑graded assignments that align with common general chemistry curricula.</p>
+            <div class="row border rounded-3 bg-light">
+              <div class="col-md-6">
+                <ul class="mb-3">
+                  <li>Deep Linking for easy assignment creation</li>
+                  <li>Automatic grade return (LTI AGS)</li>
+                  <li>Randomized variables and versions</li>
+                  <li>Flexible policies (attempts, penalties)</li>
+                  <li>All instructor accounts are completely free.</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <ul class="mb-3">
+                  <li>Aligned with OpenStax Chemistry/2e OER textbooks</li>
+                  <li>Easy configuration to match all major GenChem texts</li>
+                  <li>Large, vetted item banks with more than 13,000 question items</li>
+                  <li>You may use ChemVantage question items in your teaching without charge, even if you don't use ChemVantage assignments for students.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2" style="padding-top:20px">
+              <a href="https://calendly.com/chemvantage/install-chemvantage" target="_blank" class="btn btn-primary">Schedule a Free Demo</a>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="p-4 p-lg-5 bg-light border rounded-3 h-100">
+              <h3 class="h5 fw-semibold">Add ChemVantage to your course</h3>
+              <ol class="mb-4">
+                <li>Ask your LMS administrator to enable the ChemVantage LTI 1.3 tool for your institution.</li>
+                <li>In your course, create an assignment in ChemVantage as an External Tool using Deep Linking.</li>
+                <li>Select the desired assignment type and publish.</li>
+                <li>When the assignment launches, set policies and select question items from the Instructor Page.</li>
+              </ol>
+              <div class="alert alert-info mb-0" role="status" aria-live="polite">
+                ChemVantage supports LTI 1.3 Advantage services: Deep Linking, Assignment and Grade Services, and Names and Role Provisioning.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="admins" class="py-5 bg-light">
+      <div class="container">
+        <div class="row g-4">
+          <div class="col-lg-5">
+            <h2 class="h1 fw-semibold">For LMS Administrators</h2>
+            <p class="lead">Configure ChemVantage as a trusted LTI 1.3 Advantage tool for secure, standards‑based interoperability.</p>
+            <ul class="mb-4">
+              <li>LTI 1.3 with OAuth 2.0 and JWKs (dynamic or manual registration)</li>
+              <li>Deep Linking (DL), Names & Roles (NRPS), and AGS</li>
+              <li>Campus‑wide or course‑level deployment</li>
+              <li>Minimal personal data collection, privacy‑aware design</li>
+            </ul>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="https://calendly.com/chemvantage/install-chemvantage" target="_blank" class="btn btn-primary">Schedule Setup Help</a>
+              &nbsp;&nbsp;
+              <a class="btn btn-primary" href="/install.html" aria-label="Installation instructions">DIY Installation</a>
+            </div>
+          </div>
+          <div class="col-lg-7">
+            <div class="p-4 p-lg-5 bg-white border rounded-3">
+              <h3 class="h5 fw-semibold">Typical LTI configuration fields</h3>
+              <div class="row">
+                <div class="col-md-6">
+                  <ul>
+                    <li>Tool issuer and client ID</li>
+                    <li>Public keyset (JWKS) URL</li>
+                    <li>OIDC login initiation URL</li>
+                    <li>LTI deployment ID (per course or site)</li>
+                  </ul>
+                </div>
+                <div class="col-md-6">
+                  <ul>
+                    <li>Access token (OAuth) endpoint</li>
+                    <li>AGS and NRPS service scopes</li>
+                    <li>Deep Linking return URL</li>
+                    <li>Domain allowlists as required</li>
+                  </ul>
+                </div>
+              </div>
+              <p class="small text-muted mb-0">Your LMS documentation provides the exact steps for adding LTI 1.3 tools such as ChemVantage.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="py-5">
+      <div class="container">
+        <h2 class="section-heading h1 fw-semibold text-center mb-4">Why ChemVantage</h2>
+        <p class="lead text-center mx-auto mb-5">A reliable, accessible, and standards‑compliant resource for introductory chemistry courses.</p>
+        <div class="row g-4">
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">LMS Native</h3>
+              <p class="mb-0">Launch, grade, and manage assignments entirely within your LMS using LTI 1.3 Advantage.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">Auto‑graded</h3>
+              <p class="mb-0">Immediate scoring and grade passback reduce manual grading and give students fast feedback.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">Robust Item Banks</h3>
+              <p class="mb-0">Diverse question types with randomized parameters help promote mastery and discourage copying.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">Flexible Policies</h3>
+              <p class="mb-0">Works with your LMS to configure attempts, due dates, penalties and feedback to fit your course goals.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">Accessible by Design</h3>
+              <p class="mb-0">Semantic HTML, keyboard navigability, and color‑contrast aware components support inclusive use.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="h-100 p-4 bg-light border rounded-3">
+              <h3 class="h5">Privacy‑Aware</h3>
+              <p class="mb-0">Collects only the data needed to provide assessments and return grades; see our privacy details below.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy-accessibility" class="py-5 bg-light">
+      <div class="container">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="h-100 p-4 p-lg-5 bg-white border rounded-3">
+              <h2 class="h3 fw-semibold">Privacy</h2>
+              <p>ChemVantage uses LTI to receive user and course information from your LMS for the purposes of authentication, delivering assessments, and returning grades. Data is retained only as long as necessary to support these functions.</p>
+              <ul>
+                <li>Personal data shared via LTI depends on your LMS configuration and role.</li>
+                <li>Data is not shared with or sold to third parties.</li>
+                <li>No user Personal Identifiable Information (PII) is stored on ChemVantage servers</li>
+                <li>Instructors and administrators can request data removal as permitted by institutional policy.</li>
+              </ul>
+              <p class="mb-0">See the detailed <a href="/privacy/index.html" target="_blank" aria-label="Link to the ChemVantage privacy policy">ChemVantage privacy policy</a>.</p>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="h-100 p-4 p-lg-5 bg-white border rounded-3">
+              <h2 class="h3 fw-semibold">Accessibility</h2>
+              <p>This site is designed to meet WCAG 2.1 AA. We use semantic HTML, descriptive link text, labels for form fields, keyboard‑accessible controls, and high‑contrast colors.</p>
+              <ul>
+                <li>Navigate by keyboard using Tab/Shift+Tab; focus states are always visible.</li>
+                <li>Images and icons include suitable alternative text or ARIA labels.</li>
+                <li>Content reflows for small screens without loss of information or functionality.</li>
+              </ul>
+              <p class="mb-0">Report any accessibility barriers to <a href="mailto:admin@chemvantage.org" aria-label="Email link for help">admin@chemvantage.org</a>.</p>
+              <p class="mb-0">Download the <a href="/docs/vpat.pdf" target="_blank" aria-label="">ChemVantage VPAT</a>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="py-5">
+      <div class="container">
+        <h2 class="section-heading h1 fw-semibold text-center mb-4">Frequently Asked Questions</h2>
+        <div class="accordion mx-auto" id="faqAccordion" style="max-width: 960px;">
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q1">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a1" aria-expanded="false" aria-controls="a1">
+                How do students access ChemVantage?
+              </button>
+            </h3>
+            <div id="a1" class="accordion-collapse collapse" aria-labelledby="q1" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                Students access ChemVantage from links inside their LMS course. Launch the ChemVantage assignment and follow the prompts. No separate account is required.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q2">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a2" aria-expanded="false" aria-controls="a2">
+                Which LMS platforms are supported?
+              </button>
+            </h3>
+            <div id="a2" class="accordion-collapse collapse" aria-labelledby="q2" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                ChemVantage works with LTI 1.3 Advantage‑capable LMS platforms including Canvas, Blackboard, Brightspace (D2L), Moodle, and Sakai. Consult your LMS documentation for adding external tools.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q3">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a3" aria-expanded="false" aria-controls="a3">
+                Can I create my own assignments?
+              </button>
+            </h3>
+            <div id="a3" class="accordion-collapse collapse" aria-labelledby="q3" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                Yes. Instructors can choose topics via Deep Linking, configure assignment settings (attempts, due dates, penalties), and publish to the course. Grades return automatically to the LMS gradebook.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q4">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a4" aria-expanded="false" aria-controls="a4">
+                Is ChemVantage accessible?
+              </button>
+            </h3>
+            <div id="a4" class="accordion-collapse collapse" aria-labelledby="q4" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                ChemVantage content and this site follow WCAG 2.1 AA design practices including semantic structure, keyboard navigability, and sufficient color contrast. See Accessibility below for details and to report any barriers.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q5">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a5" aria-expanded="false" aria-controls="a5">
+                How is my data used?
+              </button>
+            </h3>
+            <div id="a5" class="accordion-collapse collapse" aria-labelledby="q5" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                ChemVantage collects only the information necessary to authenticate users via LTI, deliver assignments, and return scores to the LMS. See Privacy below for details.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header" id="q6">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a6" aria-expanded="false" aria-controls="a6">
+                Where can I get more information or support?
+              </button>
+            </h3>
+            <div id="a6" class="accordion-collapse collapse" aria-labelledby="q6" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                Contact us by email at <a href="mailto:admin@chemvantage.org" aria-label="Email link for help">admin@chemvantage.org</a> or <a href="https://calendly.com/chemvantage" target="_blank" aria-label="Link to Calendly to schedule Zoom meeting">schedule a Zoom meeting with us</a>.
+              </div>
+            </div>
+          </div>
+
+		  <div class="accordion-item">
+            <h3 class="accordion-header" id="q7">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a7" aria-expanded="false" aria-controls="a7">
+                How much does ChemVantage cost?
+              </button>
+            </h3>
+            <div id="a7" class="accordion-collapse collapse" aria-labelledby="q7" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <ul>
+                  <li>Registration and instructor accounts are free</li>
+                  <li>Individual student licenses cost $8 USD per semester (5 months)</li>
+                  <li>Schools may purchase 1-year student licenses in bulk for $5 USD each (10 license minimum)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+		  
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-top">
+    <div class="container py-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+          <a class="d-inline-flex align-items-center gap-2 mb-2 text-decoration-none text-body" href="#home" aria-label="ChemVantage home">
+            <img src="/images/CVLogo_thumb.png" alt="ChemVantage logo" height="35px" />
+            <span class="fw-bold">ChemVantage</span>
+          </a>
+          <p class="mb-0 small text-muted">© <span id="year">2025</span> ChemVantage LLC.</p>
+        </div>
+        <div class="col-md-6">
+          <nav aria-label="Footer">
+            <ul class="nav justify-content-md-end">
+              <li class="nav-item"><a class="nav-link px-2" href="#privacy-accessibility">Privacy</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#privacy-accessibility">Accessibility</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#faq">FAQ</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#home">Back to top</a></li>
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
-    <!-- Webpage BTT End -->
+  </footer>
 
-    <!-- Webpage About Start -->
-    <section id="about" class="webpage-about webpage-section section-padding bg-off-white">
-        <div class="container">
-            <div class="section-heading">
-                <h3>About Us</h3>
-            </div>
-            <div class="d-flex align-center section-heading-top-gap about-content">
-                <div class="w-40">
-                    <img src="images/about-banner.jpg" class="w-100 section-image" alt="chem lab"/>
-                </div>
-                <div class="w-60">
-                	<p>
-                		ChemVantage provides high-quality online learning tools for students in college-level General Chemistry courses. 
-                		The tools are designed to promote good study habits and effective problem-solving skills.
-                	</p>
-					<p>
-                        The founder and chief software architect of ChemVantage is <b>Chuck Wight</b>, who has taught 
-						General Chemistry since 1984 at the University of Utah, Weber State University and Salisbury University.<br/><br/>
-                    </p>
-                    <a href="/about.html" class="btn btn-two nav-link" >
-                        Learn More About ChemVantage
-                    </a>
-                </div>
-            </div>
-            <div class="d-flex about-content mt">
-                <div class="w-100">
-                    <h6>
-                        ChemVantage works with your learning management system using LTI
-                    </h6>
-                    <p>
-                        You create ChemVantage assignments in your LMS, and the scores are posted automatically to the LMS grade book. No student personal identifiable information (PII) is stored on ChemVantage servers, so your data are always secure.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Webpage About End -->
-
-    <!-- Webpage Placement Start -->
-    <section id="placement" class="webpage-section section-padding webpage-placement ">
-        <div class="container">
-            <div class="section-heading">
-                <h3>Placement Exam</h3>
-            </div>
-            <div class="d-flex align-center section-heading-top-gap placement-content">
-                <div class="w-40">
-                    <img src="images/placement-banner.jpg" class="w-100 section-image" alt="colorful chemicals"/>
-                </div>
-                <div class="w-60">
-                    <h5>
-                        Getting students into the right course at the right time is essential.
-                    </h5>
- 					The ChemVantage placement exam assesses:
-                    <ul>
-                        <li>Knowledge of basic chemistry.</li>
-                        <li>Essential math skills.</li>
-                        <li>Ability to interpret word problems.</li>
-                    </ul>
-                    <p>
-                        We predict success in General Chemistry with up to 74% accuracy! This allows you to take the right mitigation steps, such as 
-					advising some students to take an appropriate prep course or to provide them with supplemental instruction to ensure their success.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Webpage Placement End -->
-
-    <!-- Webpage Assignments Start -->
-    <section id="assignments" class="webpage-section section-padding webpage-items bg-off-white">
-        <div class="container">
-            <div class="section-heading">
-                <h3>Assignments</h3>
-            </div>
-            <div class="d-flex justify-center section-heading-top-gap">
-                <div class="w-100">
-					<a href="https://openstax.org/" target="_blank" aria-label="Opens a new tab" ><img class="openstax" src="images/openstax-logo.png" alt="openstax-partner-logo" style="width:200px;vertical-align:bottom"/></a> <br/><br/>
-					<p>
-					ChemVantage is proud to partner with OpenStax, the largest provider of OER textbooks for General Chemistry. 
-					We provide tools that are aligned with the OpenStax 
-					<a href="https://openstax.org/details/books/chemistry-2e" target="_blank" aria-label="Opens a new tab">Chemistry/2e</a> 
-					and <a href="https://openstax.org/details/books/chemistry-atoms-first-2e" target="_blank" aria-label="Opens a new tab">Chemistry: Atoms First/2e</a> texts.
-					The question items are organized by key concepts, so assignments can be customized to align with most other General Chemistry 
-					textbooks, too.</p>
-					
-					<h5>SmartText</h5>
-					SmartText is an app that combines OpenStax reading assignments with adaptive questions covering key concepts in each chapter. 
-					This ensures that your students are <b>reading and understanding</b> the content in a timely way. We also offer quizzes as 
-					an alternative for those using other textbooks.
-					
-					<h5>Videos</h5>
-					Short instructional videos focus on some of the more important key concepts. Many have embedded quizzes to keep students 
-					on their toes as they watch.
-					
-					<h5>Homework</h5>
-					Choose from thousands of parameterized homework questions designed to challenge students. These are well-suited to group study
-					because the correct answer is different for each student. We are also introducing computer-graded short essay problems, so you
-					can ask questions that start with "Explain why..."
-					
-					<h5>In-Class Polls</h5>
-					Short in-class polls are great for encouraging group work. Students work directly in the LMS with their WiFi-enabled laptop,
-					tablet or phone. It's also a handy tool for tracking attendance in large classes.
-					
-					<h5>Practice Exams</h5>
-					These combine short-answer items with more challenging word problems in a timed test that provides practice and builds confidence
-					for your students before they take your in-class exam.
-                    
-					<br/><br/>
-					<a class="btn btn-two nav-link" href="/examples" target="_blank" aria-label="Opens a new tab">
-                      Try some example assignments
-                	</a>
-				</div>
-            </div>
-        </div>
-    </section>
-    <!-- Webpage Assignments End -->
-
-    <!-- Webpage Pricing Start -->
-    <section id="pricing" class="webpage-section section-padding">
-        <div class="container">
-            <div class="section-heading">
-                <h3>Pricing</h3>
-            </div>
-            <div class="d-flex align-center section-heading-top-gap pricing-content">
-                <div class="w-40">
-                    <img src="images/pricing-banner.jpg" class="w-100 section-image" alt="green flask"/>
-                </div>
-                <div class="w-60">
-                    <h5>
-                        Lowest cost and highest value!
-                    </h5>
-                    <ul>
-                        <li>LTI registration and instructor accounts are free. 
-                            <a href="/lti/registration" target="_blank" aria-label="Opens a new tab" class="btn btn-two" target="_blank" aria-label="Opens a new tab">
-                            Register Now
-                            </a></li>
-                        <li>Each student license costs only <b>$2</b> USD per month or <b>$8</b> USD per semester (5 months). 
-                            Students are prompted to pay via credit card, Venmo or PayPal at the first ChemVantage assignment.</li>
-                        <li>Institutions may purchase 1-year student licenses in quantity for <b>$5</b> USD per student. Minimum 10 licenses. 
-                            Licenses are provisioned automatically to students as they access their first assignment.  
-                            Contact admin@chemvantage.org for an invoice.</li>
-                        <li>Individual 1-year license voucher codes may be purchased from 
-                            <a href="https://www.ecampus.com/chemvantage-1-year-license-chemvantage/bk/8780003189620" target="_blank" aria-label="Opens a new tab">eCampus.com</a>. 
-                            Each code is redeemed at the first assignment in lieu of payment.</li>
-                    </ul>
-                    
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Webpage Pricing End -->
-    </main>
-  
-    <!-- Webpage Footer Start -->
-    <footer>
-        <div class="container">
-            <div class="d-flex footer-content justify-between align-center">
-                <div class="w-40">
-                    <ul class="social"> <!--  
-                        <li>
-                            <a href="#" target="_blank" aria-label="Opens a new tab" role="button">
-                                <img src="images/facebook.png" alt="facebook"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" target="_blank" aria-label="Opens a new tab" role="button">
-                                <img src="images/instagram.png" alt="instagram"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" target="_blank" aria-label="Opens a new tab" role="button">
-                                <img src="images/twitterx.png" alt="twitterx"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" target="_blank" aria-label="Opens a new tab" role="button">
-                                <img src="images/linkedin.png" alt="linkedin"/>
-                            </a>
-                        </li> -->
-                    </ul>
-                </div>
-                <div class="w-40 text-end">
-                    <ul class="contact">
-                        <li>
-                            <a href="tel:+18012438242" title="phone">
-                                +1 (801)243-8242
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailto:admin@chemvantage.org" title="email">
-                                admin@chemvantage.org
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="m-container">
-            <div class="d-flex align-center footer-btm-content">
-                <div class="w-40">
-                    <span class="copy">
-                        &copy; 2010 - <script>document.write(new Date().getFullYear())</script> ChemVantage LLC
-                    </span>
-                </div>
-                <div class="w-60 text-end">
-                    <ul>
-                        <li>
-                            <a href="./terms_and_conditions.html" target="_blank" aria-label="Opens a new tab">
-                                Terms and Conditions
-                            </a>
-                        </li>
-                        <li>
-                            <a href="./privacy_policy.html" target="_blank" aria-label="Opens a new tab">
-                                Privacy Policy
-                            </a>
-                        </li>
-                        <li>
-                            <a href="./copyright.html" target="_blank" aria-label="Opens a new tab">
-                                Copyright
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </footer>
-    <!-- Webpage Footer End -->
-    
-    <script src="js/script.js"></script>
-    <!-- Main Script Sheet -->
-
-    <!-- AccessiBe Script -->
-    <script> (function(){ var s = document.createElement('script'); var h = document.querySelector('head') || document.body; s.src = 'https://acsbapp.com/apps/app/dist/js/app.js'; s.async = true; s.onload = function(){ acsbJS.init({ statementLink : '', footerHtml : '', hideMobile : false, hideTrigger : false, disableBgProcess : false, language : 'en', position : 'right', leadColor : '#146FF8', triggerColor : '#146FF8', triggerRadius : '50%', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerIcon : 'people', triggerSize : 'bottom', triggerOffsetX : 20, triggerOffsetY : 20, mobile : { triggerSize : 'small', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerOffsetX : 10, triggerOffsetY : 10, triggerRadius : '20' } }); }; h.appendChild(s); })(); </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script>
+    // Minimal progressive enhancement for current year without affecting functionality
+    (function () {
+      var y = new Date().getFullYear();
+      var el = document.getElementById('year');
+      if (el) el.textContent = y;
+    })();
+  </script>
 </body>
 </html>

@@ -1,112 +1,124 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="images/logo_sq.png">
-    <!-- Fav-Icon -->
-    <title>ChemVantage | Install</title>
-    <!-- Title -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <!-- Font Family -->
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Main Style Sheet -->
-    <link rel="stylesheet" href="css/responsive.css">
-    <!-- Responsive Style Sheet -->
-
-    <!-- Calendly badge widget begin -->
-    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
-    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async=true></script>
-    <script type="text/javascript">window.onload = function() { Calendly.initBadgeWidget({ url: 'https://calendly.com/richkingsford/30m', text: 'Schedule a setup', color: '#0069FF', textColor: '#FFFFFF', branding: undefined }); }</script>
-    <!-- Calendly badge widget end -->
+  <meta charset="UTF-8">
+  <title>ChemVantage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChemVantage provides standards-aligned homework, quizzes, and exams for General Chemistry with automatic grading and seamless LMS integration using LTI 1.3 Advantage.">
+  <link rel="icon" href="/images/logo_sq.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">  
+  <style>
+    body { font-family: 'Poppins', Arial, sans-serif; }
+    .bg-gradient-primary {
+      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);
+    }
+    .section-heading + p.lead {
+      max-width: 56rem;
+    }
+    .lms-instructions {
+      display: none;
+    }
+    /* Ensure visible focus for keyboard users on minimal devices */
+    :focus-visible {
+      outline: 3px solid #fd7e14;
+      outline-offset: 2px;
+    }
+  </style>
+  <script>
+    function showInstructions(lmsId) {
+      var allInstructions = document.getElementsByClassName('lms-instructions');
+      // Hide all sections
+      for (var i = 0; i < allInstructions.length; i++) {
+        allInstructions[i].style.display = 'none';
+      }
+      // Show the selected section
+      var selectedInstructions = document.getElementById(lmsId);
+      if (selectedInstructions) {
+        selectedInstructions.style.display = 'block';
+      }
+    }
+  </script>
 </head>
-<body>
-    <a href=#main class="skip-to-main-content-link">Skip to main content</a>
-    <!-- Webpage Header Start -->
-    <header class="webpage-header">
-        <div class="container">
-            <div class="d-flex justify-between align-center">
-                <div class="w-0">
-                    <a href="./index.html">
-                        <img src="images/logo.png" class="webpage-logo" alt="website logo"/>
-                    </a>
-                </div>
-                <div class="w-80">
-                    <nav class="header-nav d-flex flex-end align-center gap-3">
-                        <div class="nav-list">
-                            <ul>
-                                <li>
-                                    <a href="./index.html" class="nav-link">Home</a>
-                                </li>
-                                <li>
-                                    <a href="./about.html" class="nav-link">About Us</a>
-                                </li>
-                               <li>
-                                    <a href="./index.html#assignments" class="nav-link">Assignments</a>
-                                </li>
-                                <li>
-                                    <a href="./index.html#itembank" class="nav-link">Items</a>
-                                </li>
-                                <li>
-                                    <a href="./index.html#pricing" class="nav-link">Pricing</a>
-                                </li>
-                            </ul>
-                            <button class="close">&times;</button>
-                        </div>
-                        <button onclick="Calendly.showPopupWidget('https://calendly.com/chemvantage/install-chemvantage');" class="btn btn-two">
-                            Schedule a Setup
-                        </button>
-                        <button class="solid-bar">&#9776;</button>
-                    </nav>
-                </div>
-            </div>
+
+<body class="bg-white text-body">
+  <a href="#main-content" class="visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2  rounded text-dark">Skip to main content</a>
+
+  <header>
+      <div class="container border-bottom">
+        <a class="d-flex align-items-center gap-2" href="#home" aria-label="ChemVantage home">
+          <img src="/images/CVLogo_thumb.png" alt="ChemVantage logo" height="35px" />
+          <span class="fw-bold">ChemVantage</span>
+        </a>
+      </div>
+
+    <section id="home" class="bg-gradient-primary text-white">
+      <div class="container py-5">
+        <div class="row align-items-center g-4 py-lg-4">
+          <div class="col-lg-7">
+            <h1 class="display-5 fw-semibold mb-3">How To Install ChemVantage</h1>
+          </div>
+          <p>
+            ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, you should have administrator privileges in your LMS. There is no cost to register, and instructor accounts are free.
+          </p>
+          <p>
+            Select your LMS platform:
+          </p>
         </div>
-    </header>
-    <!-- Webpage Header End -->
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('canvas');" aria-label="Show Instructions for Canvas">Canvas</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('blackboard');" aria-label="Show Instructions for Blackboard">Blackboard</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('brightspace');" aria-label="Show Instructions for Brightspace">Brightspace</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('moodle');" aria-label="Show Instructions for Moodle">Moodle</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('sakai');" aria-label="Show Instructions for Sakai">Sakai</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('schoology');" aria-label="Show Instructions for Schoology">Schoology</button>
+          <button class="btn btn-outline-light btn-lg" onclick="showInstructions('other');" aria-label="Show Instructions for Other LMS">Other LMS</button>
+        </div>
+      </div>
+    </section>
+  </header>
 
-    <!-- Webpage BTT Start -->
-    <div class="btt">
-        <img src="images/up-arrow.png" alt="up-arrow"/>
-    </div>
-    <!-- Webpage BTT End -->
-
-    <main id="main">
-    <!-- Install Content Start -->
+  <main id="main-content">
     <section class="section-padding install-content">
         <div class="container">
-            <div class="section-heading">
-                <h1>Install</h1>
-            </div>
-            <div class="section-heading-top-gap">
-                <h2>How to Install ChemVantage</h2>
-                <p>
-                    ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, you should have administrator privileges in your LMS. There is no cost to register, and instructor accounts are free.
-                </p>
+             <div class="section-heading-top-gap">
                 <div class="tab-content">
-                    <div class="tab">
-                        <div class="inner">
-                            <button class="tablinks active" onclick="lmsOption(event, 'item01')">Canvas</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item02')">Blackboard</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item03')">Brightspace</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item04')">Moodle</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item05')">Sakai</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item06')">Schoology</button>
-                            <button class="tablinks" onclick="lmsOption(event, 'item07')">Other</button>
-                        </div>
-                      </div>
-
-                      <div id="item01" class="tabcontent" style="display: block;">
-                        <h3>Installation instructions for Instructure Canvas</h3>
-                        <h4>
+				  <br/><br/>
+                      <div id="canvas" class="lms-instructions">
+                        <h2>Installation instructions for Instructure Canvas</h2>
+                        <h3>
                             The detailed Canvas documentation can be found <a href=https://community.canvaslms.com/t5/Admin-Guide/How-do-I-add-a-developer-LTI-Registration-key-for-an-account/ta-p/601370>here</a>. The institution's account administrator should perform the following steps:
-                        </h4>
+                        </h3>
                         <ul>
                         	<li>In Global Navigation, click the Admin link, then click the name of the account.</li>
-                        	<li>In Account Navigation, click the Developer Keys link.</li>
-                            <li>Click the Add Developer Key button. Then click the LTI Registration option.</li>
-                            <li>Enter <b>https://www.chemvantage.org/lti/registration</b> in the Dynamic Registration URL field. Then click the Continue button.</li>
+                        	<li>In Account Navigation, click the Apps link.</li>
+                            <li>In the Manage tab, click the Install a New App button.</li>
+                            <li>Select the LTI version number 1.3. In the Install Method drop-down menu, select the Dynamic Registration option.</li>
+                            <li>Enter <b>https://www.chemvantage.org/lti/registration</b> in the Dynamic Registration URL field. Then click the Next button.</li>
                             <li>Enter your name, email, organization and org URL in the ChemVantage form. Accept the Terms and Submit.</li>
-                            <li>In LTI Settings, select the desired permissions and placements. Then click Enable and Close.</li>
+                            <li>To select which permissions you want to make available to the app, click the Permission toggle on. To function properly, ChemVantage needs to:
+                              <ul>
+                                <li>Create and view ChemVantage assignment data in the grade book</li>
+                                <li>View ChemVantage assignment data in the grade book</li>
+                                <li>View submission data for ChemVantage assignments</li>
+                                <li>Create and update submission results for ChemVantage assignments</li>
+                              </ul>
+                              Then, click the Next button.</li>
+                            <li>Click the User Data Shared With This App drop-down menu and then select what data the tool can access. All user data is preferred, but most features will work if data are restricted except the instructor tools to reconcile scores.</li>
+                            <li>Select the placements where the app can be accessed from. The only required placement is for Assignment Selection. Then click the Next button.
+                            <li>You can add a nickname for the app, a short description, and a name for each placement. Then, click the Next button.</li>
+                            <li>Enter the icon URL: https://www.chemvantage.org/images/CVLogo.png</li>
+                            <li>Review all the details and then click the Install App button.</li>
+                            <li>After installation, the ChemVantage app appears in the Manage tab. Click the Options icon on the far right (3 vertical dots), and copy the client ID.</li>
+                            <li>To configure ChemVantage for an account, go to Account Navigation, click the Settings link, then click the Apps tab.</li>
+                            <li>To configure an app, click the View App Configurations button. Then click the blue +App button.</li>
+                            <li>Select the Configuration Type drop-down menu and set the configuration type to By Client ID. Paste the ChemVantage client ID that you copied in a previous step. Then click Submit.</li>
+                            <li>Click the Install button</li>
+                            <li>ChemVantage should appear in the list on the External Apps page. Click the settings icon on the far right to edit any settings and control the placements. The deployment ID will be sent to ChemVantage automatically on the first tool launch.</li>
+                            <li>Setup is complete</li>
                         </ul>
                         <div class="mt">
                             <p>The course instructor can then create any ChemVantage assignment as follows:</p>
@@ -137,11 +149,11 @@
                       </div>
                       <!-- canvas tab-content end -->
                       
-                      <div id="item02" class="tabcontent">
-                        <h3>Installation instructions for Blackboard Learn</h3>
-                        <h4>
+                      <div id="blackboard" class="lms-instructions">
+                        <h2>Installation instructions for Blackboard Learn</h2>
+                        <h3>
                             The institution's account administrator should perform the following steps:
-                        </h4>
+                        </h3>
                         <ul>
                             <li>
                                 Browse to <a href="https://www.chemvantage.org/lti/registration">https://www.chemvantage.org/lti/registration</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
@@ -193,11 +205,11 @@
                       </div>
                       <!-- blackboard tab-content end -->
                       
-                      <div id="item03" class="tabcontent">
-                        <h3>Installation instructions for D2L Brightspace</h3>
-                        <h4>
+                      <div id="brightspace" class="lms-instructions">
+                        <h2>Installation instructions for D2L Brightspace</h2>
+                        <h3>
                             The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/23662-tool-registration-deployment-and-links" target="_blank" aria-label="Opens new tab">here</a>. The institution's account administrator should perform the following steps:
-                        </h4>
+                        </h3>
                         <ul>
                             <li>
                                 Go to Admin Tools | Manage Extensibility
@@ -262,7 +274,7 @@
                                     Description: ChemVantage is an Open Educational Resource for college-level General Chemistry
                                 </li>
                                 <li>
-                                    Domain: https://www.chemvantage.org <span style="color: red;">Note: Domains can only be used in one enabled registration at a time. In order to register a tool with a domain that is already in use, you must first disable the existing registration.</span>
+                                    Domain: https://www.chemvantage.org <b>Note: Domains can only be used in one enabled registration at a time. In order to register a tool with a domain that is already in use, you must first disable the existing registration.</b>
                                 </li>
                                 <li>
                                     Redirect URIs: https://www.chemvantage.org/lti/launch https://www.chemvantage.org/lti/deeplinks
@@ -308,11 +320,11 @@
                       </div>
                       <!-- brightSpace tab-content end -->
 
-                      <div id="item04" class="tabcontent">
-                        <h3>Installation instructions for Moodle</h3>
-                        <h4>
+                      <div id="moodle" class="lms-instructions">
+                        <h2>Installation instructions for Moodle</h2>
+                        <h3>
                             The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank" aria-label="Opens new tab">here</a>. The institution's account administrator should perform the following steps:
-                        </h4>
+                        </h3>
                         <ul>
                             <li>
                                 Go to Site Administration and select the Plugins tab
@@ -399,8 +411,8 @@
                       </div>
                       <!-- moodle tab-content end -->
 
-                      <div id="item05" class="tabcontent">
-                        <h3>Installation instructions for Sakai</h3>
+                      <div id="sakai" class="lms-instructions">
+                        <h2>Installation instructions for Sakai</h2>
                         <p>
                             First of all, Sakai supports LTI Advantage Dynamic Registration! The Sakai documentation can be found <a href="https://sakai.screenstepslive.com/s/sakai_help/m/108646/l/1502032-how-do-i-set-up-an-lti-advantage-tool-using-auto-configuration" target="_blank" aria-label="Opens new tab">here</a>. We strongly encourage you to try that first (see above). The institution's account administrator still has the option of manual registration, but we don't have detailed instructions for this.
                         </p>
@@ -427,8 +439,8 @@
                       </div>
                       <!-- sakai tab-content end -->
 
-                      <div id="item06" class="tabcontent">
-                        <h3>Installation instructions for PowerSchool Schoology</h3>
+                      <div id="schoology" class="lms-instructions">
+                        <h2>Installation instructions for PowerSchool Schoology</h2>
                         <ul>
                             <li>
                                 Click the App Center icon, then select App Center.
@@ -480,8 +492,8 @@
                       </div>
                       <!-- schoology tab-content end -->
 
-                      <div id="item07" class="tabcontent">
-                        <h3>Installation instructions for other LMS platforms</h3>
+                      <div id="other" class="lms-instructions">
+                        <h2>Installation instructions for other LMS platforms</h2>
                         <ul>
                             <li>
                                 Browse to <a href="https://www.chemvantage.org/lti/registration">https://www.chemvantage.org/lti/registration</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
@@ -526,96 +538,45 @@
                     If you have any difficulty with these instructions, please send email to <a href="mailto:admin@chemvantage.org" class="m">admin@chemvantage.org</a> so we can help you!
                 </p>
                 <div class="mt">
-                    <p>
-                        <b>Chuck Wight</b>
-                    </p>
                     <p>ChemVantage LLC</p>
                 </div>
             </div>
         </div>
     </section>
-    <!-- Install Content End -->
 	</main>
 	
-    <!-- Webpage Footer Start -->
-    <footer>
-        <div class="container">
-            <div class="d-flex footer-content justify-between align-center">
-                <div class="w-40">
-                    <ul class="social"> <!-- 
-                        <li>
-                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
-                                <img src="images/facebook.png" alt="facebook"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
-                                <img src="images/instagram.png" alt="instagram"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
-                                <img src="images/twitterx.png" alt="twitterx"/>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
-                                <img src="images/linkedin.png" alt="linkedin"/>
-                            </a>
-                        </li>  -->
-                    </ul>
-                </div>
-                <div class="w-40 text-end">
-                    <ul class="contact">
-                        <li>
-                            <a href="tel:+18012438242" title="phone">
-                                +1 (801)243-8242
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailto:admin@chemvantage.org" title="email">
-                                admin@chemvantage.org
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+  <footer class="border-top">
+    <div class="container py-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-md-6">
+          <a class="d-inline-flex align-items-center gap-2 mb-2 text-decoration-none text-body" href="#home" aria-label="ChemVantage home">
+            <img src="/images/CVLogo_thumb.png" alt="ChemVantage logo" height="35px" />
+            <span class="fw-bold">ChemVantage</span>
+          </a>
+          <p class="mb-0 small text-muted">© <span id="year">2025</span> ChemVantage LLC.</p>
         </div>
-        <div class="m-container">
-            <div class="d-flex align-center footer-btm-content">
-                <div class="w-40">
-                    <span class="copy">
-                        &copy; 2010 - <script>document.write(new Date().getFullYear())</script> ChemVantage LLC
-                    </span>
-                </div>
-                <div class="w-60 text-end">
-                    <ul>
-                        <li>
-                            <a href="./terms_and_conditions.html" target="_blank" aria-label="Opens new tab">
-                                Terms and Conditions
-                            </a>
-                        </li>
-                        <li>
-                            <a href="./privacy_policy.html" target="_blank" aria-label="Opens new tab">
-                                Privacy Policy
-                            </a>
-                        </li>
-                        <li>
-                            <a href="./copyright.html" target="_blank" aria-label="Opens new tab">
-                                Copyright
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+        <div class="col-md-6">
+          <nav aria-label="Footer">
+            <ul class="nav justify-content-md-end">
+              <li class="nav-item"><a class="nav-link px-2" href="#privacy-accessibility">Privacy</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#privacy-accessibility">Accessibility</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#faq">FAQ</a></li>
+              <li class="nav-item"><a class="nav-link px-2" href="#home">Back to top</a></li>
+            </ul>
+          </nav>
         </div>
-    </footer>
-    <!-- Webpage Footer End -->
-    
-    <script src="js/script.js"></script>
-    <!-- Main Script Sheet -->
+      </div>
+    </div>
+  </footer>
 
-    <!-- AccessiBe Script -->
-    <script> (function(){ var s = document.createElement('script'); var h = document.querySelector('head') || document.body; s.src = 'https://acsbapp.com/apps/app/dist/js/app.js'; s.async = true; s.onload = function(){ acsbJS.init({ statementLink : '', footerHtml : '', hideMobile : false, hideTrigger : false, disableBgProcess : false, language : 'en', position : 'right', leadColor : '#146FF8', triggerColor : '#146FF8', triggerRadius : '50%', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerIcon : 'people', triggerSize : 'bottom', triggerOffsetX : 20, triggerOffsetY : 20, mobile : { triggerSize : 'small', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerOffsetX : 10, triggerOffsetY : 10, triggerRadius : '20' } }); }; h.appendChild(s); })(); </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script>
+    // Minimal progressive enhancement for current year without affecting functionality
+    (function () {
+      var y = new Date().getFullYear();
+      var el = document.getElementById('year');
+      if (el) el.textContent = y;
+    })();
+  </script>
 </body>
 </html>
