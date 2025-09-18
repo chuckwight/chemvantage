@@ -49,8 +49,10 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -498,10 +500,17 @@ public class LTIv1p3Launch extends HttpServlet {
 			// retrieve the public Java Web Key from the platform to verify the signature
 			if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
 			URL jwks_url = new URI(d.well_known_jwks_url).toURL();
-			JwkProvider provider = new UrlJwkProvider(jwks_url);
-			if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
-			Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
+			String kid = id_token.getKeyId();
+			
+			// Header may be necessary to jet the JWKS from Moodle
+			Map<String, String> headers = new HashMap<>();
+            headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
+            JwkProvider provider = new UrlJwkProvider(jwks_url, null, null, null, headers);
+			
+            if (kid == null || kid.isEmpty()) throw new Exception("No JWK id found.");
+			Jwk jwk = provider.get(kid); //throws Exception when not found or can't get one
 			RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
+			
 			// verify the JWT signature
 			Algorithm algorithm = Algorithm.RSA256(public_key,null);
 			if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
