@@ -253,7 +253,7 @@ public class Poll extends HttpServlet {
 		
 		// This is the big blue button to view the assignment (almost) like students see it
 		buf.append("<a style='text-decoration: none' href='/Poll?UserRequest=PrintPoll&sig=" + user.getTokenSignature() + "'>"
-				+ "<button class='btn-primary'>Show This Assignment</button></a><br/><br/>");
+				+ "<button class='btn btn-primary'>Show This Assignment</button></a><br/><br/>");
 		
 		Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 		if (d.price > 0 && d.nLicensesRemaining > 0) {		
@@ -290,7 +290,7 @@ public class Poll extends HttpServlet {
 			buf.append("Please wait. Your instructor should inform you when the poll is open.<br/>"
 					+ "At that time you can click the button below to view the poll questions.<br/><br/>");
 			buf.append("<form method=get action=/Poll />"
-					+ "<input type=hidden name=sig class='btn-primary' value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=sig class='btn btn-primary' value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='View the Poll' /> "
 					+ "</form><br/><br/>");
 		}
@@ -319,7 +319,7 @@ public class Poll extends HttpServlet {
 					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Return to the instructor page</a>, or "
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='Close the Poll' />"
-					+ "<input type=submit class='btn-primary' value='Close the Poll' />"
+					+ "<input type=submit class='btn btn-primary' value='Close the Poll' />"
 					+ "</form>");
 		}
 		
@@ -349,7 +349,7 @@ public class Poll extends HttpServlet {
 
 		buf.append("<input type=hidden name=PossibleScore value='" + possibleScore + "' />");
 		buf.append("<input type=hidden name=UserRequest value='SubmitResponses' />");
-		buf.append("<input type=submit id=pollSubmit class='btn-primary' value='Submit My Responses Now' />");
+		buf.append("<input type=submit id=pollSubmit class='btn btn-primary' value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
 		if (a.pollClosesAt != null) 

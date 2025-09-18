@@ -193,7 +193,7 @@ public class PracticeExam extends HttpServlet {
 				buf.append("<b>The password for this exam is: " + a.password + "</b>");
 			}
 			
-			buf.append("<a href='/PracticeExam?sig=" + user.getTokenSignature() + "' class='btn-primary'>Show This Assignment</a><br/><br/>");
+			buf.append("<a href='/PracticeExam?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -218,7 +218,7 @@ public class PracticeExam extends HttpServlet {
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
 				+ "Password: <input type=password size=30 name='ExamPassword' /> "
-				+ "<input id=start type=submit class='btn-primary' value='Begin the exam' disabled />"
+				+ "<input id=start type=submit class='btn btn-primary' value='Begin the exam' disabled />"
 				+ "</form><br/><br/>");	
 
   		buf.append("<script>"
@@ -351,7 +351,7 @@ public class PracticeExam extends HttpServlet {
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
 			buf.append("<div id='timer0' style='color:#EE0000'></div><div id=ctrl0 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit class='btn-primary' value='Grade This Practice Exam'><p>");
+			buf.append("\n<input type=submit class='btn btn-primary' value='Grade This Practice Exam'><p>");
 
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
@@ -419,7 +419,7 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
-			buf.append("\n<input type=submit class='btn-primary' value='Grade This Practice Exam'>");
+			buf.append("\n<input type=submit class='btn btn-primary' value='Grade This Practice Exam'>");
 			buf.append("\n</form><br/>");
 			
 			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");

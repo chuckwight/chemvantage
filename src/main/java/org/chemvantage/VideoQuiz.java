@@ -152,7 +152,7 @@ public class VideoQuiz extends HttpServlet {
 					+ "<LI><a href='/VideoQuiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' video scores</a></LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/VideoQuiz?UserRequest=ShowVideo&sig=" + user.getTokenSignature() + "'>"
-					+ "<button class='btn-primary'>Show This Assignment</button></a><br/><br/>");
+					+ "<button class='btn btn-primary'>Show This Assignment</button></a><br/><br/>");
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -397,7 +397,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit id=submitButton class='btn-primary' value='Submit and Resume the Video'> or "
+		buf.append("<input type=submit id=submitButton class='btn btn-primary' value='Submit and Resume the Video'> or "
 				+ "<a href=/VideoQuiz?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {

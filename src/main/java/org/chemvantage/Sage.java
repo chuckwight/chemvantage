@@ -201,7 +201,7 @@ public class Sage extends HttpServlet {
 
 	static String askAQuestion(User user, Long conceptId, String nonce) {
 		StringBuffer buf = new StringBuffer();
-		buf.append("<button id=askButton class='btn-primary' onClick=showAskForm(); >Ask Sage a Question</button>");
+		buf.append("<button id=askButton class='btn btn-primary' onClick=showAskForm(); >Ask Sage a Question</button>");
 		buf.append("<div id=askForm style='display:none;' >"
 				+ "If you have any question for Sage about <b>" + conceptMap.get(conceptId).title + "</b> you may ask it here:<br/>"
 				+ "<form method=post action=/Sage onsubmit='waitForScore();'>"
@@ -210,7 +210,7 @@ public class Sage extends HttpServlet {
 				+ "<input type=hidden name=UserRequest value='Ask Sage' />"
 				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<textarea rows=4 cols=80 name=UserPrompt ></textarea><br/>"
-				+ "<input id=ask type=submit class='btn-primary' value='Ask Sage' />"
+				+ "<input id=ask type=submit class='btn btn-primary' value='Ask Sage' />"
 				+ "</form><p>"
 				+ "</div>\n");
 		
@@ -375,7 +375,7 @@ public class Sage extends HttpServlet {
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 							+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
 							+ "<input type=hidden name=UserRequest value=DeleteConcept />"
-							+ "<input type=submit value=Delete class='btn-primary' />"
+							+ "<input type=submit value=Delete class='btn btn-primary' />"
 							+ "</form>"
 							+ "</li>");
 				}
@@ -391,10 +391,10 @@ public class Sage extends HttpServlet {
 				buf.append("<option value=" + c.id + ">" + c.title + "</option>");
 			}
 			buf.append("</select>&nbsp;"
-					+ "<input type=submit value='Add' class='btn-primary' />"
+					+ "<input type=submit value='Add' class='btn btn-primary' />"
 					+ "</form><p>");
 
-			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class='btn-primary' onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
+			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class='btn btn-primary' onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
 			} catch (Exception e) {
 			buf.append("<p>" + e.getMessage()==null?e.toString():e.getMessage());
 		}
@@ -589,7 +589,7 @@ public class Sage extends HttpServlet {
 					+ "  b.innerHTML = 'Preparing your assignment...';"
 					+ "}"
 					+ "</script>");
-			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn-primary' onclick=wait();>Show This Assignment</a><br/><br/>");
+			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn btn-primary' onclick=wait();>Show This Assignment</a><br/><br/>");
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -681,7 +681,7 @@ public class Sage extends HttpServlet {
 				buf.append("<div>"
 						+ "Please submit your answer to the question below.<p>"
 						+ "If you get stuck, I am here to help you, but your score will be higher if you do it by yourself.<p>"
-						+ "<a id=help class='btn-primary' role=button href=/Sage?sig=" + user.getTokenSignature() + "&Help=true&ConceptId=" + concept.id + "&p=" + st.random + " onclick=waitForHelp(); >Please help me with this question</a>"
+						+ "<a id=help class='btn btn-primary' role=button href=/Sage?sig=" + user.getTokenSignature() + "&Help=true&ConceptId=" + concept.id + "&p=" + st.random + " onclick=waitForHelp(); >Please help me with this question</a>"
 						+ "</div>"
 						+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right'>"
 						+ "</div>");
@@ -706,7 +706,7 @@ public class Sage extends HttpServlet {
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=UserRequest value='Score This Response' />"
 					+ q.print()
-					+ "<input role='button' aria-label='submit button' id='sub" + q.id + "' type=submit class='btn-primary' />"
+					+ "<input role='button' aria-label='submit button' id='sub" + q.id + "' type=submit class='btn btn-primary' />"
 					+ "</form><p>");
 			
 			// include some javascript to change the submit button
@@ -738,7 +738,7 @@ public class Sage extends HttpServlet {
 					+ "<div style='max-width:800px'>"
 					+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right;margin:20px;'>"
 					+ concept.getSummary() + "<p>"
-					+ "<a class='btn-primary' id=continueButton onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'>Continue</a>"
+					+ "<a class='btn btn-primary' id=continueButton onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'>Continue</a>"
 					+ "</div>");
 	
 		} catch (Exception e) {
@@ -767,7 +767,7 @@ public class Sage extends HttpServlet {
 		
 		if (studentAnswer == null || studentAnswer.isEmpty()) {
 			buf.append("<h1>No answer was submitted</h1>\n"
-					+ "<a id=tryAgain class='btn-primary' onclick=wait('tryAgain','Here we go!'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + "'>Try Again</a><p>");
+					+ "<a id=tryAgain class='btn btn-primary' onclick=wait('tryAgain','Here we go!'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + "'>Try Again</a><p>");
 			return buf.toString() + Subject.footer;
 		};
 		
@@ -795,12 +795,12 @@ public class Sage extends HttpServlet {
 					+ "  document.getElementById('shortAnswer').style.display='inline';\n"
 					+ "}\n"
 					+ "</script>\n");
-			showMeLink.append("<a id=link class='btn-primary' role='button' href=# onclick=showAnswer();>Show Me</a>\n");
+			showMeLink.append("<a id=link class='btn btn-primary' role='button' href=# onclick=showAnswer();>Show Me</a>\n");
 			showMeLink.append("<div id=shortAnswer style='display:none';>\n"
 					+ q.printAllToStudents(studentAnswer)
 					+ " <p>\n"
 					+ " <div id=explanation>"
-					+ " <button id=explainThis class='btn-primary' onclick=getExplanation();>Please explain this answer</button>"
+					+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
 					+ " </div>\n"
 					+ "<script>\n"
 					+ "function getExplanation() {\n"
@@ -902,7 +902,7 @@ public class Sage extends HttpServlet {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
 			// print a button to continue
-			buf.append("<a id=continue class='btn-primary' onclick=wait('continue','Please wait a moment...'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
+			buf.append("<a id=continue class='btn btn-primary' onclick=wait('continue','Please wait a moment...'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		} catch (Exception e) {
 			buf.append("<p>" + e.getMessage()==null?e.toString():e.getMessage());
 		}
@@ -1118,7 +1118,7 @@ public class Sage extends HttpServlet {
 					+ "<input type=submit id=syncAll value='Synchronize All Scores' />"
 					+ "</form><p>");
 			}
-			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class='btn-primary' onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
+			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class='btn btn-primary' onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -1196,7 +1196,7 @@ public class Sage extends HttpServlet {
 				+ "with the Sage at your side, ready to provide help whenever you need it. "
 				+ "Each concept has 5 levels. Whenever you complete a level or finish a concept with a score of 100%, "
 				+ "you will have an opportunity to ask Sage a question of your choice about that concept.<p>"
-				+ "<a id=start onclick=wait(); href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn-primary'>Continue</a>"
+				+ "<a id=start onclick=wait(); href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Continue</a>"
 				+ "</div>");
 		return buf.toString() + Subject.footer;
 	}

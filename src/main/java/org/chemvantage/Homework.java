@@ -859,7 +859,7 @@ public class Homework extends HttpServlet {
 						studentAnswer += "<br/><br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString() 
 								+ "<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)" + "<br/>";
 				default:
-					buf.append("<div><img id=polly src='/images/parrot.png' alt='Fun parrot character' style='float:left; margin:10px'>"
+					buf.append("<div><img id=polly src='/images/parrot.png' alt='Fun parrot character' style='float:right; margin:10px'>"
 							+ "<h2>Congratulations!<h2><h3>You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
 						+ (!user.isAnonymous()?"<a id=showLink role='button' href=# onClick=document.getElementById('solution').style='display:inline';"
 								+ "document.getElementById('polly').style='display:none';this.style='display:none'>(show me)</a>":"") 

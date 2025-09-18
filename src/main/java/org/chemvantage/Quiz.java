@@ -182,7 +182,7 @@ public class Quiz extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
 					+ "</UL><br/>");
 			
-			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn-primary'>Show This Assignment</a><br/><br/>");
+			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -264,7 +264,7 @@ public class Quiz extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "' />"
 					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + qa.id + "' />"
 					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "' />"
-					+ "<input type=submit class='btn-primary'value='Grade This Quiz' />");
+					+ "<input type=submit class='btn btn-primary'value='Grade This Quiz' />");
 			
 			// Randomly select the keys to questions to be presented
 			Random rand = new Random(); // create random number generator to select quiz questions
@@ -311,7 +311,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<div id='timer1' style='color: #EE0000'></div>"
 					+ "	<div id='ctrl1' style='color: #EE0000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
-			buf.append("<input type=submit class='btn-primary' value='Grade This Quiz'/>"
+			buf.append("<input type=submit class='btn btn-primary' value='Grade This Quiz'/>"
 					+ "</FORM>");
 			
 			buf.append("<script>"
@@ -452,7 +452,7 @@ public class Quiz extends HttpServlet {
 					}
 					
 					if (nAnswersEligible > 0) {
-						buf.append("<a id=wrongAnsLink role='button' class='btn-primary' href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>show me</a> ");
+						buf.append("<a id=wrongAnsLink role='button' class='btn btn-primary' href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>show me</a> ");
 						buf.append("<div id=wrongAnsDiv style='display:none'>");
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
