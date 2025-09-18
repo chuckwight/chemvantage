@@ -223,7 +223,7 @@ public class SmartText extends HttpServlet {
 				   + "<input type=hidden name=Parameter value='" + p + "' />"
 				   + "<input type=hidden name=UserRequest value='GradeQuestion' />"
 				   + q.print()
-				   + "<input aria-label='submit the answer for scoring' type=submit class='btn' onclick=this.style.opacity=0.2; />"
+				   + "<input aria-label='submit the answer for scoring' type=submit class='btn-primary' onclick=this.style.opacity=0.2; />"
 				   + "</form><br/>");
 		   st.armed = true;
 		   ofy().save().entity(st).now();
@@ -311,7 +311,7 @@ public class SmartText extends HttpServlet {
 			   		+ "<input type=hidden name=UserRequest value=PrintQuestion />"
 			   		+ "<input type=hidden name=STTransactionId value=" + st.id + " />"
 			   		+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-			   		+ "<button id=btn aria-label='continue to th3e next question' type=submit class='btn' "
+			   		+ "<button id=btn aria-label='continue to the next question' type=submit class='btn-primary' "
 			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form><br/>";
 
 		   if (score==possibleScore) { // finished

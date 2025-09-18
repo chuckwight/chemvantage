@@ -322,7 +322,7 @@ public class Homework extends HttpServlet {
 					+ "<h2>" + a.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
-			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
+			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
 			
 			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items.<br/>");
 			
@@ -588,7 +588,7 @@ public class Homework extends HttpServlet {
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-						+ "<INPUT id=sub" + q.id + " role='button' aria-label='submit this answer for scoring' TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
+						+ "<INPUT id=sub" + q.id + " role='button' aria-label='submit this answer for scoring' TYPE=SUBMIT class='btn btn-primary' VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
 			}
 			if (i==0) buf.append("(none)");
@@ -629,7 +629,7 @@ public class Homework extends HttpServlet {
 							+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 							+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 							+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-							+ "<INPUT id=sub" + q.id + " role='button' TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
+							+ "<INPUT id=sub" + q.id + " role='button' TYPE=SUBMIT class='btn btn-primary' VALUE='Grade This Exercise'><p>"
 							+ "</div></div></FORM>\n");
 				}
 				if (i==0) buf.append("(none)");
@@ -735,7 +735,7 @@ public class Homework extends HttpServlet {
 						+ (qn==null?"":"<input type=hidden name=QNumber value=" + qn + " />")  // this is the assigned question number on the page
 						+ q.print(showWork,studentAnswer) + "<br>");
 
-				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
+				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
 				buf.append("<script>"
 						+ "startTimers('" + (now.getTime() + secondsRemaining*1000) + "');"
 						+ "function timesUp() {"
@@ -926,7 +926,7 @@ public class Homework extends HttpServlet {
 							+ q.printAllToStudents(studentAnswer)
 							+ " <p>\n"
 							+ " <div id=explanation style='max-width:800px'>"
-							+ " <button id=explainThis class=btn onclick=getExplanation();>Please explain this answer</button>"
+							+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
 							+ " </div>\n"
 							+ "<script>\n"
 							+ "function getExplanation() {\n"
@@ -961,14 +961,14 @@ public class Homework extends HttpServlet {
 				if (studentScore > 0) buf.append(fiveStars(user.getTokenSignature()));
 				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
+				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
 				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
 				+ "</a><br clear=left /><br/>");
 				
 				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
 						+ "or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
 			} else { // user is anonymous
-				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
+				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
 				
 				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
 			}
