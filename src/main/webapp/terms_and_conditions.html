@@ -102,7 +102,7 @@
     <div class="container py-4">
       <div class="row g-3 align-items-center">
         <div class="col-md-6">
-          <a class="d-inline-flex align-items-center gap-2 mb-2 text-decoration-none text-body" href="#home" aria-label="ChemVantage home">
+          <a class="d-inline-flex align-items-center gap-2 mb-2 text-decoration-none text-body" href="/" aria-label="ChemVantage home">
             <img src="/images/CVLogo_thumb.png" alt="ChemVantage logo" height="35px" />
             <span class="fw-bold">ChemVantage</span>
           </a>
@@ -111,6 +111,15 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    // Minimal progressive enhancement for current year without affecting functionality
+    (function () {
+      var y = new Date().getFullYear();
+      var el = document.getElementById('year');
+      if (el) el.textContent = y;
+    })();
+  </script>
 
 </body>
 </html>

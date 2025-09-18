@@ -294,7 +294,7 @@ public class Subject {
 			+ "<footer id=footer><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
-			+ "<a href=/privacy/index.html>Privacy</a> | "
+			+ "<a href=/privacy.html>Privacy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
 			+ "</body>\n</html>";
 

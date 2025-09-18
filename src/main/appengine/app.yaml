@@ -50,12 +50,6 @@ handlers:
   require_matching_file: True
   secure: always
 
-# Map the privacy policy document to a static copy
-- url: /privacy
-  static_files: classes/META-INF/resources/privacy/index.html
-  upload: classes/META-INF/resources/privacy/index.html
-  secure: always
-
 # All requests to the following URLs are restricted to admins or service accounts
 - url: /(Admin|DataStoreCleaner|Edit|EraseEntity|contacts|messages|ReportScore)
   secure: always
