@@ -210,6 +210,9 @@ public class Subject {
 		+ "  <script src='/js/script-backend.js'></script>\n"
 		+ "  <style>\n"
 		+ "    body { font-family: 'Poppins', Arial, sans-serif; }\n"
+		+ "    .has-padding {"
+		+ "      padding: 20px;"
+		+ "    }"
 		+ "    .bg-gradient-primary {\n"
 		+ "      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);\n"
 		+ "    }\n"
@@ -272,9 +275,9 @@ public class Subject {
 		+ "    }\n"
 		+ "  </style>\n"
 		+ "</head>"
-		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
+		+ "<body class='bg-white text-body'>\n"
 		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2  rounded text-dark'>Skip to main content</a>\n"
-		+ "  <div>"
+		+ "  <div style='padding: 20px;'>"
 		+ "    <a href=/ style='padding-right:25px'>Home</a> "
 		+ "    <a href=/about.html style='padding-right:25px'>About Us</a> "
 		+ "    <a href='/Feedback?sig=" + sig + "' style='padding-right:25px'>Feedback</a> "
@@ -296,6 +299,7 @@ public class Subject {
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
 			+ "<a href=/privacy.html>Privacy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
+			+ "<script>if (window===window.top)document.body.classList.add('has-padding');</script>"
 			+ "</body>\n</html>";
 
 }
