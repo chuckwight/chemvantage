@@ -3,9 +3,9 @@ instance_class: F1
 
 inbound_services:
 - warmup
-#automatic_scaling:
+automatic_scaling:
 #  min_instances: 1
-#  max_instances: 10
+  max_instances: 5
 
 #default_expiration: 1m
 
