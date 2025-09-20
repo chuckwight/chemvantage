@@ -275,7 +275,7 @@ public class Subject {
 		+ "    }\n"
 		+ "  </style>\n"
 		+ "</head>"
-		+ "<body class='bg-white text-body'>\n"
+		+ "<body>\n"
 		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2  rounded text-dark'>Skip to main content</a>\n"
 		+ "  <div style='padding: 20px;'>"
 		+ "    <a href=/ style='padding-right:25px'>Home</a> "
