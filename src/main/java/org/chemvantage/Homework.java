@@ -125,7 +125,7 @@ public class Homework extends HttpServlet {
 					hintQuestionId = Long.parseLong(request.getParameter("Q"));
 				} catch (Exception e) {}
 				boolean showOptional = Boolean.parseBoolean(request.getParameter("ShowOptional"));
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,hintQuestionId,showOptional) + Subject.footer);
+				out.println(Subject.header("Homework") + printHomework(user,a,hintQuestionId,showOptional) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);

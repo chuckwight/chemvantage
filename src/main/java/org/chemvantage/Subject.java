@@ -183,7 +183,7 @@ public class Subject {
 	}
 	
 	public static String header() {
-		return header("ChemVantage");
+		return header("","");
 	}
 
 	static String header(String title) {
@@ -197,12 +197,13 @@ public class Subject {
 		+ "<html lang='en'>\n"
 		+ "<head>\n"
 		+ "  <meta charset='UTF-8'>\n"
-		+ "  <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n"
+		+ "  <title>ChemVantage" + (title==null || title.isEmpty()?"":" | " + title) + "</title>\n"
+		+ "  <meta name='viewport' content='width=device-width, initial-scale=1'>\n"
+		+ "  <meta name='description' content='ChemVantage provides standards-aligned homework, quizzes, and exams for General Chemistry with automatic grading and seamless LMS integration using LTI 1.3 Advantage.'>\n"
 		+ "  <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />\n"
 		+ "  <meta http-equiv='Pragma' content='no-cache' />\n"
 		+ "  <meta http-equiv='Expires' content='0' />\n"
 		+ "  <link rel='icon' href='images/logo_sq.png'>\n"
-		+ "  <title>ChemVantage | " + title + "</title>\n"
 		+ "  <link rel='preconnect' href='https://fonts.googleapis.com' crossorigin>\n"
 		+ "  <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>\n"
 		+ "  <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap'>\n"
@@ -211,7 +212,7 @@ public class Subject {
 		+ "  <style>\n"
 		+ "    body { font-family: 'Poppins', Arial, sans-serif; }\n"
 		+ "    .has-padding {"
-		+ "      padding: 20px;"
+		+ "      padding: 50px;"
 		+ "    }"
 		+ "    .bg-gradient-primary {\n"
 		+ "      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);\n"
@@ -234,7 +235,7 @@ public class Subject {
 		}
 		
 		buf.append("</head>"
-		+ "<body>\n"
+		+ "<body class='bg-white text-body'>\n"
 		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2 rounded text-dark'>Skip to main content</a>\n"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
 		+ "<main id='main-content'>"));
