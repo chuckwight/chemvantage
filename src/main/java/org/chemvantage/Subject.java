@@ -212,7 +212,7 @@ public class Subject {
 		+ "  <style>\n"
 		+ "    body { font-family: 'Poppins', Arial, sans-serif; }\n"
 		+ "    .has-padding {"
-		+ "      padding: 50px;"
+		+ "      padding: 20px;"
 		+ "    }"
 		+ "    .bg-gradient-primary {\n"
 		+ "      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);\n"
