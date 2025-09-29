@@ -1,0 +1,12 @@
+# Block specific directories from all web crawlers
+User-agent: *
+Disallow: /Admin/
+Disallow: /DataStoreCleaner/
+Disallow: /Edit/
+Disallow: /EraseEntity/
+Disallow: /contacts/
+Disallow: /messages/
+Disallow: /ReportScore/
+
+# Specify the location of the sitemap
+Sitemap: https://www.chemvantage.org/sitemap.xml

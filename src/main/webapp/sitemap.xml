@@ -4,21 +4,18 @@
   <loc>http://chemvantage.org/</loc>
 </url>
 <url>
-  <loc>http://chemvantage.org/./index.html</loc>
+  <loc>http://chemvantage.org/copyright.html</loc>
+</url>
+<url>
+  <loc>http://chemvantage.org/index.html</loc>
 </url>
 <url>
   <loc>http://chemvantage.org/install.html</loc>
 </url>
 <url>
-  <loc>http://chemvantage.org/./terms_and_conditions.html</loc>
+  <loc>http://chemvantage.org/privacy.html</loc>
 </url>
 <url>
-  <loc>http://chemvantage.org/./privacy.html</loc>
-</url>
-<url>
-  <loc>http://chemvantage.org/./copyright.html</loc>
-</url>
-<url>
-  <loc></loc>
+  <loc>http://chemvantage.org/terms_and_conditions.html</loc>
 </url>
 </urlset>
