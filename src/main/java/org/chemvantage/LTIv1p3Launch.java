@@ -551,31 +551,48 @@ public class LTIv1p3Launch extends HttpServlet {
 	
 	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-		String userId = claims.get("sub")==null?"":claims.get("sub").getAsString();  // allows for anonymous user ""
-		User user = new User(claims.get("iss").getAsString(), userId);;
-		
-		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
-		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
-		JsonArray roles = roles_claim.getAsJsonArray();
-		Iterator<JsonElement> roles_iterator = roles.iterator();
-		boolean isLearner = false;
-		boolean isMentor = false;
-		while(roles_iterator.hasNext()){
-			String role = roles_iterator.next().getAsString();
-			user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
-			user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
-			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
-			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator"));
-			if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Learner")) isLearner = true;
-			if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Mentor")) isMentor = true;
-		}
-		if (!user.isInstructor() && (!isLearner || isMentor)) {  // unusual login; send a message to ChemVantage administrator
-			Utilities.sendEmail("ChemVantage Admin","admin@chemvantage.org","Unusual Login User Roles",claims.getAsString());
-		}
-		return user;
+			String userId = claims.get("sub")==null?"":claims.get("sub").getAsString();  // allows for anonymous user ""
+			String platform_id = claims.get("iss").getAsString();
+			User user = new User(platform_id, userId);
+
+			JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
+			if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
+			JsonArray roles = roles_claim.getAsJsonArray();
+			Iterator<JsonElement> roles_iterator = roles.iterator();
+			boolean isLearner = false;
+			boolean isMentor = false;
+			while(roles_iterator.hasNext()){
+				String role = roles_iterator.next().getAsString();
+				user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
+				user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
+				user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
+				user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator"));
+				if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Learner")) isLearner = true;
+				if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Mentor")) isMentor = true;
+			}
+			if (!user.isInstructor() && (!isLearner || isMentor)) {  // unusual login; send a message to ChemVantage administrator
+				Utilities.sendEmail("ChemVantage Admin","admin@chemvantage.org","Unusual Login User Roles",claims.getAsString());
+			}
+			if (user.isInstructor() && ofy().load().type(Instructor.class).filter("hashedId",user.hashedId).count() == 0) {
+				// inform ChemVantage administrator of instructor contact information
+				StringBuffer message = new StringBuffer("<h2>New Instructor:</h2>");
+				try {
+					new Instructor(platform_id,userId,user.roles);
+					message.append(claims.get("name")!= null?"Name: " + claims.get("name").getAsString() + "<br/>":"");
+					message.append(claims.get("email")!= null?"Email: " + claims.get("email").getAsString() + "<br/>":"");
+					JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
+					message.append("Institution: " + platform.get("name").getAsString() + "<br/><br/>");
+				} catch (Exception e) {
+				}
+				message.append(claims.toString());
+				Utilities.sendEmail("ChemVantage Admin","admin@chemvantage.org","New Instructor Login",message.toString());
+			}
+
+			return user;
 		} catch (Exception e) {
-			throw new Exception("User claims could not be validated: " + e.getMessage());
+			throw new Exception("User claims could not be validated: " + e.getMessage() + "<br/>" + debug.toString());
 		}
 	}
 	
