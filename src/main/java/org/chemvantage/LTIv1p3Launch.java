@@ -582,6 +582,8 @@ public class LTIv1p3Launch extends HttpServlet {
 					new Instructor(platform_id,userId,user.roles);
 					message.append(claims.get("name")!= null?"Name: " + claims.get("name").getAsString() + "<br/>":"");
 					message.append(claims.get("email")!= null?"Email: " + claims.get("email").getAsString() + "<br/>":"");
+					JsonObject context = claims.get("https://purl.imsglobal.org/spec/lti/claim/context").getAsJsonObject();
+					message.append("Context: " + context.get("label").getAsString() + " - " + context.get("title").getAsString());
 					JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 					message.append("Institution: " + platform.get("name").getAsString() + "<br/><br/>");
 				} catch (Exception e) {
