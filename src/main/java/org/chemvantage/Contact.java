@@ -41,7 +41,7 @@ public class Contact {
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.email = email;
-		if (email != null && email.contains(".edu")) this.institution = email.substring(email.indexOf("@")+1);
+		this.institution = email.substring(email.indexOf("@")+1);
 	}
 	
 	String getFullName() {

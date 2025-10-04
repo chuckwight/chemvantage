@@ -580,8 +580,17 @@ public class LTIv1p3Launch extends HttpServlet {
 				StringBuffer message = new StringBuffer("<h2>New Instructor:</h2>");
 				try {
 					new Instructor(platform_id,userId,user.roles);
-					message.append(claims.get("name")!= null?"Name: " + claims.get("name").getAsString() + "<br/>":"");
-					message.append(claims.get("email")!= null?"Email: " + claims.get("email").getAsString() + "<br/>":"");
+					String givenName = claims.get("given_name")!= null?claims.get("given_name").getAsString():"";
+					String familyName = claims.get("family_name")!= null?claims.get("family_name").getAsString():"";
+					String email = claims.get("email")!= null?claims.get("email").getAsString():"";
+					if (!familyName.isEmpty() && !email.isEmpty() && ofy().load().type(Contact.class).id(email).now()==null) { // add a Contact
+						Contact contact = new Contact(givenName,familyName,email);
+						contact.role = "faculty";
+						contact.vetted = true;
+						ofy().save().entity(contact);
+					}
+					message.append("Name: "  + givenName + " " + familyName + "<br/>");
+					message.append("Email: " + email + "<br/>");
 					JsonObject context = claims.get("https://purl.imsglobal.org/spec/lti/claim/context").getAsJsonObject();
 					message.append("Context: " + context.get("label").getAsString() + " - " + context.get("title").getAsString() + "<br/>");
 					JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
