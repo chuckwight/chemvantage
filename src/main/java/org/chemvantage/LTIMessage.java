@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -67,23 +68,23 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
 
 			if (!d.scope.contains(scope)) return null;  // must be authorized
-			debug.append("Scope OK.<br/>");
+			//debug.append("Scope OK.<br/>");
 
 			String authToken = authTokens.get(platformDeploymentId);
 			if (authToken != null) {  //found a cached authToken; check the expiration and use it
-				debug.append("Found cached authToken:" + authToken + "<br/>Expires: ");
+				//debug.append("Found cached authToken:" + authToken + "<br/>Expires: ");
 				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
-				debug.append(new Date(jAuthToken.get("exp").getAsLong()));
+				//debug.append(new Date(jAuthToken.get("exp").getAsLong()));
 				if (in5Min.before(new Date(jAuthToken.get("exp").getAsLong()))) {
 					//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Cached AuthToken Request",debug.toString() + "<br/>" );
 					return jAuthToken.get("access_token").getAsString();
 				} //else Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Stale AuthToken Request",debug.toString() + "<br/>" );
-			} else debug.append("No cached authToken found.<br/>");
+			} //else debug.append("No cached authToken found.<br/>");
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
 			String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
+			debug.append("Denied by: " + d.oauth_access_token_url + "<br/>");
 
 			String aud = d.oauth_access_token_url;
 			String sub = d.client_id;
@@ -107,7 +108,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
 					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
-			debug.append("Body: " + body + "<br/>");
+			//debug.append("Body: " + body + "<br/>");
 
 			URL u = new URI(d.oauth_access_token_url).toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -125,7 +126,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			wr.close();
 
 			int responseCode = uc.getResponseCode();
-			debug.append("ResponseCode: " + responseCode + "<br/>Content: ");
+			debug.append("ResponseCode: " + responseCode + "<br/>");
 
 			if (responseCode/100 == 2) { // response is OK
 				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
@@ -146,7 +147,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
-				debug.append("Error Stream: " + json.toString());
+				debug.append("Error Stream: " + json.toString() + "<br/>");
 				throw new Exception("Failed AuthToken Request");
 			}
 		} catch (Exception e) {
@@ -484,12 +485,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 
-		StringBuffer buf = new StringBuffer("PostUserScoreDebug:");
+		StringBuffer buf = new StringBuffer("<h2>PostUserScoreDebug</h2>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
-
+			String hashedId = Subject.hashId(userId);
+			buf.append("User hashedId=" + hashedId + "<br/>");
+			buf.append("ScoreKey: " + key(key(User.class,hashedId),Score.class,a.id).toString() + "<br/>");
+			
 			String authToken = getAccessToken(a.domain,scope);
 			buf.append("AuthToken:" + authToken + "<br/>");
 
