@@ -423,9 +423,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n</form><br/>");
 			
 			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
-			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
+			long timerMillis = pt.downloaded.getTime() + timeAllowed*1000L - new Date().getTime();
 			buf.append("<script>"
-					+ "startTimers(" + endMillis + ");"
+					+ "startTimers(" + timerMillis + ");"
 					+ "function timesUp() {"
 					+ "  try {"
 					+ "	   document.getElementById('PracticeExamForm').submit();"

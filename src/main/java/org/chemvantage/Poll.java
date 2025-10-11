@@ -86,9 +86,11 @@ public class Poll extends HttpServlet {
 				String forUserHashedId = request.getParameter("ForUserHashedId");
 				out.println(Subject.header("Poll Submission Review") + resultsPage(user,forUserHashedId,a));
 				break;
+			/*
 			case "Synch":
 				out.println(new Date().getTime());
 				break;
+			*/
 			case "Edit":
 				out.println(Subject.header() + editQuestion(user,request) + Subject.footer);
 				break;
@@ -265,9 +267,7 @@ public class Poll extends HttpServlet {
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
-					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					//+ "}\n"
+					+ "startTimers(" + (a.pollClosesAt.getTime() - new Date().getTime() + 3000L) + ");"
 					+ "</script>");
 		}
 		return buf.toString();
@@ -322,7 +322,7 @@ public class Poll extends HttpServlet {
 					+ "<input type=submit class='btn btn-primary' value='Close the Poll' />"
 					+ "</form>");
 		}
-		
+		buf.append("<div id=questions>");
 		buf.append("<OL>");
 		int possibleScore = 0;
 		buf.append("<form id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
@@ -351,15 +351,14 @@ public class Poll extends HttpServlet {
 		buf.append("<input type=hidden name=UserRequest value='SubmitResponses' />");
 		buf.append("<input type=submit id=pollSubmit class='btn btn-primary' value='Submit My Responses Now' />");
 		buf.append("</form>");
-		
+		buf.append("</div>");
 		if (a.pollClosesAt != null) 
 			buf.append("<script>"
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
+					+ "  document.getElementById('questions').innerHTML='<h2>Time Expired</h2>Your responses were autosubmitted.';"
 					+ "}"
-					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					//+ "}\n"
+					+ "startTimers(" + (a.pollClosesAt.getTime() - new Date().getTime() + (user.isInstructor()?3000L:0L)) + ");"
 					+ "</script>");
 		
 		return buf.toString();
@@ -524,9 +523,7 @@ public class Poll extends HttpServlet {
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
-					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					//+ "}\n"
+					+ "startTimers(" + (a.pollClosesAt.getTime() - new Date().getTime() + 3000L) + ");"
 					+ "</script>");
 		}		
 		return buf.toString();	
@@ -583,8 +580,8 @@ public class Poll extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug:");
 
 		try {
-			
-			if (!user.isInstructor() && forUserHashedId==null && !a.pollIsClosed) return waitForResults(user,a);
+			if (!user.isInstructor() && !a.pollIsClosed) return waitForResults(user,a);
+			//if (!user.isInstructor() && forUserHashedId==null && !a.pollIsClosed) return waitForResults(user,a);
 			
 			buf.append("<h2>Poll Results</h2>");
 			if (user.isInstructor() && forUserHashedId==null) {

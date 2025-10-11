@@ -714,7 +714,7 @@ public class Homework extends HttpServlet {
 					if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
 					if (ht.score>0) solvedRecently=true;
 				}
-				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
+				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000L;
 			}
 			debug.append("recent transactions = "+recentTransactions.size() + "...");
 			if (secondsRemaining > 0 && !solvedRecently) {  
@@ -737,7 +737,7 @@ public class Homework extends HttpServlet {
 
 				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
 				buf.append("<script>"
-						+ "startTimers('" + (now.getTime() + secondsRemaining*1000) + "');"
+						+ "startTimers(" + (secondsRemaining*1000L) + ");"
 						+ "function timesUp() {"
 						+ "document.getElementById('RetryButton').disabled=false;"
 						+ "document.getElementById('RetryButton').value='Grade This Exercise';"

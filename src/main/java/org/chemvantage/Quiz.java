@@ -315,7 +315,7 @@ public class Quiz extends HttpServlet {
 					+ "</FORM>");
 			
 			buf.append("<script>"
-					+ "startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");"
+					+ "startTimers(" + (new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() - new Date().getTime()) + ");"
 					+ "function timesUp() {"
 					+ "document.getElementById('Quiz').submit();}"
 					+ "</script>");

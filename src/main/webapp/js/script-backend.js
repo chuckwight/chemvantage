@@ -45,17 +45,17 @@ function countdown() {
     var minutes;
     var oddSeconds;
     var nowMillis = new Date().getTime();
-    var seconds=Math.round((endMillis-nowMillis)/1000);
-	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);
+    var seconds = endMillis<nowMillis?0:Math.round((endMillis-nowMillis)/1000);
+	var minutes = seconds<0?0:Math.floor(seconds/60.);
 	var oddSeconds = seconds%60;
 	for (i=0;i<2;i++) try {  // change the display of timer0 and/or timer1 in the parent page
-		    document.getElementById('timer'+i).innerHTML='Time remaining: ' + (minutes==0?'':minutes + (minutes==1?' minute ':' minutes ')) + oddSeconds + ' seconds.';}
+		    document.getElementById('timer'+i).innerHTML='Time remaining: ' + (minutes==0?'':minutes + (minutes==1?' minute ':' minutes ')) + oddSeconds + (seconds==0?'':' seconds.');}
 		catch(Exception){}
     if (seconds <= 0) try { timesUp() } catch (Exception) {} // run a custom script function in the parent page
 	else setTimeout('countdown()',1000);
 }
-function startTimers(m) {
-	endMillis = m;
+function startTimers(m) {  // m is the start value of the timer in milliseconds 
+	endMillis = new Date().getTime() + m; // endMillis is the absolute time of the user's System clock at the end of the tie onterval
 	countdown();
 }
 function confirmSubmission() {

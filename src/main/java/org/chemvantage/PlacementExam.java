@@ -437,9 +437,9 @@ public class PlacementExam extends HttpServlet {
 			buf.append("\n<input type=submit class='btn btn-primary' value='Grade This Placement Exam'>");
 			buf.append("\n</form>");
 			
-			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
+			long timerMillis = pt.downloaded.getTime() + timeAllowed*1000L - new Date().getTime();
 			buf.append("<script>"
-					+ "startTimers(" + endMillis + ");"
+					+ "startTimers(" + timerMillis + ");"
 					+ "function timesUp() {"
 					+ "  try {"
 					+ "	   document.getElementById('PlacementExamForm').submit();"
