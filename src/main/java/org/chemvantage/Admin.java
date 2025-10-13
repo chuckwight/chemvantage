@@ -29,6 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
+import com.googlecode.objectify.cmd.Query;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -69,6 +73,10 @@ public class Admin extends HttpServlet {
 			case "OpenStaxCSVReport":
 				response.setContentType("text/csv");
 				out.println(Group.openStaxCSVReport());
+				break;
+			case "Find text":
+				String searchFor = request.getParameter("searchFor");
+				out.println(Subject.getHeader(user) + searchQuestions(searchFor) + Subject.footer);
 				break;
 			default: 
 				out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
@@ -274,11 +282,43 @@ public class Admin extends HttpServlet {
 			// Signature Code
 			buf.append("<h2>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h2>");	
 			buf.append("<h2>Signature Code for 1 year Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 31536000000L).getTime())) + "</h2>");	
-		
+			buf.append("<h2>Search Questions for Text</h2><"
+					+ "form method=get>"
+					+ "Search for: <input type=text name=searchFor /><input type=submit name=UserRequest value='Find text' />"
+					+ "</form>");
 		} catch (Exception e) {
 			buf.append("<p>" + e.toString());
 		}
 		return buf.toString();
 	}
+	
+	String searchQuestions(String searchFor) throws Exception {
+		StringBuffer buf = new StringBuffer("<h1>Searching Questions For: " + searchFor + "</h1>");
+		if (searchFor==null || searchFor.isEmpty()) {
+			buf.append("search string was missing");
+			return buf.toString();
+		}
+		int found = 0;
+		Query<Question> query = ofy().load().type(Question.class).limit(1000);
+		while (found < 100) {
+			QueryResults<Question> iterator = query.iterator();
+			int countInBatch = 0;
+			while (iterator.hasNext()) {
+				Question question = iterator.next();
+				countInBatch++;
+				if (question.text != null && question.text.toLowerCase().contains(searchFor)) {
+					buf.append("id: " + question.id + " Text: " + question.text + "<br/>");
+					found++;
+				}
+			}
+
+			if (countInBatch < 1000) break;
+			Cursor nextCursor = iterator.getCursorAfter();
+			query = query.startAt(nextCursor);           
+		}
+		if (found==0) buf.append("String not found.");
+		return buf.toString();
+	}
+
 }
 
