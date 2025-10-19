@@ -148,7 +148,13 @@ public class Admin extends HttpServlet {
 	}
 
 	private String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
-		StringBuffer buf = new StringBuffer("<h1>Administration</h1>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Administration</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			// Announcements
 			buf.append("<h2>Announcements</h2>");
@@ -158,13 +164,13 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=Announce>"
 					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Subject.getAnnouncement() + "'><BR>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
+					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM><p>");
 
 			// User Feedback
 			int nUserReports = ofy().load().type(UserReport.class).count();
 			if (nUserReports > 0)  {
 				buf.append("<h2>User Feedback</h2>"
-						+ "You have " + nUserReports + " new user feedback reports.");
+						+ "You have " + nUserReports + " new user feedback reports.<p>");
 			}
 
 			// Item Bank Requests
@@ -189,7 +195,7 @@ public class Admin extends HttpServlet {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			if (nPending > 0) buf.append("<h2>Contributed Questions</h2>"
 					+ "<a href=Edit?UserRequest=Review>"
-					+ nPending + " items are currently pending editorial review.</a>");
+					+ nPending + " items are currently pending editorial review.</a><p>");
 			
 			// Recent Activity
 			buf.append("<h2>Recent Activity (past 30 days)</h2>");			
@@ -215,7 +221,7 @@ public class Admin extends HttpServlet {
 						+ "Placement Exam: " + plt + "<br/>"
 						+ "Video: " + vdt + "<br/>"
 						+ "Poll: " + pot
-						+ "</div>");
+						+ "</div><p>");
 			}
 			
 			// New Accounts
@@ -230,12 +236,12 @@ public class Admin extends HttpServlet {
 				buf.append("Assignments: " + nAssignments + ".<br/>"
 						+ "<input type=submit name=action value='Approve'/>&nbsp;"
 						+ "<input type=submit name=action value='Block'/>&nbsp;"
-						+ "<input type=submit name=action value='Delete'/></form><br/>");
+						+ "<input type=submit name=action value='Delete'/></form><p>");
 			}
 			
 			// OpenStax
 			buf.append("<h2>Quarterly OpenStax Ally Partner Report</h2>"
-					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a>");
+					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a><p>");
 			
 			// Create subscription vouchers
 			buf.append("<h2>1-Year Subscription Vouchers</h2>");
@@ -278,10 +284,11 @@ public class Admin extends HttpServlet {
 					+ "<input type=text name=Organization placeholder=organization /> at "
 					+ "$<input type=text size=3 name=Price value=16> each. "
 					+ "<input type=submit value='Show Codes' />");
-			buf.append("</form>");
+			buf.append("</form><p>");
 			// Signature Code
-			buf.append("<h2>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h2>");	
-			buf.append("<h2>Signature Code for 1 year Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 31536000000L).getTime())) + "</h2>");	
+			buf.append("<h2>Anonymous Signature Codes</h2>"
+					+ "1 month: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>"
+					+ "1 year: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 31536000000L).getTime())) + "<p>");	
 			buf.append("<h2>Search Questions for Text</h2><"
 					+ "form method=get>"
 					+ "Search for: <input type=text name=searchFor /><input type=submit name=UserRequest value='Find text' />"

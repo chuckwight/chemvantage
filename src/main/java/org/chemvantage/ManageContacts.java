@@ -54,7 +54,13 @@ public class ManageContacts extends HttpServlet {
 		user.setIsChemVantageAdmin(true);
 		//user.setToken();
 		
-		StringBuffer buf = new StringBuffer("<h2>Manage Contacts</h2>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Contacts</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		int nContacts = ofy().load().type(Contact.class).count();
 		int nUnsubscribed = ofy().load().type(Contact.class).filter("unsubscribed",true).count();
 		

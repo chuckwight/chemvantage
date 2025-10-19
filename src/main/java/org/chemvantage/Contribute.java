@@ -124,8 +124,13 @@ public class Contribute extends HttpServlet {
 	}
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Authors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			// The values of assignmentType, questionType and topicKey are required to start editing
 			String assignmentType = request.getParameter("AssignmentType");

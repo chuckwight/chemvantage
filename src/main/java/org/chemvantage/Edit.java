@@ -390,49 +390,55 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String conceptsForm(HttpServletRequest request) {
-			StringBuffer buf = new StringBuffer();
-			try {
-				// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
-				String assignmentType = request.getParameter("AssignmentType");
-				if (assignmentType==null) assignmentType = "";
-				buf.append("<b>Key Concepts in General Chemistry</b>\n"
-						+ "<form method=get action=/Edit>"
-						+ "<input type=hidden name=UserRequest value=ManageConcepts />"
-						+ "Optional:" + assignmentTypeDropDownBox(assignmentType,true) + "<p>"
-						+ "</form>");
-				buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-						+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH>" + (assignmentType.isEmpty()?"":"<TH>nQuestions</TH>") + "</TR>");
-				List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
-				for (Concept c : concepts) { // one row for each concept
-					Integer nQuestions = null;
-					if (!assignmentType.isEmpty()) {
-						nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",c.id).count();
-					}
-					buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
-							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
-					buf.append("<TR>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + c.orderBy + "' /></TD>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(c.title) + "' /></TD>"
-							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
-							+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
-							+ "</TD></FORM>"
-							+ (nQuestions==null?"":"<TD>"+nQuestions+"</TD>")
-							+ "</TR>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		try {
+			// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
+			String assignmentType = request.getParameter("AssignmentType");
+			if (assignmentType==null) assignmentType = "";
+			buf.append("<h2>Key Concepts in General Chemistry</h2>\n"
+					+ "<form method=get action=/Edit>"
+					+ "<input type=hidden name=UserRequest value=ManageConcepts />"
+					+ "Optional:" + assignmentTypeDropDownBox(assignmentType,true) + "<p>"
+					+ "</form>");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH>" + (assignmentType.isEmpty()?"":"<TH>nQuestions</TH>") + "</TR>");
+			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+			for (Concept c : concepts) { // one row for each concept
+				Integer nQuestions = null;
+				if (!assignmentType.isEmpty()) {
+					nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",c.id).count();
 				}
-				
-	//			print one-row form to add a new Concept:
-				buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateConcept>");
+				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
+						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
+						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
 				buf.append("<TR>"
-						+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
-						+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
-				buf.append("</TABLE>");
-			} catch (Exception e) {
-				buf.append(e.getMessage());
+						+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + c.orderBy + "' /></TD>"
+						+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(c.title) + "' /></TD>"
+						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
+						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
+						+ "</TD></FORM>"
+						+ (nQuestions==null?"":"<TD>"+nQuestions+"</TD>")
+						+ "</TR>");
 			}
-			return buf.toString();
+
+			//			print one-row form to add a new Concept:
+			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateConcept>");
+			buf.append("<TR>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
 		}
+		return buf.toString();
+	}
 
 	void createChapter(HttpServletRequest request) throws Exception {
 			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
@@ -567,13 +573,19 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String editCurrentQuestion (User user,Question q) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			long questionId = q.id;
 			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
 			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
-			buf.append("<h1>Edit</h1><h2>Current Question</h2>");
+			buf.append("<h2>Current Question</h2>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			//buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
@@ -666,7 +678,13 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 */
 	String editorsPage(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h1>Editor's Page</h1>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			buf.append("<a href=Edit?UserRequest=Review>"
@@ -847,7 +865,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String manageOrphanQuestions(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Question Without A ConceptId</h2>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		buf.append("<h2>Question Without A ConceptId</h2>");
 		// find an orphan Question where conceptId==null or conceptId==0 
 		String text = request.getParameter("text");  // starting point for search
 		if (text==null) text = "";
@@ -963,7 +988,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 }
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>New Question</h2>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		buf.append("<h2>New Question</h2>");
 		Long conceptId = null;
 		try {
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
@@ -1047,7 +1079,13 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String previewQuestion(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Administration</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			long questionId = 0;
 			boolean current = false;
@@ -1071,7 +1109,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			Question q = assembleQuestion(request);
 			if (q.requiresParser()) q.setParameters();
 			
-			buf.append("<h1>Edit</h1><h2>Preview Question</h2>");
+			buf.append("<h2>Preview Question</h2>");
 			
 			q.assignmentType = request.getParameter("AssignmentType");
 			if (q.assignmentType==null || q.assignmentType.isEmpty()) q.assignmentType = "Quiz";
@@ -1148,7 +1186,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 
 	String reviewProposedQuestion (User user, HttpServletRequest request) {
 		// identifies a ProposedQuestion item, either from a specific questionId or next in the list
-		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Proposed Question</h2>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editor</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		buf.append("<h2>Proposed Question</h2>");
 		try {
 			List<Key<ProposedQuestion>> pendingQuestionKeys = ofy().load().type(ProposedQuestion.class).keys().list();
 			if (pendingQuestionKeys.size()==0) return editorsPage(user,request);  // done!
@@ -1226,12 +1271,17 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String textsForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		try {
 			long textId = Long.parseLong(request.getParameter("TextId"));
 			Text t = ofy().load().type(Text.class).id(textId).safe();
-			buf.append("<h1>Edit</h1>"
-					+ "<h2>Manage Chapters</h2>");
+			buf.append("<h2>Manage Chapters</h2>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Return to Manage Texts</a><br/><br/>");
 			buf.append("Title: " + t.title + "<br/>"
 				+ "Author: " + t.author + "<br/>"
@@ -1389,7 +1439,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 	
 	String topicsForm(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h1>Edit</h1?<h2>Manage Quiz/Homework/Exam Topics</h2>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		buf.append("<h2>Manage Quiz/Homework/Exam Topics</h2>");
 		try {
 			// print the table of topics for this subject:
 			buf.append("<b>" + Subject.getTitle() + "</b>\n");
@@ -1582,7 +1639,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String videosForm() {
-		StringBuffer buf = new StringBuffer("<h3>Manage Videos</h3>");
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		buf.append("<h2>Manage Videos</h2>");
 		try {
 			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
 			
@@ -1798,7 +1862,13 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 	
 	String editVideoForm(Video v, int segment) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		if (v.breaks == null) {
 			v.breaks = new int[0];
 			v.nQuestions = new int[0];
@@ -1806,7 +1876,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 		}
 		
 		try {
-			buf.append("<h1>Edit</h1><h2>Embed quiz questions in a video</h2>");
+			buf.append("<h2>Embed quiz questions in a video</h2>");
 
 			buf.append("Video: " + v.title + "<p>");
 			

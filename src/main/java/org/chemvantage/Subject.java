@@ -283,7 +283,6 @@ public class Subject {
 		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2  rounded text-dark'>Skip to main content</a>\n"
 		+ "  <div style='padding: 20px;'>"
 		+ "    <a href=/ style='padding-right:25px'>Home</a> "
-		+ "    <a href=/about.html style='padding-right:25px'>About Us</a> "
 		+ "    <a href='/Feedback?sig=" + sig + "' style='padding-right:25px'>Feedback</a> "
 		+ "    <a href='/Contribute?sig=" + sig + "' style='padding-right:25px'>Authors</a> "
 		+ "    <a href='/Edit?sig=" + sig + "' style='padding-right:25px'>Editors</a> "
@@ -298,7 +297,7 @@ public class Subject {
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "</main>"
-			+ "<footer id=footer><hr/>"
+			+ "<footer id=footer style='max-width: 600px'><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
 			+ "<a href=/privacy.html>Privacy</a> | "

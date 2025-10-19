@@ -131,9 +131,16 @@ public class Feedback extends HttpServlet {
 	}
 
 	String feedbackForm(User user) {
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h1>ChemVantage Feedback Page</h1>");
-
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:800px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>ChemVantage Feedback</h1>"
+				+ "				 Your comments and opinions are important to us.  We use this "
+				+ "              information to improve the functionality of the site for our users."
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
 				+ "information to improve the functionality of the site for our users.<p>");
 
