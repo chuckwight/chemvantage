@@ -141,9 +141,6 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
-		buf.append("Your comments and opinions are important to us.  We use this<br>"
-				+ "information to improve the functionality of the site for our users.<p>");
-
 		buf.append("Please rate your overall experience with ChemVantage:<br/>");
 
 		buf.append("<span id='vote' style='color:red;'>(click a star):</span><br/>");
@@ -206,7 +203,15 @@ public class Feedback extends HttpServlet {
 	}
 	
 	String submitFeedback(User user,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:800px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>ChemVantage Feedback</h1>"
+				+ "				 Your comments and opinions are important to us.  We use this "
+				+ "              information to improve the functionality of the site for our users."
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
 		
 		try { 
 			if (!request.getServerName().equals("localhost") && user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
@@ -242,7 +247,6 @@ public class Feedback extends HttpServlet {
 			sendEmailToAdmin(r,user,email);
 		}
 
-		buf.append("<h1>ChemVantage Feedback Page</h1>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars)":"") + ". ");
 		
