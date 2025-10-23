@@ -69,20 +69,6 @@ public class Edit extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-
-/********* temporary utility for Microsoft Partnership *************************
-		if ("Get Json".equals(request.getParameter("UserRequest"))) {
-			try {
-				response.setContentType("text/plain");
-				Integer n = Integer.parseInt(request.getParameter("n"));
-				if (n<=0) throw new Exception("Enter a valid integer.");
-				out.println(sampleQuestions(n));
-			} catch (Exception e) {
-				out.println(e.getMessage());
-			}
-			return;
-		}
-*********************************************************************************/
 		
 		try {
 			String userId = "admin";
@@ -693,16 +679,6 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
-		//	buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
-
-			/********* temporary utility for Microsoft Partnership *************************
-
-			// Temporary section to extract questions as JsonArray
-			buf.append("<form method=get>"
-					+ "Get <input type=text size=3 name=n /> questions as Json array "
-					+ "<input type=submit name=UserRequest value='Get Json' />"
-					+ "</form>");
-***************************************************************************************/
 			
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
 			buf.append("<div style=display:table><div style=display:table-row>");
@@ -832,8 +808,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
 							+ "<TR id=q" + q.id + " VALIGN=TOP>"
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
-							+ "<br/><FONT SIZE=-2>" + q.getPctSuccess() + "%&nbsp;avg&nbsp;score</FONT>"
-							//+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
+							+ "<br/><FONT SIZE=-2>" + q.getSuccess() + "</FONT>"
 							+ "</TD>");
 					buf.append("</FORM>");
 					buf.append("<FORM METHOD=POST ACTION=/Edit>"
