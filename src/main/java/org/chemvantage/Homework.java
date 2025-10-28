@@ -1149,12 +1149,13 @@ public class Homework extends HttpServlet {
 					boolean assigned = a.questionKeys.remove(key(q));
 					StringBuffer qbuf = new StringBuffer();
 					q.setParameters();  // creates randomly selected parameters
+					int successRate = q.getPctSuccess();
 					qbuf.append("\n<TR>"
 							+ "<TD style='vertical-align:top;' NOWRAP>"
 							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
 							+ (assigned?" CHECKED>":">")
 							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
-							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
 							+ "<TD>" + q.printAll() + "</TD>"
 							+ "</TR>");
 					if (assigned) {
@@ -1174,12 +1175,13 @@ public class Homework extends HttpServlet {
 					boolean assigned = a.questionKeys.remove(key(q));
 					StringBuffer qbuf = new StringBuffer();
 					q.setParameters();  // creates randomly selected parameters
+					int successRate = q.getPctSuccess();
 					qbuf.append("\n<TR>"
 							+ "<TD style='vertical-align:top;' NOWRAP>"
 							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
 							+ (assigned?" CHECKED>":">")
 							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
-							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
 							+ "<TD>" + q.printAll() + "</TD>"
 							+ "</TR>");
 					if (assigned) {
