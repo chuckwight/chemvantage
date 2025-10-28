@@ -150,7 +150,7 @@ public class Checkout extends HttpServlet {
 
 		buf.append( "If you have a subscription voucher, please enter the code here: "
 				+ "<input id=voucher_code type=text size=10 />&nbsp;"
-				+ "<button class=btn onclick=redeemVoucher('" + user.getTokenSignature() + "','" + d.getPlatformDeploymentId() + "')>&nbsp;Redeem</button><br/>");
+				+ "<button class='btn btn-primary' onclick=redeemVoucher('" + user.getTokenSignature() + "','" + d.getPlatformDeploymentId() + "')>&nbsp;Redeem</button><br/>");
 		
 		buf.append("<hr>Otherwise, please select the desired number of months you wish to purchase:<br/>"
 				+ "<div style='align: center'>"
@@ -160,7 +160,7 @@ public class Checkout extends HttpServlet {
 				+ "<option value=5 selected>5 months - $" + 4*price + " USD</option>"
 				+ "<option value=12>12 months - $" + 8*price + " USD</option>"
 				+ "</select>&nbsp;"
-				+ "<button class=btn onclick=startCheckout();>Checkout</button>"
+				+ "<button class='btn btn-primary' onclick=startCheckout();>Checkout</button>"
 				+ "</div>");		
 		buf.append("</div>");  // end of 'select_payment_method' div
 		
@@ -171,7 +171,7 @@ public class Checkout extends HttpServlet {
 		buf.append("</div>");  // end of payment div
 		
 		buf.append("<div id=proceed style='display: none'><br/><br/>"
-				+ "<a class='btn btn-two' href='/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'>Proceed to your assignment</a><br/><br/>"
+				+ "<a class='btn btn-primary' href='/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'>Proceed to your assignment</a><br/><br/>"
 				+ "</div>");
 		
 		buf.append(Subject.footer);
