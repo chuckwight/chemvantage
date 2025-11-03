@@ -64,7 +64,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
-			if (d==null) debug.append("Deployment unknown<br/>");
+			if (d==null) debug.append("ChemVantage Deployment unknown<br/>");
 			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
 
 			if (!d.scope.contains(scope)) return null;  // must be authorized
