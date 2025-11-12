@@ -330,9 +330,10 @@ public class Question implements Serializable, Cloneable {
 			buf.append(parseString(text));
 			buf.append("<br/>");
 			buf.append("<div id=showWork" + this.id + " style='display:none'>"
-					+ "<label>Show your work:<br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
+					+ "<label for=ShowWork'" + this.id + "'>Show your work:</label><br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
 					+ "maxlength=500 placeholder='Show your work here' aria-label='show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA>"
-					+ "</label><br/></div>");
+					+ "<br/></div>"
+					+ "<label for='answer" + this.id + "'>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
@@ -341,8 +342,8 @@ public class Question implements Serializable, Cloneable {
 			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}
-			buf.append("<label><input aria-label='student answer' size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
-			buf.append("&nbsp;" + parseString(tag) + "</label><br/><br/>");
+			buf.append("</label><br/><input aria-label='student answer' size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
+			buf.append("&nbsp;" + parseString(tag) + "<br/><br/>");
 			break;        
 		case 6: // FIVE_STAR rating
 			buf.append(text);
@@ -374,7 +375,7 @@ public class Question implements Serializable, Cloneable {
 		case 7: // Short ESSAY question
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<span style='color:#EE0000;font-size:small;'><label for='" + this.id + "'>Write a short essay (800 characters max):</label></span><br/>");
 			buf.append("<textarea id=" + this.id + " aria-label='enter your essay here' name=" + this.id 
 					+ " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
 			break;
@@ -466,12 +467,12 @@ public class Question implements Serializable, Cloneable {
 		case 6: // FIVE_STAR rating
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
+			buf.append("<label><span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
 			for (int i=1;i<6;i++) {
 				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star' "        // properties
 						+ "onmouseover=showStars" + this.id + "(" + i + ") onmouseout=showStars" + this.id + "(0) onclick=showStars" + this.id + "(" + i + ",true) />" ); // mouse actions
 			}
-			buf.append("<input id=" + this.id + " type=hidden name=" + this.id + " />");
+			buf.append("</label><input id=" + this.id + " type=hidden name=" + this.id + " />");
 			buf.append("<br/><br/>");
 			buf.append("<script>"
 					+ "var fixed" + this.id + " = false;"
@@ -487,10 +488,10 @@ public class Question implements Serializable, Cloneable {
 		case 7: // Short ESSAY question
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<label><span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
 			buf.append("<textarea id=" + this.id + " name=" + this.id + " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' "				
 					+ "onKeyUp=document.getElementById('" + this.id + "').value=document.getElementById('" + this.id + "').value.substring(0,800);}>"
-					+ "</textarea><br/><br/>");
+					+ "</textarea></label><br/><br/>");
 			break;
 		}
 		return buf.toString();
@@ -611,11 +612,12 @@ public class Question implements Serializable, Cloneable {
 			} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM id='suggest" + this.id + "' >"
-					+ "<INPUT role='button' aria-label='Report a problem with this question' TYPE=BUTTON VALUE='Report a problem with this question' "
-					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
-					+ "<div id='form" + this.id + "' style='display: none'>");
+					+ "<a aria-label='Report a problem with this question' href=# "
+					+ "onClick=getElementById('form" + this.id + "').style.display='block'>"
+					+ "Report a problem with this question</a>"
+					+ "<div id='form" + this.id + "' style='display:none'>");
 
-			buf.append("<span style=color:red><br/>");
+			buf.append("<span style='color:#EE0000'><br/>");
 			switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
@@ -633,8 +635,8 @@ public class Question implements Serializable, Cloneable {
 			}		
 			buf.append("</span><br/>");
 
-			buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br/>");
-			buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br/>");
+			buf.append("<label>Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /></label><br/>");
+			buf.append("<label>Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /></label><br/>");
 			buf.append("<INPUT TYPE=BUTTON VALUE='Submit Feedback' "
 					+ "onClick=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + Arrays.toString(this.parameters) + "','" + studentAnswer + "',encodeURIComponent(document.getElementById('suggest" + this.id + "').Notes.value),encodeURIComponent(document.getElementById('suggest" + this.id + "').Email.value)); return false;\" />"
 					+ "</div></FORM><br/>");

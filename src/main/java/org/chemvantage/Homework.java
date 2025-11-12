@@ -275,7 +275,7 @@ public class Homework extends HttpServlet {
 	static String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
 		
-		buf.append("Please rate your overall experience with ChemVantage:<br />"
+		buf.append("<bbr/>Please rate your overall experience with ChemVantage:<br />"
 				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
 	
 		for (int iStar=1;iStar<6;iStar++) {
@@ -735,7 +735,7 @@ public class Homework extends HttpServlet {
 						+ (qn==null?"":"<input type=hidden name=QNumber value=" + qn + " />")  // this is the assigned question number on the page
 						+ q.print(showWork,studentAnswer) + "<br>");
 
-				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
+				buf.append("<INPUT TYPE='submit' id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
 				buf.append("<script>"
 						+ "startTimers(" + (secondsRemaining*1000L) + ");"
 						+ "function timesUp() {"
@@ -852,7 +852,7 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) {
 				switch (q.getQuestionType()) {
 				case 6: // Five star response
-					buf.append("<h3>Thank you for the rating.</h3>");
+					buf.append("<b>Thank you for the rating.</b>");
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
@@ -861,7 +861,7 @@ public class Homework extends HttpServlet {
 				default:
 					buf.append("<div style='display:flex'>"
 							+ "<div>"
-							+ "<h2>Congratulations!<h2><h3>You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
+							+ "<h2>Congratulations!</h2><b>You answered the question correctly.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>"
 							+ (!user.isAnonymous()?"<a id=showLink role='button' href=# onClick=document.getElementById('solution').style='display:inline';"
 							+ "document.getElementById('polly').style='display:none';this.style='display:none'>(show me)</a>":"") 
 							+ "</div>"
@@ -875,27 +875,29 @@ public class Homework extends HttpServlet {
 						try {
 							@SuppressWarnings("unused")
 							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
-							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
+							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h2>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>"
+									+ "Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
+							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h2>Almost there!</h2>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
 									+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant or (better!) use <a href=https://en.wikipedia.org/wiki/Scientific_notation#E_notation>scientific E notation</a>.<br/><br/>");
 						}
 						catch (Exception e2) {
-							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
+							buf.append("<h2>Wrong Format</h2>"
+									+ "This question requires a numeric response expressed as an integer, decimal number, "
 									+ "or in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the computer "
 									+ "was unable to recognize your answer as one of these types.<br/>");
 						}
 						break;
 					case 6:  // Five star rating
-						buf.append("<h3>No rating was submitted for this item.</h3>");
+						buf.append("<h2>No rating was submitted for this item.</h2>");
 						break;
 					case 7:  // Essay question
 						int score = essay_score.get("score").getAsInt();
-						if (score<=1) buf.append("<h3>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>");
-						else buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
+						if (score<=1) buf.append("<h2>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>");
+						else buf.append("<h2>Your answer is partly correct, but needs improvement.</h2>");
 						buf.append(essay_score.get("feedback").getAsString() + "<br/><br/>");
 						break;
 					default:  // All other types of questions
-						buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer was scored incorrect because it does not agree with the "
+						buf.append("<h2>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.<br/>");
 				}
 				
@@ -914,7 +916,7 @@ public class Homework extends HttpServlet {
 							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
 							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
 					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
-					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
+					buf.append("<input type='submit' value='Get Some Help Here'></form><br/>");
 				}				
 			}  
 			else {
@@ -1080,16 +1082,16 @@ public class Homework extends HttpServlet {
 			buf.append("<h1>Customize Homework Assignment</h1>");
 			buf.append("<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
-					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
+					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n");
 							
 			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
 					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/>");
+					+ "</form><br/>\n");
 			
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Select the homework questions below to be assigned for grading, "
@@ -1098,7 +1100,7 @@ public class Homework extends HttpServlet {
 					+ "<a href=/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() 
 					+ ">create a custom question for this assignment</a>.<p>"
 					+ "Students may work the optional problems; however, these are not included in the scores "
-					+ "reported to the class LMS.<p>");
+					+ "reported to the class LMS.<p>\n");
 	
 			// Show a List of concepts covered by this assignment
 			Long newConceptId = null;
@@ -1119,14 +1121,14 @@ public class Homework extends HttpServlet {
 						a.conceptIds.remove(cId);  // remove id for null Concept
 					}
 				}
-				buf.append("</ul>");
+				buf.append("</ul>\n");
 			}
 	
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=get action=/Homework>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "You may include additional question items from: "
 					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<label>You may include additional question items from: "
 					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
 				try {
@@ -1134,7 +1136,7 @@ public class Homework extends HttpServlet {
 					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("</select></form><br/><hr>");
+			buf.append("</select></label></form><br/>\n<hr>\n");
 			
 			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
 			StringBuffer assignedQuestions = new StringBuffer();
@@ -1152,9 +1154,11 @@ public class Homework extends HttpServlet {
 					int successRate = q.getPctSuccess();
 					qbuf.append("\n<TR>"
 							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<label>"
 							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED>":">")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ (assigned?" CHECKED />":" />")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
+							+ "</label><br/>"
 							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
 							+ "<TD>" + q.printAll() + "</TD>"
 							+ "</TR>");
@@ -1178,9 +1182,11 @@ public class Homework extends HttpServlet {
 					int successRate = q.getPctSuccess();
 					qbuf.append("\n<TR>"
 							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<label>"
 							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED>":">")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ (assigned?" CHECKED >":" />")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
+							+ "</label><br/>"
 							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
 							+ "<TD>" + q.printAll() + "</TD>"
 							+ "</TR>");
@@ -1199,10 +1205,10 @@ public class Homework extends HttpServlet {
 			buf.append("<b>Select the assigned question items for this assignment</b><br/>");
 			
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM style='display:inline;' NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM style='display:inline;' NAME=DummyForm><label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
-					+ "> Select/Unselect All</FORM>&nbsp;&nbsp;&nbsp;");
+					+ "> Select/Unselect All</label></FORM>&nbsp;&nbsp;&nbsp;");
 			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
 			
 			// Make a list of individual questions that can be selected or deselected for this assignment
@@ -1330,7 +1336,7 @@ public class Homework extends HttpServlet {
 				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
-			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
+			buf.append("<table><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
 			int i=0;
 			int nMismatched = 0;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
