@@ -200,7 +200,7 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	static Question assembleQuestion(HttpServletRequest request) throws Exception {
+	Question assembleQuestion(HttpServletRequest request) throws Exception {
 		int questionType = Integer.parseInt(request.getParameter("QuestionType"));
 		String assignmentType = request.getParameter("AssignmentType");
 		Question q = new Question(questionType);
@@ -263,7 +263,7 @@ public class Homework extends HttpServlet {
 		return q;
 	}
 	
-	static void deleteQuestion(User user, HttpServletRequest request) {
+	void deleteQuestion(User user, HttpServletRequest request) {
 		if (!user.isInstructor()) return;
 		Question q = null;
 		try {
@@ -272,27 +272,142 @@ public class Homework extends HttpServlet {
 		if (user.getId().equals(q.authorId)) ofy().delete().entity(q).now();
 	}
 	
-	static String fiveStars(String sig) {
+	String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
 		
-		buf.append("<bbr/>Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
-	
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' alt='star " + iStar + " for rating' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
-		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 aria-label='slider for rating ChemVantage' onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
-				+ "</span>");
-		buf.append("<p>");
+		buf.append("<style>"
+				+ ":root{\n"
+				+ "  --star-rating-size: 2.5rem;\n"
+				+ "  --unchecked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='%23fff' stroke='%23666' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --checked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='gold' stroke='%23666' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --hovered-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='red' stroke='%23fff' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --max-stars: 5;\n"
+				+ "}\n"
+				+ ".star-rating{\n"
+				+ "  width: min-content;\n"
+				+ "  padding: 0.3rem;\n"
+				+ "}\n"
+				+ ".star-rating>div {\n"
+				+ "  position: relative;\n"
+				+ "  height: var(--star-rating-size);\n"
+				+ "  width: calc(var(--star-rating-size) * var(--max-stars));\n"
+				+ "  background-image: var(--unchecked-image); \n"
+				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
+				+ "}\n"
+				+ ".star-rating label {\n"
+				+ "  position: absolute;\n"
+				+ "  height: 100%;\n"
+				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(1) {\n"
+				+ "  z-index: 5;\n"
+				+ "  width: calc(100% / var(--max-stars) * 1);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(2) {\n"
+				+ "  z-index: 4;\n"
+				+ "  width: calc(100% / var(--max-stars) * 2);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(3) {\n"
+				+ "  z-index: 3;\n"
+				+ "  width: calc(100% / var(--max-stars) * 3);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(4) {\n"
+				+ "  z-index: 2;\n"
+				+ "  width: calc(100% / var(--max-stars) * 4);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(5) {\n"
+				+ "  z-index: 1;\n"
+				+ "  width: calc(100% / var(--max-stars) * 5);\n"
+				+ "}\n"
+				+ ".star-rating input:checked + label,\n"
+				+ ".star-rating input:focus + label{\n"
+				+ "  background-image: var(--checked-image); \n"
+				+ "}\n"
+				+ ".star-rating input:checked + label:hover,\n"
+				+ ".star-rating label:hover{\n"
+				+ "  background-image: var(--hovered-image); \n"
+				+ "}\n"
+				+ ".star-rating>div:focus-within{\n"
+				+ "  outline: 0.25rem solid lightblue;\n"
+				+ "}\n"
+				+ ".star-rating input,\n"
+				+ ".star-rating label>span{\n"
+				+ "  border: 0;\n"
+				+ "  padding: 0;\n"
+				+ "  margin: 0;\n"
+				+ "  position: absolute !important;\n"
+				+ "  height: 1px; \n"
+				+ "  width: 1px;\n"
+				+ "  overflow: hidden;\n"
+				+ "  clip: rect(1px 1px 1px 1px); \n"
+				+ "  clip: rect(1px, 1px, 1px, 1px); \n"
+				+ "  clip-path: inset(50%); \n"
+				+ "  white-space: nowrap; \n"
+				+ "}\n"
+				+ "</style>");
+		
+		buf.append("<div id='my-star-rating' style='color:#B20000;font-size:2em;'>"
+				+ "<fieldset class='star-rating'>\n"
+				+ "  <legend style='color:#B20000;'>Please rate ChemVantage:</legend>\n"
+				+ "  <div>"
+				+ "    <input type='radio' name='rating' value='1' id='rating1' />\n"
+				+ "    <label for='rating1'><span>1</span></label>\n"
+				+ "    <input type='radio' name='rating' value='2' id='rating2' />\n"
+				+ "    <label for='rating2'><span>2</span></label>\n"
+				+ "    <input type='radio' name='rating' value='3' id='rating3' />\n"
+				+ "    <label for='rating3'><span>3</span></label>\n"
+				+ "    <input type='radio' name='rating' value='4' id='rating4' />\n"
+				+ "    <label for='rating4'><span>4</span></label>\n"
+				+ "    <input type='radio' name='rating' value='5' id='rating5' />\n"
+				+ "    <label for='rating5'><span>5</span></label>\n"
+				+ "  </div>"
+				+ "</fieldset>"
+				+ "</div>");
+		
+		buf.append("<script>"
+				+ "var rating = 0;\n"
+				+ "document.querySelectorAll('.star-rating input[name=\"rating\"]').forEach(function(radio){\n"
+				+ "   radio.addEventListener('change', function(){\n"
+				+ "      rating = document.querySelector('.star-rating input[name=\"rating\"]:checked').value;\n"
+				+ "      submitStars(rating);"
+				+ "   });\n"
+				+ "});"
+				+ "async function submitStars(rating) {\n"
+				+ "  try {\n"
+				+ "    const url = '/Feedback?UserRequest=AjaxRating&NStars=' + rating + '&sig=" + sig + "';"
+				+ "    var msg = '';"
+				+ "    const response = await fetch(url);\n"
+				+ "    if (!response.ok) {\n"
+				+ "      throw new Error(`HTTP error! status: ${response.status}`);\n"
+				+ "    }\n"
+				+ "    const resultString = await response.text();\n"
+				+ "    switch (rating) {\n"
+				+ "      case '1': msg='1 star - Please <a href=/Feedback?sig=" + sig + ">tell us why</a>.';\n"
+				+ "                break;\n"
+				+ "      case '2': msg='2 stars - Please <a href=/Feedback?sig=" + sig + ">tell us why</a>.';\n"
+				+ "                break;\n"
+				+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + sig + ">Provide additional feedback.';\n"
+				+ "                break;\n"
+				+ "      case '4': msg='Thank you. ' + resultString;\n"
+				+ "                break;\n"
+				+ "      case '5': msg='Thank you! ' + resultString;\n"
+				+ "                break;\n"
+				+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
+				+ "    }"
+				+ "    document.getElementById('my-star-rating').innerHTML = msg + '<br/>';\n"
+				+ "    return msg;\n"
+				+ "  } catch (error) {\n"
+				+ "    return 'Error recording rating: ' + error;\n"
+				+ "  }\n"
+				+ "}"
+				+ "</script>");
+		
+		buf.append("<br/>");
 	
 		return buf.toString(); 
 	}
-	
-	static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
+
+	void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return;
 		String[] questionIds = request.getParameterValues("QuestionId");
 		if (questionIds == null) return;
@@ -347,7 +462,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String newQuestionForm(User user,HttpServletRequest request) {
+	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>Create Custom Homework Question</h1>");
 		if (!user.isInstructor()) return null;
 		
@@ -452,7 +567,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String orderResponses(String[] answers) {
+	String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
@@ -504,7 +619,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws Exception  {
+	String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws Exception  {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
@@ -648,7 +763,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
+	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		JsonObject essay_score = new JsonObject(); // contains essay score and feedback
@@ -985,7 +1100,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String questionTypeDropDownBox(int questionType) {
+	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("\n<SELECT NAME=QuestionType>"
 				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
@@ -1062,7 +1177,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static void saveQuestion(User user, HttpServletRequest request) {
+	void saveQuestion(User user, HttpServletRequest request) {
 		if (!user.isInstructor()) return;
 		try {
 			Question q = assembleQuestion(request);
@@ -1383,7 +1498,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String synchronizeScore(User user, Assignment a, String forUserId) {
+	String synchronizeScore(User user, Assignment a, String forUserId) {
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
 			if (a==null) throw new Exception();  // can only do this for a known assignment
@@ -1392,7 +1507,7 @@ public class Homework extends HttpServlet {
 		return "Failed. Check assignment settings in the LMS.";
 	}
 
-	static boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
+	boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
 		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function

@@ -236,7 +236,7 @@ public class Subject {
 		
 		buf.append("</head>\n"
 		+ "<body class='bg-white text-body'><main id='main-content'>\n"
-		+ (announcement==null || announcement.isEmpty()?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n")
+		+ (announcement==null || announcement.isEmpty()?"":"<FONT style='color: #B20000'>" + announcement + "</FONT><br/>\n")
 		);
 		
 		return buf.toString();
@@ -289,7 +289,7 @@ public class Subject {
 		+ "    <a href='/contacts' style='padding-right:25px'>Contacts</a> "
 		+ "    <a href='/messages' style='padding-right:25px'>Messages</a> "
 		+ "  </div><br/>"
-		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
+		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #B20000'>" + announcement + "</FONT><br/>\n"
 		+ "<main id='main-content'>");
 	}
 	

@@ -80,7 +80,7 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin(r,user,email);
 				break;
 			case "AjaxRating":
-				recordAjaxRating(request);
+				out.println(recordAjaxRating(request));
 				break;
 			default:
 				out.println((user.isChemVantageAdmin()?Subject.getHeader(user):Subject.header("ChemVantage Feedback Form")) + feedbackForm(user) + Subject.footer);
@@ -127,7 +127,7 @@ public class Feedback extends HttpServlet {
 		catch (Exception e) {
 			return e.toString();
 		}
-		return "Your rating was " + stars + " stars. The average user rating is " + Subject.getAvgStars() + " stars.";
+		return "Your rating was " + stars + " stars. The average user rating is " + Subject.getAvgStars() + " stars (" + Subject.getNStarReports() + " ratings).";
 	}
 
 	String feedbackForm(User user) {
