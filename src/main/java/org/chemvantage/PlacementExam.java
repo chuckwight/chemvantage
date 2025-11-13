@@ -392,7 +392,7 @@ public class PlacementExam extends HttpServlet {
 			debug.append("6");
 			
 			// 2-point questions
-			buf.append("<U>2 point questions:</U>");
+			buf.append("<B>2 point questions:</B>");
 			buf.append("<OL>\n");
 			int nQuestions = 30;
 			int i = 0;
@@ -410,7 +410,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("</OL>");
 
 			// 4-point questions
-			buf.append("<U>4 point questions:</U>");
+			buf.append("<B>4 point questions:</B>");
 			buf.append("<OL>\n");
 			nQuestions = 10;
 			i=0;
@@ -874,7 +874,7 @@ public class PlacementExam extends HttpServlet {
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
 			for (int j=1;j<=concepts.size();j++) buf.append("<th>Topic " + j + "</th>");
-			buf.append("<th>Total Score</th><th>Reviewed</th><th></th><th></th></tr>");
+			buf.append("<th>Total Score</th><th>Reviewed</th><th>Review</th><th>Delete</th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
@@ -1285,22 +1285,23 @@ public class PlacementExam extends HttpServlet {
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
 					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br/>");
 			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />" 
-					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
+					+ "<label>Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes.</label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
 					+ "</form><br/>");
 			
 			buf.append("By default, students may attempt this placement exam as many times as they wish. This rewards students who persist "
 					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<label>Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
 					+ "</form><br/><br/>");
 			
 			buf.append("By default, students will view the exam immediately after clicking the assignment link in your LMS. However, "
-					+ "you may (optionally) set a password required to start the exam by entering it below:</br>"
-					+ "<form method=post action=/PlacementExam ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
+					+ "you may (optionally) set a password required to start the exam:</br>"
+					+ "<form method=post action=/PlacementExam >"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Password: <input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' /></label>"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 			
 			buf.append("Select the items to be included in this placement exam:<br/><br/>");
@@ -1317,52 +1318,53 @@ public class PlacementExam extends HttpServlet {
 			 questionKeys.addAll(questionKeys_04pt);
 			 Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM NAME=DummyForm><label><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
-					+ "> Select/Unselect All</FORM>");
+					+ "> Select/Unselect All</label></FORM>");
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=PlacementExam>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PlacementExam>"
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>"
+					+ "<fieldset><legend><h2>Available Questions</h2></legend>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
 			Question q = null;
 			int i = 0;
 
 			// 2-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>2-point Questions: (select at least 30)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><B>2-point Questions: (select at least 30)</B></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_02pt) {
 				i++;
 				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b></label></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 			// 4-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>4-point Questions: (select at least 10)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><B>4-point Questions: (select at least 10)</B></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_04pt) {
 				i++;
 				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b></label></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+			buf.append("</TABLE></fieldset><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
 		} catch (Exception e) {
 			buf.append("Sorry, the assignment could not be found. " + e.getMessage());
 		}
