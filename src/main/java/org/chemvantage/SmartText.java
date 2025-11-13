@@ -319,7 +319,7 @@ public class SmartText extends HttpServlet {
 				   buf.append(continueButton);
 			   } else {  // just completed for first time
 				   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
-				   buf.append(fiveStars());
+				   buf.append(fiveStars(user.getTokenSignature()));
 			   }
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
@@ -354,45 +354,141 @@ public class SmartText extends HttpServlet {
 	   return buf.toString();
    }
 
-	String fiveStars() {
+   String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
-
-		buf.append("<script type='text/javascript'>"
-				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
-				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;"
-				+ "  function showStars(n) {"
-				+ "    if (!set) {"
-				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
+		
+		buf.append("<style>"
+				+ ":root{\n"
+				+ "  --star-rating-size: 2.5rem;\n"
+				+ "  --unchecked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='%23fff' stroke='%23666' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --checked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='gold' stroke='%23666' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --hovered-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='red' stroke='%23fff' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
+				+ "  --max-stars: 5;\n"
+				+ "}\n"
+				+ ".star-rating{\n"
+				+ "  width: min-content;\n"
+				+ "  padding: 0.3rem;\n"
+				+ "}\n"
+				+ ".star-rating>div {\n"
+				+ "  position: relative;\n"
+				+ "  height: var(--star-rating-size);\n"
+				+ "  width: calc(var(--star-rating-size) * var(--max-stars));\n"
+				+ "  background-image: var(--unchecked-image); \n"
+				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
+				+ "}\n"
+				+ ".star-rating label {\n"
+				+ "  position: absolute;\n"
+				+ "  height: 100%;\n"
+				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(1) {\n"
+				+ "  z-index: 5;\n"
+				+ "  width: calc(100% / var(--max-stars) * 1);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(2) {\n"
+				+ "  z-index: 4;\n"
+				+ "  width: calc(100% / var(--max-stars) * 2);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(3) {\n"
+				+ "  z-index: 3;\n"
+				+ "  width: calc(100% / var(--max-stars) * 3);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(4) {\n"
+				+ "  z-index: 2;\n"
+				+ "  width: calc(100% / var(--max-stars) * 4);\n"
+				+ "}\n"
+				+ ".star-rating label:nth-of-type(5) {\n"
+				+ "  z-index: 1;\n"
+				+ "  width: calc(100% / var(--max-stars) * 5);\n"
+				+ "}\n"
+				+ ".star-rating input:checked + label,\n"
+				+ ".star-rating input:focus + label{\n"
+				+ "  background-image: var(--checked-image); \n"
+				+ "}\n"
+				+ ".star-rating input:checked + label:hover,\n"
+				+ ".star-rating label:hover{\n"
+				+ "  background-image: var(--hovered-image); \n"
+				+ "}\n"
+				+ ".star-rating>div:focus-within{\n"
+				+ "  outline: 0.25rem solid lightblue;\n"
+				+ "}\n"
+				+ ".star-rating input,\n"
+				+ ".star-rating label>span{\n"
+				+ "  border: 0;\n"
+				+ "  padding: 0;\n"
+				+ "  margin: 0;\n"
+				+ "  position: absolute !important;\n"
+				+ "  height: 1px; \n"
+				+ "  width: 1px;\n"
+				+ "  overflow: hidden;\n"
+				+ "  clip: rect(1px 1px 1px 1px); \n"
+				+ "  clip: rect(1px, 1px, 1px, 1px); \n"
+				+ "  clip-path: inset(50%); \n"
+				+ "  white-space: nowrap; \n"
+				+ "}\n"
+				+ "</style>");
+		
+		buf.append("<div id='my-star-rating' style='color:#B20000;font-size:2em;'>"
+				+ "<fieldset class='star-rating'>\n"
+				+ "  <legend style='color:#B20000;'>Please rate ChemVantage:</legend>\n"
+				+ "  <div>"
+				+ "    <input type='radio' name='rating' value='1' id='rating1' />\n"
+				+ "    <label for='rating1'><span>1</span></label>\n"
+				+ "    <input type='radio' name='rating' value='2' id='rating2' />\n"
+				+ "    <label for='rating2'><span>2</span></label>\n"
+				+ "    <input type='radio' name='rating' value='3' id='rating3' />\n"
+				+ "    <label for='rating3'><span>3</span></label>\n"
+				+ "    <input type='radio' name='rating' value='4' id='rating4' />\n"
+				+ "    <label for='rating4'><span>4</span></label>\n"
+				+ "    <input type='radio' name='rating' value='5' id='rating5' />\n"
+				+ "    <label for='rating5'><span>5</span></label>\n"
+				+ "  </div>"
+				+ "</fieldset>"
+				+ "</div>");
+		
+		buf.append("<script>"
+				+ "var rating = 0;\n"
+				+ "document.querySelectorAll('.star-rating input[name=\"rating\"]').forEach(function(radio){\n"
+				+ "   radio.addEventListener('change', function(){\n"
+				+ "      rating = document.querySelector('.star-rating input[name=\"rating\"]:checked').value;\n"
+				+ "      submitStars(rating);"
+				+ "   });\n"
+				+ "});"
+				+ "async function submitStars(rating) {\n"
+				+ "  try {\n"
+				+ "    const url = '/Feedback?UserRequest=AjaxRating&NStars=' + rating + '&sig=" + sig + "';"
+				+ "    var msg = '';"
+				+ "    const response = await fetch(url);\n"
+				+ "    if (!response.ok) {\n"
+				+ "      throw new Error(`HTTP error! status: ${response.status}`);\n"
+				+ "    }\n"
+				+ "    const resultString = await response.text();\n"
+				+ "    switch (rating) {\n"
+				+ "      case '1': msg='1 star - Please <a href=/Feedback?sig=" + sig + ">tell us why</a>.';\n"
+				+ "                break;\n"
+				+ "      case '2': msg='2 stars - Please <a href=/Feedback?sig=" + sig + ">tell us why</a>.';\n"
+				+ "                break;\n"
+				+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + sig + ">Provide additional feedback.';\n"
+				+ "                break;\n"
+				+ "      case '4': msg='Thank you. ' + resultString;\n"
+				+ "                break;\n"
+				+ "      case '5': msg='Thank you! ' + resultString;\n"
+				+ "                break;\n"
+				+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
 				+ "    }"
-				+ "  }"
-				+ "  function setStars(n) {"
-				+ "    if (!set) {"
-				+ "      ajaxStars(n);"
-				+ "      set = true;"
-				+ "      document.getElementById('sliderspan').style='display:none';"
-				+ "    }"
-				+ "  }"
+				+ "    document.getElementById('my-star-rating').innerHTML = msg + '<br/>';\n"
+				+ "    return msg;\n"
+				+ "  } catch (error) {\n"
+				+ "    return 'Error recording rating: ' + error;\n"
+				+ "  }\n"
+				+ "}"
 				+ "</script>");
-
-		buf.append("<div>Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
-
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
-		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
-				+ "</span>");
-		buf.append("</div><br/>");
-
+		
+		buf.append("<br/>");
+	
 		return buf.toString(); 
 	}
-	
+
 	static String reviewScore (User user, Assignment a, String for_user_id) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h1>Reading Assignment</h1>"
