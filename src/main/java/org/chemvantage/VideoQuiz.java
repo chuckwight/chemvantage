@@ -677,7 +677,7 @@ public class VideoQuiz extends HttpServlet {
 				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
-			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+			buf.append("<table><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
 			int i=0;
 			int nMismatched = 0;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
