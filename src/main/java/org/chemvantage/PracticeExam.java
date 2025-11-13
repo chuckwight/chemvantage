@@ -360,7 +360,7 @@ public class PracticeExam extends HttpServlet {
 			pt.putPossibleScore(0);
 			
 			// Two-point questions
-			buf.append("<U>2 point questions:</U>");
+			buf.append("<B>2 point questions:</B>");
 			buf.append("<OL>\n");
 			int nQuestions = 10;
 			int i = 0;
@@ -378,7 +378,7 @@ public class PracticeExam extends HttpServlet {
 			if (pt.questionShowWork==null) pt.questionShowWork = new HashMap<Key<Question>,String>();  // initialize this, if necessary
 			
 			// 10-point questions
-			buf.append("<U>10 point questions:</U>");
+			buf.append("<B>10 point questions:</B>");
 			buf.append("<OL>\n");
 			nQuestions = 5;
 			i=0;
@@ -397,7 +397,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			// 15-point questions
-			buf.append("<U>15 point questions:</U>");
+			buf.append("<B>15 point questions:</B>");
 			buf.append("<OL>\n");
 			nQuestions = 2;
 			i = 0;
@@ -727,13 +727,13 @@ public class PracticeExam extends HttpServlet {
 				// put the user's transactions in order of decreasing download time:
 				Collections.sort(userpets,new SortExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
-					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
+					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"#EEEEEE":"#FFFDD0") + "'>"
 							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=6>(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
 						PracticeExamTransaction p = userpets.get(k-1);
-						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
+						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"#EEEEEE":"#FFFDD0") + "'>");
 						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + df.format(p.downloaded) + "&nbsp;UTC</td>");
 
 						if (p.graded==null) buf.append("<td colspan=3>(exam was not submitted for scoring)</td>");
@@ -833,9 +833,9 @@ public class PracticeExam extends HttpServlet {
 					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
-				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+				buf.append("<td style='text-align:center'><label><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
-						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value; /></abel></td>");
 				buf.append("</tr>");
 			}
 			buf.append("</table>");
@@ -860,9 +860,9 @@ public class PracticeExam extends HttpServlet {
 					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
-				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+				buf.append("<td style='text-align:center'><label><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
-						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value; /></label></td>");
 				buf.append("</tr>");
 			}
 			buf.append("</table>");
@@ -887,9 +887,9 @@ public class PracticeExam extends HttpServlet {
 					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
-				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+				buf.append("<td style='text-align:center'><label><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
-						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value; /></label></td>");
 				buf.append("</tr>");
 			}
 			buf.append("</table>");
@@ -956,22 +956,23 @@ public class PracticeExam extends HttpServlet {
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
 					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
 			buf.append("<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
-					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
+					+ "<label>Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes.</label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
 					+ "</form><br/>");
 
 			buf.append("By default, students may attempt this practice exam as many times as they wish. This rewards students who persist "
 					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<label>Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
 					+ "</form><br/>");
 			
 			buf.append("By default, students will view the exam immediately after clicking the assignment link in your LMS. However, "
-					+ "you may (optionally) set a password required to start the exam by entering it below:</br>"
-					+ "<form method=post action=/PracticeExam ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
+					+ "you may (optionally) set a password required to start the exam:</br>"
+					+ "<form method=post action=/PracticeExam >"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Password: <input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' /></label>"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/>");
 			
 			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
@@ -1005,16 +1006,16 @@ public class PracticeExam extends HttpServlet {
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=get action=/PracticeExam>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "You may include additional question items from: "
 					+ "<input type=hidden name=UserRequest value=AssignExamQuestions />"
-					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+					+ "You may include additional question items from the <label>key concept: "
+					+ "<select name=ConceptId><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
 				try {
 					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
 					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("</select></form><hr>");
+			buf.append("</select></label><input type=submit value='Include' /></form><hr>");
 			
 			// retrieve all of the question keys for the requested concepts
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -1047,66 +1048,67 @@ public class PracticeExam extends HttpServlet {
 				ofy().save().entity(a);
 			}
 			
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM NAME=DummyForm><label><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
-					+ "> Select/Unselect All</FORM>");
+					+ "> Select/Unselect All</label></FORM>");
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=PracticeExam>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>"
+					+ "<fieldset><legend><h2>Available Questions</h2></legend>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
 			Question q = null;
 			int i = 0;
 
 			// 2-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>2-point Questions: (select at least 10)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><B>2-point Questions: (select at least 10)</B></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_02pt) {
 				i++;
 				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b></label></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 			// 10-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>10-point Questions: (select at least 5)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><B>10-point Questions: (select at least 5)</B></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_10pt) {
 				i++;
 				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b></label></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 			// 15-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>15-point Questions: (select at least 2)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><B>15-point Questions: (select at least 2)</B></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_15pt) {
 				i++;
 				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b></label></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+			buf.append("</TABLE></fieldset><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
 		} catch (Exception e) {
 			buf.append("Sorry, the assignment could not be found. " + e.getMessage());
 		}
