@@ -738,6 +738,7 @@ public class Homework extends HttpServlet {
 			HWTransaction ht = null;
 			
 			showWork = request.getParameter("ShowWork"+questionId);
+			Score s = null;
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				switch (q.getQuestionType()) {
 				case 6:  // Handle five-star rating response
@@ -819,7 +820,7 @@ public class Homework extends HttpServlet {
 				try {  // throws exception if hwa==null
 					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
 						q.addAttemptSave(studentScore>0);
-						Score s = Score.getInstance(user.getId(),hwa);
+						s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
 						String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
 						Utilities.createTask("/ReportScore",payload);
@@ -832,21 +833,39 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) {
 				switch (q.getQuestionType()) {
 				case 6: // Five star response
-					buf.append("<b>Thank you for the rating.</b>");
+					buf.append("<h3>Thank you for the rating.</h3>");
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
 						studentAnswer += "<br/><br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString() 
 								+ "<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)" + "<br/>";
 				default:
+					
 					buf.append("<div style='display:flex'>"
 							+ "<div>"
-							+ "<h2>Congratulations!</h2><b>You answered the question correctly.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>"
+							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>"
 							+ (!user.isAnonymous()?"<a id=showLink role='button' href=# onClick=document.getElementById('solution').style='display:inline';"
-							+ "document.getElementById('polly').style='display:none';this.style='display:none'>(show me)</a>":"") 
-							+ "</div>"
-							+ "<img id=polly src='/images/parrot.png' alt='Fun parrot character' style='max-width:30%; height:auto; margin:10px'>"
-						+ "</div>");
+							+ "document.getElementById('badge').style='display:none';this.style='display:none'>(show me)</a>":"") 
+							+ "</div>");
+					int decileScore = (int) Math.floor(s.getPctScore() / 10.0);
+					String badgeName = null;
+					switch (decileScore) {
+					case 0: badgeName="Turbo-Penguin-Alchemist";break;
+					case 1: badgeName="Glitter-Shark-Wizard";break;
+					case 2: badgeName="Electric-Llama-Prophet";break;
+					case 3: badgeName="Flamingo-Karate-Detective";break;
+					case 4: badgeName="Space-Hamster-Captain";break;
+					case 5: badgeName="Ninja-Cactus-Cowboy";break;
+					case 6: badgeName="Galactic-Taco-Wizard";break;
+					case 7: badgeName="Pirate-Samurai-Unicorn";break;
+					case 8: badgeName="Disco-Viking-Platypus";break;
+					case 9: badgeName="Quantum-Donut-Knight";break;
+					case 10: badgeName="Turbo-Racoon-Overlord";break;
+					}
+					buf.append("<div id=badge style='text-align: center; max-width:30%; height:auto; margin:10px'>"
+							+ "<img src='/images/badges/" + badgeName + ".png' alt='Fun cartoon character'><br/>"
+							+ "Your score is " + s.getPctScore() + "%<br/>" + badgeName
+							+ "</div></div>");
 				}
 			}
 			else if (studentAnswer.length() > 0) {
