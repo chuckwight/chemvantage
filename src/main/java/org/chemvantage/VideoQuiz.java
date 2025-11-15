@@ -523,20 +523,8 @@ public class VideoQuiz extends HttpServlet {
 			// Seek some feedback for ChemVantage:
 			if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-				buf.append("Please rate your overall experience with ChemVantage:<br />\n"
-						+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
-
-				for (int iStar=1;iStar<6;iStar++) {
-					buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-							+ "style='width:30px; height:30px;' "
-							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
-				}
-				buf.append("<span id=sliderspan style='opacity:0'>"
-						+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-						+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
-						+ "</span>");
-				buf.append("<p>");
-
+				
+				buf.append(Feedback.fiveStars(user.getTokenSignature()));
 			} else {
 				buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
