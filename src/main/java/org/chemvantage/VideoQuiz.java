@@ -90,7 +90,7 @@ public class VideoQuiz extends HttpServlet {
 				out.println(Subject.header("Video") + showVideo(user,videoId,segment) + Subject.footer);
 				break;
 			case "ShowQuizlet":
-				out.println(showQuizlet(user,videoId,segment));
+				out.println(showQuizlet(user,videoId,segment,response));
 				break;
 			case "ShowScores":
 				out.println(Subject.header("Video assignment scores") + showScores(user,request) + Subject.footer);
@@ -100,6 +100,10 @@ public class VideoQuiz extends HttpServlet {
 				break;
 			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
+				break;
+			case "FinishQuizlet":
+				VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.getHashedId()).filter("videoId",videoId).order("-downloaded").first().now();
+				out.println(Subject.header("Video Lecture") + finishQuizlet(user,vt,response) + Subject.footer);
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
@@ -130,7 +134,7 @@ public class VideoQuiz extends HttpServlet {
 				else out.println("Synchronization request failed.");
 				break;
 			default:
-				out.println(scoreQuizlet(user,request));
+				out.println(scoreQuizlet(user,request,response));
 			}
 		} catch (Exception e) {
 			response.getWriter().println(Logout.now(request,e));
@@ -208,7 +212,6 @@ public class VideoQuiz extends HttpServlet {
 					+ "<p>");
 
 			buf.append("<script type=text/javascript>\n"
-					+ "\n"
 					+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"
 					+ "var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);\n"
 					+ "var player;\n"
@@ -326,7 +329,7 @@ public class VideoQuiz extends HttpServlet {
 		return buf.toString();
 	}
 
-	public String showQuizlet(User user,long videoId,int segment) {
+	public String showQuizlet(User user,long videoId,int segment,HttpServletResponse response) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = null;
@@ -356,7 +359,7 @@ public class VideoQuiz extends HttpServlet {
 				ofy().save().entity(vt).now();
 			}
 
-			if (segment == v.breaks.length) return finishQuizlet(user,vt); // we are at the end of video; no more quizlets; shortcut to show results
+			if (segment == v.breaks.length) response.sendRedirect("/VideoQuiz?UserRequest=FinishQuizlet&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
 
 			// get a List of available Question keys for this segment of this video
 			int counter = 0; // skip over this many questions to the ones in the current quizlet
@@ -406,7 +409,7 @@ public class VideoQuiz extends HttpServlet {
 		return buf.toString();
 	}
 
-	public String scoreQuizlet(User user, HttpServletRequest request) throws Exception {
+	public String scoreQuizlet(User user, HttpServletRequest request, HttpServletResponse response) throws Exception {
 		StringBuffer debug = new StringBuffer("starting...");
 		Date now = new Date();
 		VideoTransaction vt = null;
@@ -475,10 +478,10 @@ public class VideoQuiz extends HttpServlet {
 			debug.append(e.getMessage());
 			return debug.toString();
 		}
-		return showQuizlet(user,vt.videoId,segment+1);  // return the next quizlet
+		return showQuizlet(user,vt.videoId,segment+1,response);  // return the next quizlet
 	}
 	
-	String finishQuizlet(User user, VideoTransaction vt) {
+	String finishQuizlet(User user, VideoTransaction vt, HttpServletResponse response) {
 		StringBuffer buf = new StringBuffer();  // prepare a summary of the quizlet scores and missed questions
 
 		boolean noQuizlets = vt.possibleScore==0;
@@ -518,14 +521,14 @@ public class VideoQuiz extends HttpServlet {
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			buf.append(df.format(new Date()));
 
-			buf.append("<h4>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</h4>\n");
-
 			// Seek some feedback for ChemVantage:
 			if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
-				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
+				buf.append("<H3>Congratulations on a perfect score! Good job.</H3>\n");
 				
 				buf.append(Feedback.fiveStars(user.getTokenSignature()));
 			} else {
+				buf.append("<b>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</b>\n");
+
 				buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 				String missedQuestions = "";

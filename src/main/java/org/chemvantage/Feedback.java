@@ -164,11 +164,11 @@ public class Feedback extends HttpServlet {
 		String email = member!=null && member[2]!=null?member[2]:null;
 		
 		buf.append("<FORM NAME=FeedbackForm id=FeedbackForm ACTION=Feedback METHOD=POST>\n"
-				+ "Comments, suggestions or requests: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
+				+ "<label for='comment'>Comments, suggestions or requests: <FONT SIZE=-1>(160 characters max.)</FONT></label><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback />"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars />"
 				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
+				+ "<TEXTAREA id=comment NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
@@ -177,7 +177,7 @@ public class Feedback extends HttpServlet {
 				+ "<input type=hidden name=Email value=" + email + " />");
 		
 		// If the user is anonymous, insert the Google reCaptcha tool (version 2) on the page
-		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><p>");				
+		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><br/>");				
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
@@ -198,138 +198,45 @@ public class Feedback extends HttpServlet {
 
 	static String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
-		
 		buf.append("<style>"
-				+ ":root{\n"
-				+ "  --star-rating-size: 2.5rem;\n"
-				+ "  --unchecked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='%23fff' stroke='%23666' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
-				+ "  --checked-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='gold' stroke='%23666' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
-				+ "  --hovered-image: url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3e%3cpath fill='red' stroke='%23fff' stroke-width='2' d='m25,1 6,17h18l-14,11 5,17-15-10-15,10 5-17-14-11h18z'/%3e%3c/svg%3e\");\n"
-				+ "  --max-stars: 5;\n"
-				+ "}\n"
-				+ ".star-rating{\n"
-				+ "  width: min-content;\n"
-				+ "  padding: 0.3rem;\n"
-				+ "}\n"
-				+ ".star-rating>div {\n"
-				+ "  position: relative;\n"
-				+ "  height: var(--star-rating-size);\n"
-				+ "  width: calc(var(--star-rating-size) * var(--max-stars));\n"
-				+ "  background-image: var(--unchecked-image); \n"
-				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
-				+ "}\n"
-				+ ".star-rating label {\n"
+				+ ".radioStar {\n"
 				+ "  position: absolute;\n"
-				+ "  height: 100%;\n"
-				+ "  background-size: var(--star-rating-size) var(--star-rating-size);\n"
-				+ "}\n"
-				+ ".star-rating label:nth-of-type(1) {\n"
-				+ "  z-index: 5;\n"
-				+ "  width: calc(100% / var(--max-stars) * 1);\n"
-				+ "}\n"
-				+ ".star-rating label:nth-of-type(2) {\n"
-				+ "  z-index: 4;\n"
-				+ "  width: calc(100% / var(--max-stars) * 2);\n"
-				+ "}\n"
-				+ ".star-rating label:nth-of-type(3) {\n"
-				+ "  z-index: 3;\n"
-				+ "  width: calc(100% / var(--max-stars) * 3);\n"
-				+ "}\n"
-				+ ".star-rating label:nth-of-type(4) {\n"
-				+ "  z-index: 2;\n"
-				+ "  width: calc(100% / var(--max-stars) * 4);\n"
-				+ "}\n"
-				+ ".star-rating label:nth-of-type(5) {\n"
-				+ "  z-index: 1;\n"
-				+ "  width: calc(100% / var(--max-stars) * 5);\n"
-				+ "}\n"
-				+ ".star-rating input:checked + label,\n"
-				+ ".star-rating input:focus + label{\n"
-				+ "  background-image: var(--checked-image); \n"
-				+ "}\n"
-				+ ".star-rating input:checked + label:hover,\n"
-				+ ".star-rating label:hover{\n"
-				+ "  background-image: var(--hovered-image); \n"
-				+ "}\n"
-				+ ".star-rating>div:focus-within{\n"
-				+ "  outline: 0.25rem solid lightblue;\n"
-				+ "}\n"
-				+ ".star-rating input,\n"
-				+ ".star-rating label>span{\n"
-				+ "  border: 0;\n"
-				+ "  padding: 0;\n"
-				+ "  margin: 0;\n"
-				+ "  position: absolute !important;\n"
-				+ "  height: 1px; \n"
-				+ "  width: 1px;\n"
-				+ "  overflow: hidden;\n"
-				+ "  clip: rect(1px 1px 1px 1px); \n"
-				+ "  clip: rect(1px, 1px, 1px, 1px); \n"
-				+ "  clip-path: inset(50%); \n"
-				+ "  white-space: nowrap; \n"
-				+ "}\n"
-				+ "</style>\n");
-		
-		buf.append("<div id='my-star-rating' style='color:#B20000;font-size:1.5em;'>"
-				+ "<fieldset class='star-rating'>\n"
-				+ "  <legend style='color:#B20000;'>Please rate ChemVantage:</legend>\n"
-				+ "  <div>"
-				+ "    <input type='radio' name='rating' value='1' id='rating1' />\n"
-				+ "    <label for='rating1'><span>1</span></label>\n"
-				+ "    <input type='radio' name='rating' value='2' id='rating2' />\n"
-				+ "    <label for='rating2'><span>2</span></label>\n"
-				+ "    <input type='radio' name='rating' value='3' id='rating3' />\n"
-				+ "    <label for='rating3'><span>3</span></label>\n"
-				+ "    <input type='radio' name='rating' value='4' id='rating4' />\n"
-				+ "    <label for='rating4'><span>4</span></label>\n"
-				+ "    <input type='radio' name='rating' value='5' id='rating5' />\n"
-				+ "    <label for='rating5'><span>5</span></label>\n"
-				+ "  </div>"
-				+ "</fieldset>"
-				+ ""
-				+ "</div><p class='star-value' style='display:none'></p>\n");
-		
-		buf.append("<script>\n"
-				+ "var rating = 1;"
-				+ "document.querySelectorAll('.star-rating input[name=\"rating\"]').forEach(function(radio){\n"
-				+ "  radio.addEventListener('change', function(){\n"
-				+ "    rating = document.querySelector('.star-rating input[name=\"rating\"]:checked').value;\n"
-				+ "    document.querySelector('.star-value').innerHTML=' Rating: ' + rating + ' stars<br/>';"
-				+ "  });\n"
-				+ "  radio.addEventListener('click', function(){\n"
-				+ "    if (event.x>0 && event.y>0) {\n"
-				+ "      rating = document.querySelector('.star-rating input[name=\"rating\"]:checked').value;\n"
-				+ "      submitStars();\n"
-				+ "    }\n"
-				+ "  });\n"
-				+ "  radio.addEventListener('keydown', function(){\n"
-				+ "    document.querySelector('.star-value').style.display='inline';\n"
-				+ "    if (event.key===' ' || event.key==='Enter') submitStars();\n"
-				+ "  });\n"
-				+ "});\n"
-				+ "async function submitStars(event) {\n"
-				+ "  try {\n"
-				+ "    document.querySelector('.star-value').style.display='none';\n"
-				+ "    var url = '/Feedback?UserRequest=AjaxRating&NStars=' + rating + '&sig=" + sig + "';"
-				+ "    const response = await fetch(url);\n"
-				+ "    if (!response.ok) {\n"
-				+ "      throw new Error(`HTTP error! status: ${response.status}`);\n"
-				+ "    }\n"
-				+ "    const resultString = await response.text();\n"
-				+ "    document.getElementById('my-star-rating').innerHTML = resultString + '<br/>';\n"
-				+ "    return null;\n"
-				+ "  } catch (error) {\n"
-				+ "    document.getElementById('my-star-rating').innerHTML = 'Error recording rating: ' + error.message + '<br/>';\n"
-				+ "    return null;\n"
-				+ "  }\n"
+				+ "  opacity: 0;\n"
+				+ "  cursor: pointer;\n"
+				+ "  height: 0;\n"
+				+ "  width: 0;\n"
 				+ "}"
-				+ "</script>");
+				+ ".radioStar:focus + .star-label {\n"
+				+ "  outline: 2px solid blue;\n"
+				+ "  outline-offset: 2px;\n"
+				+ "}"
+				+ ".radio-star-container {\n"
+				+ "  display: inline-block;\n"
+				+ "  cursor: pointer;\n"
+				+ "}"
+				+ "</style>");
 		
-		buf.append("<br/>");
-	
-		return buf.toString(); 
+		buf.append("<br/><div id=star-rating display='flex'><fieldset>Please rate ChemVantage: ");
+		for (int istar=1;istar<6;istar++) {
+			buf.append("<div class='radio-star-container'>"
+					+ "<input type='radio' id='radio" + istar + "' name='StarSelection' class='radioStar' value='" + istar + "' "
+					+ " onfocus=showStars(" + istar + "); "
+					+ " onblur=showStars(0); "
+					+ " onkeydown=submitStars(event,'" + sig + "'); />"
+					+ "<label for='radio" + istar + "' class='star-label'>"
+					+ " <img id=" + istar + " src='/images/star1.gif' alt='star" + istar + "' "
+					+ " onmouseover=showStars(this.id); "
+					+ " onmouseout=showStars(0); "
+					+ " onclick=document.getElementById('radio'+this.id).checked=true;submitStars(event,'" + sig + "'); />\n"
+					+ "</label>"
+					+ "</div>");
+		}
+		buf.append("<span id='vote' style='color:#B20000;display:none'></span></fieldset></div><br/>");
+		buf.append("<script src='/js/five_star_radios.js?v=3'></script>");
+		
+		return buf.toString();
 	}
-
+	
 	String[] getMember(User user) {
 		String[] member = null;
 		try {
