@@ -80,7 +80,7 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin(r,user,email);
 				break;
 			case "AjaxRating":
-				recordAjaxRating(request);
+				out.println(recordAjaxRating(request));
 				break;
 			default:
 				out.println((user.isChemVantageAdmin()?Subject.getHeader(user):Subject.header("ChemVantage Feedback Form")) + feedbackForm(user) + Subject.footer);
@@ -127,7 +127,7 @@ public class Feedback extends HttpServlet {
 		catch (Exception e) {
 			return e.toString();
 		}
-		return "Your rating was " + stars + " stars. The average user rating is " + Subject.getAvgStars() + " stars.";
+		return "Thank you. Your rating was " + stars + " stars.<br/>The average user rating is " + Subject.getAvgStars() + " stars (" + Subject.getNStarReports() + " ratings).";
 	}
 
 	String feedbackForm(User user) {
@@ -141,6 +141,7 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
+		/*
 		buf.append("Please rate your overall experience with ChemVantage:<br/>");
 
 		buf.append("<span id='vote' style='color:red;'>(click a star):</span><br/>");
@@ -149,8 +150,13 @@ public class Feedback extends HttpServlet {
 					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick=\"set=false;showStars(this.id);setFeedbackStars(this.id)\"; />" ); // mouse actions
 		}
 		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput=\"set=false;showStars(this.value);setFeedbackStars(this.value);\">");
-		buf.append("<br clear='all'>");
-		buf.append("<FONT SIZE=-1>(" + Subject.getNStarReports() + " user ratings; avg = " + Subject.getAvgStars() + " stars)</FONT><p>\n");
+		
+		*/
+		
+		buf.append(fiveStars(user.getTokenSignature()));
+		
+		//buf.append("<br clear='all'>");
+		//buf.append("<FONT SIZE=-1>(" + Subject.getNStarReports() + " user ratings; avg = " + Subject.getAvgStars() + " stars)</FONT><p>\n");
 
 		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
 		
@@ -158,11 +164,11 @@ public class Feedback extends HttpServlet {
 		String email = member!=null && member[2]!=null?member[2]:null;
 		
 		buf.append("<FORM NAME=FeedbackForm id=FeedbackForm ACTION=Feedback METHOD=POST>\n"
-				+ "Comments, suggestions or requests: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
+				+ "<label for='comment'>Comments, suggestions or requests: <FONT SIZE=-1>(160 characters max.)</FONT></label><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback />"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars />"
 				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
+				+ "<TEXTAREA id=comment NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
@@ -171,7 +177,7 @@ public class Feedback extends HttpServlet {
 				+ "<input type=hidden name=Email value=" + email + " />");
 		
 		// If the user is anonymous, insert the Google reCaptcha tool (version 2) on the page
-		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><p>");				
+		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><br/>");				
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
@@ -190,6 +196,47 @@ public class Feedback extends HttpServlet {
 		return buf.toString(); 
 	}
 
+	static String fiveStars(String sig) {
+		StringBuffer buf = new StringBuffer();
+		buf.append("<style>"
+				+ ".radioStar {\n"
+				+ "  position: absolute;\n"
+				+ "  opacity: 0;\n"
+				+ "  cursor: pointer;\n"
+				+ "  height: 0;\n"
+				+ "  width: 0;\n"
+				+ "}"
+				+ ".radioStar:focus + .star-label {\n"
+				+ "  outline: 2px solid blue;\n"
+				+ "  outline-offset: 2px;\n"
+				+ "}"
+				+ ".radio-star-container {\n"
+				+ "  display: inline-block;\n"
+				+ "  cursor: pointer;\n"
+				+ "}"
+				+ "</style>");
+		
+		buf.append("<br/><div id=star-rating display='flex'><fieldset>Please rate ChemVantage: ");
+		for (int istar=1;istar<6;istar++) {
+			buf.append("<div class='radio-star-container'>"
+					+ "<input type='radio' id='radio" + istar + "' name='StarSelection' class='radioStar' value='" + istar + "' "
+					+ " onfocus=showStars(" + istar + "); "
+					+ " onblur=showStars(0); "
+					+ " onkeydown=submitStars(event,'" + sig + "'); />"
+					+ "<label for='radio" + istar + "' class='star-label'>"
+					+ " <img id=" + istar + " src='/images/star1.gif' alt='star" + istar + "' "
+					+ " onmouseover=showStars(this.id); "
+					+ " onmouseout=showStars(0); "
+					+ " onclick=document.getElementById('radio'+this.id).checked=true;submitStars(event,'" + sig + "'); />\n"
+					+ "</label>"
+					+ "</div>");
+		}
+		buf.append("<span id='vote' style='color:#B20000;display:none'></span></fieldset></div><br/>");
+		buf.append("<script src='/js/five_star_radios.js?v=3'></script>");
+		
+		return buf.toString();
+	}
+	
 	String[] getMember(User user) {
 		String[] member = null;
 		try {

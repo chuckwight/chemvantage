@@ -294,35 +294,38 @@ public class Question implements Serializable, Cloneable {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
 			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><br/>");
+			buf.append("<fieldset><legend style='color:#B20000;font-size: small;'>Select only the best answer:</legend>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED /> ":" /> ") + choices.get(choice-'a') + "</label><br/>");
 			}
+			buf.append("</fieldset>");
 			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 2: // True/False
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><br/>");
+			buf.append("<fieldset><legend style='color:#B20000;font-size: small;'>Select true or false:</legend>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
+			buf.append("</fieldset>");
 			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
 			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><br/>");
+			buf.append("<fieldset><legend style='color:#B20000;font-size: small;'>Select all of the correct answers:</legend>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED /> ":" /> ") + choices.get(choice-'a') + "</label><br/>");
 			}
+			buf.append("</fieldset>");
 			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append("<label for=" + this.id + ">" + text + "</label>");
 			buf.append("<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			buf.append("<input id=" + this.id + " type=text aria-label='student answer' name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
 			buf.append("&nbsp;" + tag + "<br/><br/>");
 			break;
@@ -330,28 +333,45 @@ public class Question implements Serializable, Cloneable {
 			buf.append(parseString(text));
 			buf.append("<br/>");
 			buf.append("<div id=showWork" + this.id + " style='display:none'>"
-					+ "<label>Show your work:<br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
+					+ "<label for=ShowWork'" + this.id + "'>Show your work:</label><br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
 					+ "maxlength=500 placeholder='Show your work here' aria-label='show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA>"
-					+ "</label><br/></div>");
+					+ "<br/></div>"
+					+ "<label for='answer" + this.id + "'>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#B20000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#B20000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}
-			buf.append("<label><input aria-label='student answer' size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
-			buf.append("&nbsp;" + parseString(tag) + "</label><br/><br/>");
+			buf.append("</label><br/><input aria-label='student answer' size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
+			buf.append("&nbsp;" + parseString(tag) + "<br/><br/>");
 			break;        
 		case 6: // FIVE_STAR rating
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
+			buf.append("<label for=" + this.id + "><span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span></label><br/>");
+						
 			for (int i=1;i<6;i++) {
 				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star " + i + " for rating' "        // properties
 						+ "onmouseover=showStars" + this.id + "(" + i + ") onmouseout=showStars" + this.id + "(0) onclick=showStars" + this.id + "(" + i + ",true) />" ); // mouse actions
 			}
+			
+			buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input id=" + this.id + " name=" + this.id + " type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1';this.value=4;showStars" + this.id + "(4,true); oninput='showStars" + this.id + "(this.value,true);' />");
+			buf.append("<br clear='all'><br/>");
+			buf.append("<script>"
+					+ "var fixed" + this.id + " = false;"
+					+ "function showStars" + this.id + "(nStars,clicked=false) {"
+					+ "  if (fixed" + this.id + " && !clicked) return;"
+					+ "  document.getElementById('vote" + this.id + "').innerHTML=(nStars==0?'(click a star)':nStars+(nStars>1?' stars':' star'));"  // unary operator + converts string to int
+					+ "  for (i=1;i<6;i++) document.getElementById('star'+i+'" + this.id + "').src = (nStars<i?'/images/star1.gif':'/images/star2.gif');"
+					+ "  fixed" + this.id + " = clicked;"
+					+ "  if (clicked) document.getElementById('" + this.id + "').value=nStars;"
+					+ "}"
+					+ "</script>\n");
+			
+			/*
 			buf.append("<input id=" + this.id + " type=hidden name=" + this.id + " />");
 			buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='showStars" + this.id + "(this.value,true);' />");
 			buf.append("<br clear='all'>");
@@ -365,6 +385,8 @@ public class Question implements Serializable, Cloneable {
 					+ "  if (clicked) document.getElementById('" + this.id + "').value=nStars;"
 					+ "}"
 					+ "</script>\n");
+			*/
+			
 			int initialStars = 0;
 			try { 
 				initialStars = Integer.parseInt(studentAnswer);
@@ -374,7 +396,7 @@ public class Question implements Serializable, Cloneable {
 		case 7: // Short ESSAY question
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<span style='color:#B20000;font-size:small;'><label for='" + this.id + "'>Write a short essay (800 characters max):</label></span><br/>");
 			buf.append("<textarea id=" + this.id + " aria-label='enter your essay here' name=" + this.id 
 					+ " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
 			break;
@@ -396,12 +418,12 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><br/>");
-			buf.append("<UL" + (scrambleChoices?" style=color:red":"") + ">");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select only the best answer:</span><br/>");
+			buf.append("<UL" + (scrambleChoices?" style=color:#B20000":"") + ">");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>" 
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#767676>")
 						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
@@ -410,23 +432,23 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 2: // True/False
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><UL>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select true or false:</span><UL>");
 			buf.append("<LI>" 
-					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
+					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#767676>True</FONT>") 
 					+ "</LI>");
 			buf.append("<LI>" 
-					+ (correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>") 
+					+ (correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#767676>False</FONT>") 
 					+ "</LI>");
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span>");
-			buf.append("<UL" + (scrambleChoices?" style=color:red":"") + ">");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select all of the correct answers:</span>");
+			buf.append("<UL" + (scrambleChoices?" style=color:#B20000":"") + ">");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>"
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#767676>")
 						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
@@ -435,7 +457,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
@@ -445,11 +467,11 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#B20000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#B20000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}			
 			buf.append("<span style='border: 1px solid black'>"
@@ -466,31 +488,24 @@ public class Question implements Serializable, Cloneable {
 		case 6: // FIVE_STAR rating
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
+			buf.append("<label><span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
+			buf.append(parseString(text) + "<br/>");
+			int nStars = 0;
+			try {
+				nStars = Integer.parseInt(correctAnswer);
+			} catch (Exception e) {}
 			for (int i=1;i<6;i++) {
-				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star' "        // properties
-						+ "onmouseover=showStars" + this.id + "(" + i + ") onmouseout=showStars" + this.id + "(0) onclick=showStars" + this.id + "(" + i + ",true) />" ); // mouse actions
+				buf.append("<img " + (i<=nStars?"src='images/star2.gif'":"src='images/star1.gif'") + " style='width:30px; height:30px;' alt='star' />");
 			}
-			buf.append("<input id=" + this.id + " type=hidden name=" + this.id + " />");
-			buf.append("<br/><br/>");
-			buf.append("<script>"
-					+ "var fixed" + this.id + " = false;"
-					+ "function showStars" + this.id + "(nStars,clicked=false) {"
-					+ "  if (fixed" + this.id + " && !clicked) return;"
-					+ "  document.getElementById('vote" + this.id + "').innerHTML=(nStars==0?'(click a star)':nStars+(nStars>1?' stars':' star'));"  // unary operator + converts string to int
-					+ "  for (i=1;i<6;i++) document.getElementById('star'+i+'" + this.id + "').src = (nStars<i?'images/star1.gif':'images/star2.gif');"
-					+ "  fixed" + this.id + " = clicked;"
-					//+ "  if (clicked) document.getElementById('" + this.id + "').value=nStars;"
-					+ "}"
-					+ "</script>\n");
+			buf.append("<br/>");
 			break;
 		case 7: // Short ESSAY question
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<label><span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
 			buf.append("<textarea id=" + this.id + " name=" + this.id + " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' "				
 					+ "onKeyUp=document.getElementById('" + this.id + "').value=document.getElementById('" + this.id + "').value.substring(0,800);}>"
-					+ "</textarea><br/><br/>");
+					+ "</textarea></label><br/><br/>");
 			break;
 		}
 		return buf.toString();
@@ -518,10 +533,10 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><br/>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select only the best answer:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
-						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#767676>")
 						+ quot2html(choices.get(i))
 						+ (showDetails && correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
 				choice++;
@@ -529,21 +544,21 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 2: // True/False
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><UL>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select true or false:</span><UL>");
 			buf.append("<LI>" 
-					+ (showDetails && correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
+					+ (showDetails && correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#767676>True</FONT>") 
 					+ "</LI>");
 			buf.append("<LI>" 
-					+ (showDetails && correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>")
+					+ (showDetails && correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#767676>False</FONT>")
 					+ "</LI>");
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><br/>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Select all of the correct answers:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
-						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#767676>")
 						+ quot2html(choices.get(i))
 						+ (showDetails && correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
 				choice++;
@@ -551,7 +566,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
+			buf.append("<span style='color:#B20000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<span style='border: 1px solid black'>"
 					+ (showDetails?"<b>" + quot2html(answers[0]) + "</b>":"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
@@ -561,11 +576,11 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#B20000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#B20000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}			
 			buf.append("<span style='border: 1px solid black'>"
@@ -573,18 +588,19 @@ public class Question implements Serializable, Cloneable {
 					+ "</span>");
 			buf.append("&nbsp;" + parseString(tag) + "<br/>");
 			break;        
-		case 6:
+		case 6: // FIVE_STAR rating
 			buf.append(parseString(text) + "<br/>");
 			int nStars = 0;
 			try {
 				nStars = Integer.parseInt(studentAnswer);
 			} catch (Exception e) {}
 			for (int i=1;i<6;i++) {
-				buf.append("<img " + (i<=nStars?"src='images/star2.gif'":"src='images/star1.gif'") + " style='width:30px; height:30px;' alt='star' />");
+				buf.append("<img " + (i<=nStars?"src='images/star2.gif'":"src='images/star1.gif'") + " style='width:30px; height:30px;' alt='star" + i + "' />");
 			}
+			if (studentAnswer!=null) buf.append("&nbsp;(" + nStars +  (nStars==1?" star":" stars)"));
 			buf.append("<br/>");
 			break;
-		case 7:
+		case 7: //Short ESSAY question
 			buf.append(text);
 			buf.append("<br/>");
 			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
@@ -611,11 +627,13 @@ public class Question implements Serializable, Cloneable {
 			} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM id='suggest" + this.id + "' >"
-					+ "<INPUT role='button' aria-label='Report a problem with this question' TYPE=BUTTON VALUE='Report a problem with this question' "
-					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
-					+ "<div id='form" + this.id + "' style='display: none'>");
+					+ "<a id='link" + this.id + "' aria-label='Report a problem with this question' href=# "
+					+ "onClick=getElementById('form" + this.id + "').style.display='block';"
+					+ "getElementById('link" + this.id + "').style='display:none';>"
+					+ "Report a problem with this question</a>"
+					+ "<div id='form" + this.id + "' style='display:none'>");
 
-			buf.append("<span style=color:red><br/>");
+			buf.append("<span style='color:#B20000'><br/>");
 			switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
@@ -633,8 +651,8 @@ public class Question implements Serializable, Cloneable {
 			}		
 			buf.append("</span><br/>");
 
-			buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br/>");
-			buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br/>");
+			buf.append("<label>Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /></label><br/>");
+			buf.append("<label>Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /></label><br/>");
 			buf.append("<INPUT TYPE=BUTTON VALUE='Submit Feedback' "
 					+ "onClick=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + Arrays.toString(this.parameters) + "','" + studentAnswer + "',encodeURIComponent(document.getElementById('suggest" + this.id + "').Notes.value),encodeURIComponent(document.getElementById('suggest" + this.id + "').Email.value)); return false;\" />"
 					+ "</div></FORM><br/>");
@@ -866,7 +884,7 @@ public class Question implements Serializable, Cloneable {
 			case 1: // Multiple Choice
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best choice:</span><br/>");
+				buf.append("<span style='color:#B20000;font-size: small;'>Select only the best choice:</span><br/>");
 				for (int i=0;i<5;i++) { 
 					if (i < nChoices) {
 						buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'");
@@ -884,7 +902,7 @@ public class Question implements Serializable, Cloneable {
 			case 2: // True/False
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><br/>");
+				buf.append("<span style='color:#B20000;font-size: small;'>Select true or false:</span><br/>");
 				buf.append("<input type=radio name=CorrectAnswer value='true'");
 					if (correctAnswer.equals("true")) buf.append(" CHECKED");
 				buf.append("/> True<br/>");
@@ -895,7 +913,7 @@ public class Question implements Serializable, Cloneable {
 			case 3: // Select Multiple
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><br/>");
+				buf.append("<span style='color:#B20000;font-size: small;'>Select all of the correct answers:</span><br/>");
 				for (int i=0;i<5;i++){
 					if (i < nChoices) {
 						buf.append("<input type=checkbox name=CorrectAnswer value='" + choice + "'");
@@ -913,7 +931,7 @@ public class Question implements Serializable, Cloneable {
 			case 4: // Fill-in-the-Word
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase.<br/>"
+				buf.append("<span style='color:#B20000;font-size: small;'>Enter the correct word or phrase.<br/>"
 						+ "Multiple correct answers can be entered as a comma-separated list.</span><br/>");
 				buf.append("<input type=text name=CorrectAnswer value=\"" 
 						+ quot2html(amp2html(correctAnswer)) + "\"'/><br/>");
@@ -926,11 +944,11 @@ public class Question implements Serializable, Cloneable {
 						+ amp2html(text) + "</TEXTAREA><br/>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'/> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'/> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 0: buf.append("<span style='color:#B20000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 1: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 				case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-					buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+					buf.append("<span style='color:#B20000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 3: buf.append("<span style='color:#B20000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D7\u0031\u0030\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 				default:
 				}			
 				buf.append("Correct answer:");

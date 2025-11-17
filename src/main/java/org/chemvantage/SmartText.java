@@ -319,7 +319,7 @@ public class SmartText extends HttpServlet {
 				   buf.append(continueButton);
 			   } else {  // just completed for first time
 				   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
-				   buf.append(fiveStars());
+				   buf.append(Feedback.fiveStars(user.getTokenSignature()));
 			   }
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
@@ -354,46 +354,7 @@ public class SmartText extends HttpServlet {
 	   return buf.toString();
    }
 
-	String fiveStars() {
-		StringBuffer buf = new StringBuffer();
-
-		buf.append("<script type='text/javascript'>"
-				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
-				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;"
-				+ "  function showStars(n) {"
-				+ "    if (!set) {"
-				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
-				+ "    }"
-				+ "  }"
-				+ "  function setStars(n) {"
-				+ "    if (!set) {"
-				+ "      ajaxStars(n);"
-				+ "      set = true;"
-				+ "      document.getElementById('sliderspan').style='display:none';"
-				+ "    }"
-				+ "  }"
-				+ "</script>");
-
-		buf.append("<div>Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
-
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
-		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
-				+ "</span>");
-		buf.append("</div><br/>");
-
-		return buf.toString(); 
-	}
-	
-	static String reviewScore (User user, Assignment a, String for_user_id) {
+   static String reviewScore (User user, Assignment a, String for_user_id) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h1>Reading Assignment</h1>"
 				+ "<h2>" + (a.title==null?"":a.title) + "</h2>");

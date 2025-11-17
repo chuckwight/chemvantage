@@ -243,8 +243,8 @@ public class Poll extends HttpServlet {
 				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> <div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div><br/>") + "<br/>");
 
 		// Here is a simpler version of the tool below
-		if (a.pollIsClosed) buf.append("Set a time limit for this poll (in minutes): "
-				+ "<form style=display:inline method=post action=/Poll ><input type=text size=8 name=TimeLimit placeholder=unlimited />"
+		if (a.pollIsClosed) buf.append("<form style=display:inline method=post action=/Poll >"
+				+ "<label>Set a time limit for this poll (in minutes): <input type=text size=8 name=TimeLimit placeholder=unlimited /></label>"
 				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=submit name=UserRequest value='Open the Poll' /> " 
 				+ "</form><br/><br/>");
@@ -583,7 +583,7 @@ public class Poll extends HttpServlet {
 			if (!user.isInstructor() && !a.pollIsClosed) return waitForResults(user,a);
 			//if (!user.isInstructor() && forUserHashedId==null && !a.pollIsClosed) return waitForResults(user,a);
 			
-			buf.append("<h2>Poll Results</h2>");
+			buf.append("<h1>Class Poll</h1><h2>Results</h2>");
 			if (user.isInstructor() && forUserHashedId==null) {
 				if (a.pollIsClosed) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>");
 				else buf.append("The poll is still open. ");
@@ -862,10 +862,10 @@ public class Poll extends HttpServlet {
 	static String editPage(User user,Assignment a,long conceptId) {
 		StringBuffer buf = new StringBuffer();
 		if (!user.isInstructor()) return "Not Authorized";
-
-		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a New Class Poll</h2>");
-		else buf.append("<h2>Edit Class Poll</h2>");
-
+		buf.append("<h1>Class Poll</h1>");
+		
+		buf.append("<h2>Add Question Items</h2>");
+		
 		List<Question> addQuestions = new ArrayList<Question>();
 		if (conceptId>0) addQuestions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).list();
 		
@@ -874,13 +874,13 @@ public class Poll extends HttpServlet {
 		buf.append("<form method=get action=/Poll>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value=EditPoll>"
-				+ "Add questions related to:"
-				+ "<select name=ConceptId onchange=this.form.submit();><option value=0>Select a key concept</option>");
+				+ "<label>Add questions related to:"
+				+ "<select name=ConceptId><option value=0>Select a key concept</option>");
 		for (Concept c : concepts) {
 			if (c.orderBy.startsWith(" 0")) continue; // skip reserved concepts
 			buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
 		}
-		buf.append("</select></form>");
+		buf.append("</select></label><input type=submit value='Add Questions' /></form>");
 
 		int i=0;
 		if (addQuestions.isEmpty()) {  // give option to create a new question and show current questions
@@ -892,7 +892,7 @@ public class Poll extends HttpServlet {
 			
 			if (conceptId!=0) buf.append("<br/><br/><span style=background-color:yellow;font-weight:bold;>Sorry, there are no avalable questions for the selected key concept.</span>");
 			
-			buf.append("<h3>Current Questions For This Poll</h3>");
+			buf.append("<h2>Current Questions For This Poll</h2>");
 			int possibleScore = 0;
 			Map<Key<Question>,Question> currentQuestions = ofy().load().keys(a.questionKeys);
 			for (Key<Question> k : a.questionKeys) {  // main loop to present questions

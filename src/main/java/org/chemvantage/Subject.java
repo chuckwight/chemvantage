@@ -208,12 +208,14 @@ public class Subject {
 		+ "  <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>\n"
 		+ "  <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap'>\n"
 		+ "  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css' integrity='sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH' crossorigin='anonymous'>\n"
-		+ "  <script src='/js/script-backend-v01.js'></script>\n"
+		+ "  <script src='/js/script-backend.js?v=1'></script>\n"
 		+ "  <style>\n"
-		+ "    body { font-family: 'Poppins', Arial, sans-serif; }\n"
-		+ "    .has-padding {"
-		+ "      padding: 20px;"
-		+ "    }"
+		+ "    body {\n"
+		+ "      font-family: 'Poppins', Arial, sans-serif;\n"
+		+ "    }\n"
+		+ "    .has-padding {\n"
+		+ "      padding: 20px;\n"
+		+ "    }\n"
 		+ "    .bg-gradient-primary {\n"
 		+ "      background: linear-gradient(180deg, #0b5ed7 0%, #0d6efd 100%);\n"
 		+ "    }\n"
@@ -222,7 +224,7 @@ public class Subject {
 		+ "    }\n"
 		+ "    /* Ensure visible focus for keyboard users on minimal devices */\n"
 		+ "    :focus-visible {\n"
-		+ "      outline: 3px solid #fd7e14;\n"
+		+ "      outline: 2px solid blue;\n"
 		+ "      outline-offset: 2px;\n"
 		+ "    }\n"
 		+ "  </style>\n");
@@ -234,11 +236,10 @@ public class Subject {
 			break;
 		}
 		
-		buf.append("</head>"
-		+ "<body class='bg-white text-body'>\n"
-		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2 rounded text-dark'>Skip to main content</a>\n"
-		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
-		+ "<main id='main-content'>"));
+		buf.append("</head>\n"
+		+ "<body class='bg-white text-body'><main id='main-content'>\n"
+		+ (announcement==null || announcement.isEmpty()?"":"<FONT style='color: #B20000'>" + announcement + "</FONT><br/>\n")
+		);
 		
 		return buf.toString();
 	}
@@ -290,19 +291,19 @@ public class Subject {
 		+ "    <a href='/contacts' style='padding-right:25px'>Contacts</a> "
 		+ "    <a href='/messages' style='padding-right:25px'>Messages</a> "
 		+ "  </div><br/>"
-		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
+		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #B20000'>" + announcement + "</FONT><br/>\n"
 		+ "<main id='main-content'>");
 	}
 	
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
-	public static String footer = "</main>"
+	public static String footer = "\n</main>\n"
 			+ "<footer id=footer style='max-width: 600px'><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
 			+ "<a href=/privacy.html>Privacy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
 			+ "<script>if (window===window.top)document.body.classList.add('has-padding');</script>"
-			+ "</body>\n</html>";
+			+ "\n</body>\n</html>";
 
 }

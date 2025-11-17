@@ -196,6 +196,14 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String orderResponses(String[] answers) {
+		if (answers==null) return "";
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
+	}
+
 	static String printQuiz(User user, Assignment qa) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		StringBuffer buf = new StringBuffer();
@@ -255,8 +263,8 @@ public class Quiz extends HttpServlet {
 					+ "	<li>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
 					+ "	</ul>\n");
 			
-			buf.append("<div id='timer0' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl0' style='color: #EE0000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
+			buf.append("<div id='timer0' style='color: #B20000'></div>"
+					+ "	<div id='ctrl0' style='color: #B20000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			debug.append("5");
 			
@@ -308,8 +316,8 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt).now();
 			buf.append("</OL>\n");
 		
-			buf.append("<div id='timer1' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl1' style='color: #EE0000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
+			buf.append("<div id='timer1' style='color: #B20000'></div>"
+					+ "	<div id='ctrl1' style='color: #B20000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<input type=submit class='btn btn-primary' value='Grade This Quiz'/>"
 					+ "</FORM>");
@@ -427,7 +435,7 @@ public class Quiz extends HttpServlet {
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</b><br/>");
 
 			if (studentScore == qt.possibleScore && !timeExpired) {
-				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>");
+				buf.append("<h2>Congratulations on a perfect score! Good job.</h2>");
 			} else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
@@ -469,7 +477,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// if the user response was correct, seek five-star feedback:
-			if (studentScore == qt.possibleScore && !timeExpired) buf.append(fiveStars(user.getTokenSignature()));
+			if (studentScore == qt.possibleScore && !timeExpired) buf.append(Feedback.fiveStars(user.getTokenSignature()));
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 			if (!user.isAnonymous()) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
@@ -487,24 +495,115 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String fiveStars(String sig) {
-		StringBuffer buf = new StringBuffer();
+	String selectQuestionsForm(User user,Assignment a, HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
-		buf.append("Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
-
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' alt='rating star " + iStar + "'"
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
+		StringBuffer buf = new StringBuffer();
+		try {
+			buf.append("<h1>Customize Quiz</h1>");
+			buf.append("<form action=/Quiz method=post>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<label><b>Title:</b>&nbsp;<input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></label></form><br/>");
+					
+			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
+			
+			// Allow instructor to pick individual question items from all active questions:
+			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
+					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
+					+ "a student requiring extended time up to 60 minutes).<br>");
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "></label> minutes. "
+					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+					+ "</form><p>");
+			buf.append("By default, students may attempt this quiz as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
+					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>");
+			
+			buf.append("You may select the items that will be used for this assignment by checking the boxes in the left column below. "
+					+ "Students are provided answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
+					+ "larger than 10, but not much larger than 50.  Experience shows that 40 items is about right in most cases. "
+					+ "If you don't see a question you want to include, you may "
+					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<br/><br/>");
+	
+			// make a List of conceptIds covered by this assignment
+			List<Long> conceptIds = a.conceptIds;
+			// Include any conceptId included in this request:
+			Long newConceptId = null;
+			try {
+				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
+				conceptIds.add(newConceptId);
+			} catch (Exception e) {}
+	
+			// Make a list of key concepts already covered by this assignment:
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(key(Concept.class,cId)).title + "</li>");
+				buf.append("</ul>");
+			}
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Quiz>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<label for='new_concept_id'>You may include additional question items from: </label>"
+					+ "<input type=hidden name=UserRequest value=AssignQuizQuestions />"
+					+ "<select id=new_concept_id name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+			for (Key<Concept> k : conceptKeys) {
+				try {
+					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
+				} catch (Exception e) {}
+			}
+			buf.append("</select></form><hr><br/>");
+						
+			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+	
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+	
+			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
+				questions.putAll(ofy().load().keys(a.questionKeys));
+				questionKeys = new ArrayList<Key<Question>>(questions.keySet()); // this avoids duplicate keys
+			}
+	
+			// This dummy form uses javascript to select/deselect all questions
+			buf.append("<FORM NAME=DummyForm>"
+					+ "<label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}' /> "
+					+ "Select/Unselect All</label></FORM>");
+			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
+			// Make a list of individual questions that can be selected or deselected for this assignment
+			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Quiz>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+	
+			int i=0;
+			for (Question q : questions.values()) {
+				i++;
+				q.setParameters();
+				buf.append("<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT id='q" + i + "' TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
+				buf.append("<b>&nbsp;<label for='q" + i + "'>" + i + "</label>.</b></TD>");
+				buf.append("<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString() + " " + e.getMessage());
 		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
-				+ "</span>");
-		buf.append("<p>");
-
-		return buf.toString(); 
+		return buf.toString();
 	}
 
 	static String showQuiz (User user, Assignment a, String quizTransactionId) {
@@ -547,7 +646,7 @@ public class Quiz extends HttpServlet {
 		try {
 			buf.append("<h1>Quiz Transactions</h1>");
 			if (for_user_name != null) buf.append("Name: " + for_user_name + "<br/>");
-			buf.append("<h2?Topic: "+ a.title + "</h2>");
+			buf.append("<h2>Topic: "+ a.title + "</h2>");
 			buf.append("Assignment ID: " + a.id + "<br/>");
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			buf.append("Valid: " + df.format(new Date()) + "<p>");
@@ -618,7 +717,7 @@ public class Quiz extends HttpServlet {
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				
-				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Details</th></tr>");
+				buf.append("<table><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Details</th></tr>");
 				int i=0;
 				int nMismatched = 0;
 				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -700,130 +799,11 @@ public class Quiz extends HttpServlet {
 				String s = scores.get(entry.getKey());
 				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
 				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8"));
-				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {
 			return false;
 		}
 		return true;
-	}
-	
-	String selectQuestionsForm(User user,Assignment a, HttpServletRequest request) {
-		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
-		
-		StringBuffer buf = new StringBuffer();
-		try {
-			buf.append("<h1>Customize Quiz</h1>");
-			buf.append("<form action=/Quiz method=post>"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<b>Title:</b>&nbsp;<input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
-					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
-					
-			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
-			
-			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
-					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
-					+ "a student requiring extended time up to 60 minutes).<br>");
-			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
-					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-					+ "</form><p>");
-			buf.append("By default, students may attempt this quiz as many times as they wish. This rewards students who persist "
-					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
-					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/>");
-			
-			buf.append("You may select the items that will be used for this assignment by checking the boxes in the left column below. "
-					+ "Students are provided answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
-					+ "larger than 10, but not much larger than 50.  Experience shows that 40 items is about right in most cases. "
-					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<br/><br/>");
-
-			// make a List of conceptIds covered by this assignment
-			List<Long> conceptIds = a.conceptIds;
-			// Include any conceptId included in this request:
-			Long newConceptId = null;
-			try {
-				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
-				conceptIds.add(newConceptId);
-			} catch (Exception e) {}
-
-			// Make a list of key concepts already covered by this assignment:
-			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
-			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
-			if (conceptIds.size()>0) {
-				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(key(Concept.class,cId)).title + "</li>");
-				buf.append("</ul>");
-			}
-			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
-			buf.append("<form method=get action=/Quiz>"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "You may include additional question items from: "
-					+ "<input type=hidden name=UserRequest value=AssignQuizQuestions />"
-					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
-			for (Key<Concept> k : conceptKeys) {
-				try {
-					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
-					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
-				} catch (Exception e) {}
-			}
-			buf.append("</select></form><hr><br/>");
-						
-			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
-
-			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
-
-			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
-				questions.putAll(ofy().load().keys(a.questionKeys));
-				questionKeys = new ArrayList<Key<Question>>(questions.keySet()); // this avoids duplicate keys
-			}
-
-			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
-					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
-					+ "> Select/Unselect All</FORM>");
-			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
-			
-			// Make a list of individual questions that can be selected or deselected for this assignment
-			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Quiz>"
-					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
-			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-
-			int i=0;
-			for (Question q : questions.values()) {
-				i++;
-				q.setParameters();
-				buf.append("<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
-				buf.append("<TD>" + q.printAll() + "</TD>");
-				buf.append("</TR>");
-			}
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
-		} catch (Exception e) {
-			buf.append(e.toString() + " " + e.getMessage());
-		}
-		return buf.toString();
-	}
-	
-	String orderResponses(String[] answers) {
-		if (answers==null) return "";
-		Arrays.sort(answers);
-		String studentAnswer = "";
-		for (String a : answers) studentAnswer = studentAnswer + a;
-		return studentAnswer;
 	}
 
 }
