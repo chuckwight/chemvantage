@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -78,6 +79,10 @@ public class Admin extends HttpServlet {
 				String searchFor = request.getParameter("searchFor");
 				out.println(Subject.getHeader(user) + searchQuestions(searchFor) + Subject.footer);
 				break;
+			case "ViewCodes":
+				String org = request.getParameter("Org");
+				out.println(Subject.getHeader(user) + viewCodes(org) + Subject.footer);
+			break;
 			default: 
 				out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
 			}
@@ -270,9 +275,9 @@ public class Admin extends HttpServlet {
 					for (Voucher v : vouchers) { // increment count for this org
 						voucherCounts.put(v.org, voucherCounts.containsKey(v.org)?voucherCounts.get(v.org)+1:1);
 					}
-					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></th>");
+					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></tr>");
 					for (Entry<String,Integer> e : voucherCounts.entrySet()) {
-						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'>" + e.getValue() + "</td></tr>");
+						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'><a href=/Admin?UserRequest=ViewCodes&Org=" + e.getKey() + ">" + e.getValue() + "</a></td></tr>");
 					}
 				}
 				buf.append("</table><br/>");
@@ -296,6 +301,19 @@ public class Admin extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("<p>" + e.toString());
 		}
+		return buf.toString();
+	}
+	
+	String viewCodes(String org) {
+		StringBuffer buf = new StringBuffer("<h1>Student Subscription Vouchers</h1><b>" + org + "</b><br/><br/>");
+		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
+		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
+		buf.append("<table><tr><th>Voucher Code</th><th style='text-align:center'>Expires</th></tr>");
+		for (Voucher v:vouchers) {
+			buf.append("<tr><td style='text-align:center'>" + v.code + "</td>"
+					+ "<td style='text-align:center'>" + (v.expires==null?" - ":df.format(v.expires)) + "</td></tr>");
+		}
+		buf.append("</table>");
 		return buf.toString();
 	}
 	
