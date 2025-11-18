@@ -277,7 +277,7 @@ public class Admin extends HttpServlet {
 					}
 					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></tr>");
 					for (Entry<String,Integer> e : voucherCounts.entrySet()) {
-						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'><a href=/Admin?UserRequest=ViewCodes&Org=" + e.getKey() + ">" + e.getValue() + "</a></td></tr>");
+						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'><a href='/Admin?UserRequest=ViewCodes&Org=" + e.getKey().replaceAll(" ","+") + "'>" + e.getValue() + "</a></td></tr>");
 					}
 				}
 				buf.append("</table><br/>");
