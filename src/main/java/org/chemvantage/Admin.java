@@ -21,6 +21,8 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -277,7 +279,8 @@ public class Admin extends HttpServlet {
 					}
 					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></tr>");
 					for (Entry<String,Integer> e : voucherCounts.entrySet()) {
-						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'><a href='/Admin?UserRequest=ViewCodes&Org=" + e.getKey().replaceAll(" ","+") + "'>" + e.getValue() + "</a></td></tr>");
+						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'>"
+								+ "<a href='/Admin?UserRequest=ViewCodes&Org=" + URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "'>" + e.getValue() + "</a></td></tr>");
 					}
 				}
 				buf.append("</table><br/>");
@@ -309,7 +312,8 @@ public class Admin extends HttpServlet {
 		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
 		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
 		buf.append("<table><tr><th>Voucher Code</th><th style='text-align:center'>Expires</th></tr>");
-		for (Voucher v:vouchers) {
+		for (Voucher v : vouchers) {
+			if (!org.equals(v.org)) continue;
 			buf.append("<tr><td style='text-align:center'>" + v.code + "</td>"
 					+ "<td style='text-align:center'>" + (v.expires==null?" - ":df.format(v.expires)) + "</td></tr>");
 		}
