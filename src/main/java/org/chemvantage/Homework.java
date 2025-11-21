@@ -829,6 +829,40 @@ public class Homework extends HttpServlet {
 				} catch (Exception e2) {
 				}
 			}
+			
+			StringBuffer solutionBuf = new StringBuffer();
+			if (studentScore>0 || user.isInstructor()) { // prepare the solution
+				solutionBuf.append(q.printAllToStudents(studentAnswer)
+						+ " <p>\n"
+						+ " <div id=explanation style='max-width:800px'>"
+						+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
+						+ " </div>\n"
+						+ "<script>\n"
+						+ "function getExplanation() {\n"
+						+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
+						+ "  try {\n"
+						+ "    var xmlhttp = GetXmlHttpObject();\n"
+						+ "    if (xmlhttp==null) {\n"
+						+ "      alert('Sorry, your browser does not support AJAX!');\n"
+						+ "	     return false;\n"
+						+ "    }\n"
+						+ "	   xmlhttp.onreadystatechange=function() {\n"
+						+ "      if (xmlhttp.readyState==4) {\n"
+						+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
+						+ "        var mathjax = document.createElement('script');\n"
+						+ "        mathjax.type = 'text/javascript';\n"
+						+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+						+ "        document.head.appendChild(mathjax);\n"
+						+ "      }\n"
+						+ "    }\n"
+						+ "  } catch (error) {}\n"
+						+ "  xmlhttp.open('GET','/Homework?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + hashMe.hashCode() + "',true);\n"
+						+ "  xmlhttp.send(null);\n"
+						+ "}\n"
+						+ "</script>\n"
+						+ "<br/><br/>\n");				
+			}
+			
 			// Send response to the user:
 			if (studentScore > 0) {
 				switch (q.getQuestionType()) {
@@ -840,13 +874,12 @@ public class Homework extends HttpServlet {
 						studentAnswer += "<br/><br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString() 
 								+ "<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)" + "<br/>";
 				default:
-					
 					buf.append("<div style='display:flex'>"
 							+ "<div>"
-							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>"
-							+ (!user.isAnonymous()?"<a id=showLink role='button' href=# onClick=document.getElementById('solution').style='display:inline';"
-							+ "document.getElementById('badge').style='display:none';this.style='display:none'>(show me)</a>":"") 
+							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>");
+					buf.append(solutionBuf.toString()
 							+ "</div>");
+					
 					int decileScore = (int) Math.floor(s.getPctScore() / 10.0);
 					String badgeName = null;
 					switch (decileScore) {
@@ -865,7 +898,8 @@ public class Homework extends HttpServlet {
 					buf.append("<div id=badge style='text-align: center; max-width:30%; height:auto; margin:10px'>"
 							+ "<img src='/images/badges/" + badgeName + ".png' alt='Fun cartoon character'><br/>"
 							+ "Your score is " + s.getPctScore() + "%<br/>" + badgeName
-							+ "</div></div>");
+							+ "</div>"
+						+ "</div>");
 				}
 			}
 			else if (studentAnswer.length() > 0) {
@@ -908,7 +942,11 @@ public class Homework extends HttpServlet {
 				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
 			
 				if (user.isInstructor() || user.isTeachingAssistant()) {
-					buf.append("<br/>Instructor: <a role='button' href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
+					buf.append("<br/>Instructor only: <a role='button' href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a>"
+							+ "<div id=solution style='display:none'>"
+							+ solutionBuf.toString()
+							+ "</div>"
+							+ "<br/><br/>");
 				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<br/><form method=post action=/Help>"
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
@@ -925,55 +963,22 @@ public class Homework extends HttpServlet {
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
 			if (!user.isAnonymous()) {
-				if (studentScore>0 || user.isInstructor()) {
-					buf.append("<div id=solution style='display:none'>"
-							+ q.printAllToStudents(studentAnswer)
-							+ " <p>\n"
-							+ " <div id=explanation style='max-width:800px'>"
-							+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
-							+ " </div>\n"
-							+ "<script>\n"
-							+ "function getExplanation() {\n"
-							+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
-							+ "  try {\n"
-							+ "    var xmlhttp = GetXmlHttpObject();\n"
-							+ "    if (xmlhttp==null) {\n"
-							+ "      alert('Sorry, your browser does not support AJAX!');\n"
-							+ "	     return false;\n"
-							+ "    }\n"
-							+ "	   xmlhttp.onreadystatechange=function() {\n"
-							+ "      if (xmlhttp.readyState==4) {\n"
-							+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
-							+ "        var mathjax = document.createElement('script');\n"
-							+ "        mathjax.type = 'text/javascript';\n"
-							+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
-							+ "        document.head.appendChild(mathjax);\n"
-							+ "      }\n"
-							+ "    }\n"
-							+ "  } catch (error) {}\n"
-							+ "  xmlhttp.open('GET','/Homework?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + hashMe.hashCode() + "',true);\n"
-							+ "  xmlhttp.send(null);\n"
-							+ "}\n"
-							+ "</script>\n"
-							+ "</div><p>\n");				
-				}
-
-				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a aria-label='Opens in a new tab' href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+				//if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
+				//	buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a aria-label='Opens in a new tab' href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 
 				// if the user response was correct, seek five-star feedback:
 				if (studentScore > 0) buf.append(Feedback.fiveStars(user.getTokenSignature()));
 				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
-				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
-				+ "</a><br clear=left /><br/>");
-				
+						+ (offerHint?"Please give me a hint":"Continue with this assignment") 
+						+ "</a><br clear=left /><br/>");
+
 				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
 						+ "or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
 			} else { // user is anonymous
 				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
-				
+
 				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
 			}
 		} catch (Exception e) {
