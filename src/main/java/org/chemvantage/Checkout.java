@@ -190,7 +190,7 @@ public class Checkout extends HttpServlet {
 		if (!v.activate()) { // check for duplicate submission by same user
 			pu = ofy().load().type(PremiumUser.class).id(user.hashedId).safe();
 			if (pu.order_id.equals(v.code)) return pu.exp;
-			else throw new Exception("This voucher code was redeemed previously by another user.");
+			else throw new Exception("This voucher code has expired or was redeemed previously.");
 		}
 
 		// code is valid, so create a new PremiumUser
