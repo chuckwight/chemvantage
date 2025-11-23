@@ -629,16 +629,12 @@ public class Homework extends HttpServlet {
 	}
 
 	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer("<h1>" + hwa.title + "</h1>"
-				+ "<style>"
+		StringBuffer buf = new StringBuffer("<style>"
 				+ ".response-container {\n"
-				+ "    width: 600px; \n"
-				+ "    margin: 0 auto; \n"
+				+ "    max-width: 900px; \n"
+				//+ "    margin: 0 auto; \n"
 				+ "    box-sizing: border-box;\n"
 				+ "    padding: 15px;\n"
-				+ "}\n"
-				+ ".score-container {\n"
-				//+ "    margin-bottom: 20px;\n"
 				+ "}\n"
 				+ ".status-text {\n"
 				+ "    text-align: center;\n"
@@ -674,7 +670,6 @@ public class Homework extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Homework.printScore...");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
-		buf.append(df.format(now) + "<br/><br/>");
 		
 		String qn = null;
 		Question q = null;
@@ -812,6 +807,8 @@ public class Homework extends HttpServlet {
 
 			// Send a response to the student:
 			buf.append("<div class='response-container'>"
+					+ "<h1>" + hwa.title + "</h1>"
+					+ df.format(now) + "<br/><br/>"
 					+ "<div class='score-container'>");
 			if (studentScore==q.pointValue) {  // studentAnswer is correct
 				String msg = null;
