@@ -654,7 +654,7 @@ public class LTIRegistration extends HttpServlet {
 		JsonObject registrationResponse = new JsonObject();;
 		JsonObject regJson = new JsonObject();
 		StringBuffer debug = new StringBuffer("a");
-
+		try {
 		regJson.addProperty("application_type","web");
 		JsonArray grantTypes = new JsonArray();
 		grantTypes.add("implicit");
@@ -786,16 +786,18 @@ public class LTIRegistration extends HttpServlet {
 			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
 			debug.append("f");
 		} catch (Exception e) {
-			debug.append("g");
+			debug.append("g ");
 			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
 			String line = "";
 			while ((line = reader.readLine()) != null) registrationResponseBuffer.append(line);
-			debug.append("h");
+			debug.append(line);
 		}
 		if (reader != null) reader.close();
 		debug.append("i");
 		if (uc.getResponseCode() >= 400) throw new Exception("Platform refused registration request with code " + uc.getResponseCode() + ":<br/>" + registrationResponseBuffer.toString());
-
+		} catch (Exception e) {
+			throw new Exception(e.getMessage() + "<br/>Debug: " + debug.toString());
+		}
 		return registrationResponse;
 	}
 	
