@@ -119,6 +119,9 @@ public class Homework extends HttpServlet {
 			case "Preview":
 				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
 				break;
+			case "Instructor":
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
 			default:
 				long hintQuestionId = 0L;
 				try {
@@ -1479,6 +1482,7 @@ public class Homework extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			buf.append("<h1>Customize Homework Assignment</h1>");
+			buf.append("<a href='/Homework?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
 			buf.append("<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
