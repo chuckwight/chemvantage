@@ -227,7 +227,7 @@ public class LTIDeepLinks extends HttpServlet {
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
 		
-		buf.append("<div style='padding:10px'><h1>Assignment Setup Page</h1>");
+		buf.append("<h1>Assignment Setup Page</h1>");
 
 		buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>");
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
@@ -407,7 +407,7 @@ public class LTIDeepLinks extends HttpServlet {
 		default:  // no assignmentType selected
 		}
 		
-		buf.append("</form></div>");
+		buf.append("</form>");
 		
 		buf.append("<script>"
 				+ "function countChecks(type) {"
