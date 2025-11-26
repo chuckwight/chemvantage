@@ -196,8 +196,7 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<span style='color: #EE0000; border: 2px solid red'>&nbsp;" + message + " &nbsp;</span>");
 		}
 		
-		buf.append("<main>"
-				+ "<h2>LTI Advantage " + (dynamic?"Dynamic ":"") + "Registration</h2>");
+		buf.append("<h1>LTI Advantage " + (dynamic?"Dynamic ":"") + "Registration</h1>");
 		
 		buf.append("<form id=regform method=post action=/lti/registration>"
 				+ "Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage "
@@ -250,8 +249,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		
 		buf.append("<input type=submit value='Submit Registration'/>"
-				+ "</form><br/><br/>"
-				+ "</main>");
+				+ "</form><br/><br/>");
 		
 		return buf.toString();
 	}
