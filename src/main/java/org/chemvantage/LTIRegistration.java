@@ -152,7 +152,6 @@ public class LTIRegistration extends HttpServlet {
 					
 			        Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					debug.append("Deployment created: " + d.platform_deployment_id);
-					if ("canvas".equals(d.lms_type) && d.getDeploymentId().isEmpty()) throw new Exception("Missing Deployment ID");
 					sendApprovalEmail(d,request);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
@@ -499,6 +498,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String createDeployment(HttpServletRequest request) throws Exception {
+		/* Manual Registration */
 		DecodedJWT jwt = JWT.decode(request.getParameter("Token"));
 		String client_name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
@@ -519,33 +519,62 @@ public class LTIRegistration extends HttpServlet {
 		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
 		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
 		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
-		
-		if (deployment_id != null) {
-			Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
-			d.status = "pending";
-			d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 
-			Deployment prior = Deployment.getInstance(d.platform_deployment_id);
+		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+		d.status = "pending";
+		d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 
-			String msg = "<h2>Congratulations. Registration is complete.</h2>"
-					+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
+		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 
-			if (prior!=null) {  // this is a repeat registration
-				d.status = prior.status==null?"pending":prior.status;
-				if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
-				else msg += "<p>Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+		String msg = "<h2>Congratulations. Registration is complete.</h2>"
+				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
+
+		if (prior!=null) {  // this is a repeat registration
+			d.status = prior.status==null?"pending":prior.status;
+			if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
+			else msg += "<p>Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+		}
+
+		ofy().save().entity(d).now();  // registration is now complete
+		return msg;
+	}
+
+	Deployment createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse, HttpServletRequest request) throws Exception {
+		/* Dynamic Registration */
+		try {
+			String platformId = openIdConfiguration.get("issuer").getAsString();
+			String clientId = registrationResponse.get("client_id").getAsString();
+			String oidc_auth_url = openIdConfiguration.get("authorization_endpoint").getAsString();
+			String oauth_access_token_url = openIdConfiguration.get("token_endpoint").getAsString();
+			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
+			
+			String lms = "unknown";
+			try {
+				lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+			} catch (Exception e) {	
+				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error: LMS Type Unknown",openIdConfiguration.toString());
 			}
-
-			ofy().save().entity(d).now();  // registration is now complete
-			return msg;
-		} else {  // this path is used by Canvas, which doesn't send the deployment_id until the first launch
-			ProvisionalDeployment pd = new ProvisionalDeployment(platform_id,client_id,client_name,email,organization,org_url);
-			String msg = "<h2>Congratulations. Registration was successful.</h2>"
-					+ "You should now create a deployment (developer key) using the client_id " + client_id + ". The deployment_id will be sent to ChemVantage automatically "
-					+ "with the first launch. If you have a sandbox course, please create a test assignment to be sure that everything is working.<p>"
-					+ "Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
-			ofy().save().entity(pd).now();
-			return msg;
+	
+			String contact_name = request.getParameter("sub");
+			String contact_email = request.getParameter("email");
+			String organization = request.getParameter("aud");
+			String org_url = request.getParameter("url");
+			
+			String deploymentId = "";  // Most LMS platforms send the deployment_id in the registration response, but it's not required. Thanks, Brightspace and Canvas.
+			try {
+				deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id").getAsString();
+			} catch (Exception e) {}
+			
+			Deployment d = new Deployment(platformId,deploymentId,clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
+			d.status = "pending";
+			d.price = Integer.parseInt(price);
+			if (deploymentId.isEmpty()) {  // create a provisional deployment to use when an authToken is requested
+				ProvisionalDeployment pd = new ProvisionalDeployment(platformId,clientId,contact_name,contact_email,organization,org_url);
+				ofy().save().entity(pd);
+			} else 	ofy().save().entity(d);  // only save the deployment if it is complete
+			return d;
+		} catch (Exception e) {
+			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString() + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
 		}
 	}
 
@@ -799,43 +828,11 @@ public class LTIRegistration extends HttpServlet {
 		return registrationResponse;
 	}
 	
-	Deployment createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse, HttpServletRequest request) throws Exception {
-		try {
-			String platformId = openIdConfiguration.get("issuer").getAsString();
-			String clientId = registrationResponse.get("client_id").getAsString();
-			String oidc_auth_url = openIdConfiguration.get("authorization_endpoint").getAsString();
-			String oauth_access_token_url = openIdConfiguration.get("token_endpoint").getAsString();
-			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
-			
-			String lms = "unknown";
-			try {
-				lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
-			} catch (Exception e) {	
-				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error: LMS Type Unknown",openIdConfiguration.toString());
-			}
-
-			String contact_name = request.getParameter("sub");
-			String contact_email = request.getParameter("email");
-			String organization = request.getParameter("aud");
-			String org_url = request.getParameter("url");
-			
-			String deploymentId = "";  // Most LMS platforms send the deployment_id in the registration response, but it's not required. Thanks, Brightspace.
-			try {
-				deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id").getAsString();
-			} catch (Exception e) {}
-			
-			Deployment d = new Deployment(platformId,deploymentId,clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
-			d.status = "pending";
-			d.price = Integer.parseInt(price);
-
-			ofy().save().entity(d);
-			return d;
-		} catch (Exception e) {
-			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString() + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
-		}
-	}
-	
 	String successfulRegistrationRequestPage(JsonObject openid_configuration, HttpServletRequest request) {
+		int semesterPrice = 8;
+		try {
+			semesterPrice = Integer.parseInt(price)*4;
+		} catch (Exception e) {}
 		StringBuffer buf = new StringBuffer();
 		buf.append(Subject.header() + "<h1>ChemVantage</h1>");
 		buf.append("<h2>Your Registration Request Was Successful</h2>"
@@ -848,7 +845,7 @@ public class LTIRegistration extends HttpServlet {
 		} else {
 			buf.append("Your ChemVantage has been fully activated and provisioned with 1 free student license for testing. Each unique student "
 					+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
-					+ "Otherwise, ChemVantage will charge each student a subsciption price of $" + price + ".00 USD per month to access the assignments. "
+					+ "Otherwise, ChemVantage will charge each student a subsciption price of $" + semesterPrice + ".00 USD per semester (5 months) to access the assignments. "
 					+ "As a reminder, access to ChemVantage by instructors and LMS account administrators is always free.<br/><br/>");
 		}
 		
