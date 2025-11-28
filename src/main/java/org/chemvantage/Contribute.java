@@ -230,11 +230,14 @@ public class Contribute extends HttpServlet {
 			
 			if (conceptId>0L) {
 				Concept c = ofy().load().type(Concept.class).id(conceptId).now();
-				buf.append(c.title + "<input type=hidden name=ConcweptId value=" + c.id + " /><br/>");
+				buf.append(c.title + "<input type=hidden name=ConceptId value=" + c.id + " /><br/>");
 			} else {
 				List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 				buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept:</OPTION>");
-				for (Concept c : concepts) buf.append("<OPTION VALUE='" + c.id + "'>" + c.title + "</OPTION>");
+				for (Concept c : concepts) {
+					if (c.orderBy.startsWith(" 0")) continue;
+					buf.append("<OPTION VALUE='" + c.id + "'>" + c.title + "</OPTION>");
+				}
 				buf.append("</SELECT><br/><br/>");
 			}
 			
@@ -276,6 +279,9 @@ public class Contribute extends HttpServlet {
 						+ "of the student's response in percent (default = 2%). Use the Units box "
 						+ "to indicate the expected dimensions or units of the student response or "
 						+ "to finish any part of the question text that comes last.<p>"); break;
+				case (7): buf.append("Essay<br />");
+				buf.append("Pose a free-response question that the learner can answer in 800 characters "
+						+ "or less. The response will be scored by AI.<p>"); break;
 				default:  buf.append("An unexpected error occurred. "
 						//+ "Please <a href=Contribute" + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">try again</a>.");
 						+ "Please <a href=Contribute?sig=" + user.getTokenSignature() + ">try again</a>.");
@@ -287,8 +293,9 @@ public class Contribute extends HttpServlet {
 						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=2>True/False</label><br />"
 						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=3>Select Multiple</label><br />"
 						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=4>Fill in Word</label><br />"
-						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=5>Numeric</label><br />");
-			}
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=5>Numeric</label><br />"
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=7>Essay</label><br />");
+				}
 
 			if (q != null) buf.append(q.edit() 
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview This Question'>");

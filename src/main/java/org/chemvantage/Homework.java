@@ -119,6 +119,9 @@ public class Homework extends HttpServlet {
 			case "Preview":
 				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
 				break;
+			case "Instructor":
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
 			default:
 				long hintQuestionId = 0L;
 				try {
@@ -629,6 +632,401 @@ public class Homework extends HttpServlet {
 	}
 
 	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
+		StringBuffer buf = new StringBuffer("<style>"
+				+ ".response-container {\n"
+				+ "    max-width: 900px; \n"
+				//+ "    margin: 0 auto; \n"
+				+ "    box-sizing: border-box;\n"
+				+ "    padding: 15px;\n"
+				+ "}\n"
+				+ ".status-text {\n"
+				+ "    text-align: center;\n"
+				+ "    font-size: 3rem;\n"
+				+ "    font-weight: bold;\n"
+				+ "    color: white;\n"
+				+ "    background-color: blue;\n"
+				+ "    width: 100%;\n"
+				+ "}\n"
+				+ ".explanation-text {\n"
+				+ "    font-size: 1rem;\n"
+				+ "    color: black;\n"
+				+ "    background-color: white;\n"
+				+ "    text-align: left;\n"
+				+ "}\n"
+				+ ".badge-container {\n"
+				+ "    display: flex;\n"
+				+ "    flex-direction: column;\n"
+				+ "    align-items: center;\n"
+				+ "    text-align: center;\n"
+				+ "}\n"
+				+ ".solution-container {\n"
+				+ "    background-color: white;\n"
+				+ "    border: 3px solid blue;\n"
+				+ "    padding: 15px;\n"
+				+ "    text-align: left;\n"
+				+ "    width: 100%"
+				+ "}\n"
+				+ ".feedback-container {\n"
+				+ "    text-align: left;\n"
+				+ "}\n"
+				+ "</style>");
+		StringBuffer debug = new StringBuffer("Homework.printScore...");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
+		String qn = null;
+		Question q = null;
+		String hashMe = user.getId() + (user.isAnonymous()?0:hwa.id);  //used to setParameters
+		String studentAnswer = null;
+		JsonObject essay_score = new JsonObject(); // contains essay score and feedback
+		int studentScore = 0;
+		Score s = null;
+		
+		/*
+		 * Validate the student response
+		 */
+		try {
+			// Check to see if a response was submitted
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
+			if (studentAnswer.isEmpty()) {
+				buf.append("<h2>No response was submitted</h2>"
+						+ "<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id 
+						+ "&sig=" + user.getTokenSignature() + (qn==null?"":"#q" + qn) + ">"
+						+ "Go Back</a><br/><br/>");
+
+				return buf.toString();
+			}
+			
+			// Check to see if attemptsAllowed has been exceeded
+			qn = request.getParameter("QNumber");
+			q = ofy().load().type(Question.class).id(questionId).safe();
+			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+			String tooManyAttempts = tooManyAttempts(user,hwa,questionId);
+			if (tooManyAttempts != null) {
+				buf.append(tooManyAttempts);
+				buf.append("<br/><a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id 
+						+ "&sig=" + user.getTokenSignature() + (qn==null?"":"#q" + qn) + ">"
+						+ "Continue with this assignment</a><br/><br/>");
+				return buf.toString();
+			}
+
+			// Check to see if the retry delay has expired
+			String showWork = request.getParameter("ShowWork"+q.id);
+			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
+			String attemptTooSoon = attemptTooSoon(user,hwa,q,qn,showWork,studentAnswer);
+			if (attemptTooSoon != null) {
+				buf.append(attemptTooSoon);
+				return buf.toString();
+			}
+			
+			// Everything is OK, score the studentAnswer
+			switch (q.getQuestionType()) {
+			case 6:  // Handle five-star rating response
+				studentScore = q.pointValue;  // full marks for submitting a response
+				break;
+			case 7:  // New section for scoring essay questions with Chat GPT
+				debug.append("essay question...");
+				if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
+
+				BufferedReader reader = null;
+				JsonObject api_request = new JsonObject();
+				api_request.addProperty("model", Subject.getGPTModel());
+				JsonObject prompt = new JsonObject();
+				prompt.addProperty("id", "pmpt_68b05dd3c7e88190b02ec3c4a41e412003d177cd13da4c5d");
+				JsonObject variables = new JsonObject();
+				variables.addProperty("question_item", q.printForSage());
+				variables.addProperty("student_answer", studentAnswer);
+				prompt.add("variables", variables);
+				api_request.add("prompt", prompt);
+
+				URL u = new URI("https://api.openai.com/v1/responses").toURL();
+				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+				uc.setRequestMethod("POST");
+				uc.setDoInput(true);
+				uc.setDoOutput(true);
+				uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+				uc.setRequestProperty("Content-Type", "application/json");
+				uc.setRequestProperty("Accept", "application/json");
+				OutputStream os = uc.getOutputStream();
+				byte[] json_bytes = api_request.toString().getBytes("utf-8");
+				os.write(json_bytes, 0, json_bytes.length);           
+				os.close();
+
+				int response_code = uc.getResponseCode();
+				debug.append("HTTP Response Code: " + response_code);
+
+				JsonObject api_response = null;
+				if (response_code/100==2) {
+					reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					api_response = JsonParser.parseReader(reader).getAsJsonObject();
+					debug.append(api_response.toString());
+					reader.close();
+				} else {
+					reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+					debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
+					reader.close();
+				}
+
+				// Find the output text buried in the response JSON:
+				JsonArray output = api_response.get("output").getAsJsonArray();
+				JsonObject message = null;
+				JsonObject output_text = null;
+				for (JsonElement element0 : output) {
+					message = element0.getAsJsonObject();
+					if (message.has("content")) {
+						JsonArray content = message.get("content").getAsJsonArray();
+						for (JsonElement element1 : content) {
+							output_text = element1.getAsJsonObject();
+							if (output_text.has("text")) {
+								essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
+								studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
+								break;
+							}
+						}
+						break;
+					}
+				}
+				debug.append("e");
+				break;
+			default:
+				studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
+			}
+
+			HWTransaction ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,q.pointValue,showWork);
+			ht.studentAnswer = studentAnswer;
+			ht.correctAnswer = q.getCorrectAnswer();				
+			ofy().save().entity(ht).now();
+
+			// create/update/store a Score object and report the score to the LMS
+			Key<Question> k = key(Question.class,questionId);
+			if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
+				q.addAttemptSave(studentScore>0);
+				s = Score.getInstance(user.getId(),hwa);
+				ofy().save().entity(s).now();
+				String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
+				Utilities.createTask("/ReportScore",payload);
+			}
+
+			// Send a response to the student:
+			buf.append("<div class='response-container'>"
+					+ "<h1>" + hwa.title + "</h1>"
+					+ df.format(now) + "<br/><br/>"
+					+ "<div class='score-container'>");
+			if (studentScore==q.pointValue) {  // studentAnswer is correct
+				String msg = null;
+				int rand = new Random().nextInt(10);
+				switch(rand) {
+				case 0: msg = "Correct!"; break;
+				case 1: msg = "That's Right!"; break;
+				case 2: msg = "Great Job!"; break;
+				case 3: msg = "Excellent!"; break;
+				case 4: msg = "Spot On!"; break;
+				case 5: msg = "Nailed It!"; break;
+				case 6: msg = "You Got It!"; break;
+				case 7: msg = "Fantastic!"; break;
+				case 8: msg = "Awesome!"; break;
+				case 9: msg = "Right On!"; break;
+				}
+				buf.append("<div class='status-text'>" + (q.getQuestionType()==6?"Thank you!":msg) + "</div>");
+				
+			} else {  // studentAnswer is incorrect or incomplete
+				switch (q.getQuestionType()) {
+				case 5:  // Numeric question
+					try {
+						@SuppressWarnings("unused")
+						double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
+						if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<div class='status-text'>Incorrect Answer</div>"
+								+ "<p class='explanation-text'>"
+								+ "Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>")
+								+ "</p>");
+						else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<div class='status-text'>Almost There!</div>"
+								+ "<p class='explanation-text'>"
+								+ "It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
+								+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant or (better!) use <a href=https://en.wikipedia.org/wiki/Scientific_notation#E_notation>scientific E notation</a>.<br/><br/>"
+								+ "</p>");
+					}
+					catch (Exception e2) {
+						buf.append("<div class='status-text'>Wrong Format</div>"
+								+ "<p class='explanation-text'>"
+								+ "This question requires a numeric response expressed as an integer, decimal number, "
+								+ "or in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the computer "
+								+ "was unable to recognize your answer as one of these types.<br/>"
+								+ "</p>");
+					}
+					break;
+				case 6:  // Five star rating
+					buf.append("<div class='status-text'>No rating was submitted for this item.</div>");
+					break;
+				case 7:  // Essay question
+					int score = essay_score.get("score").getAsInt();
+					if (score<=1) buf.append("<div class='status-text'>Your answer is incorrect.</div>");
+					else buf.append("<div class='status-text'>Your answer needs improvement</div><br/>");
+					buf.append("<p class='explanation-text'>" + essay_score.get("feedback").getAsString() + "<br/><br/></p>");
+					break;
+				default:  // All other types of questions
+					buf.append("<div class='status-text'>Incorrect Answer</div>"
+							+ "<p class='explanation-text'>"
+							+ "Your answer was scored incorrect because it does not agree with the answer in the database.<br/>"
+							+ "</p>");
+				}
+			}
+		} catch (Exception e) {
+			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
+			return Logout.now(request,e);
+		}
+		buf.append("</div>"); // end of score-container
+		
+		/*
+		 * Display the correct solution to the problem, if appropriate
+		 */
+		if (studentScore==q.pointValue || user.isInstructor()) {
+			if (user.isInstructor() && studentScore!=q.pointValue) {
+				buf.append("<div id='solution-link'>Instructor Only: "
+						+ "<a href=# onclick=this.style='display:none';document.querySelector('.solution-container').style='display:block';>show the solution.</a></div>"
+						+ "<div class='solution-container' style='display:none'>");
+			} else {
+				buf.append("<div class='solution-container'>");
+
+			}
+			
+			buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
+			
+			if (q.getQuestionType()==7) { // ESSAY
+				int essayScore = essay_score.get("score").getAsInt();
+				buf.append("<br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString()
+				+ (essayScore<4?"":"<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)") + "<br/>");
+			} else if (q.getQuestionType()<6) {
+				buf.append("<div class='ai-explanation'>"
+						+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
+						+ "</div>");
+				buf.append("<script>"
+						+ "async function getExplanation() {"
+						+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
+						+ "  try {\n"
+						+ "    const url = '/Homework?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + hashMe.hashCode() + "';\n"
+						+ "    const response = await fetch(url);\n"
+						+ "    if (!response.ok) {\n"
+						+ "      throw new Error(`HTTP error! status: ${response.status}`);\n"
+						+ "    }\n"
+						+ "    const textData = await response.text();\n"
+						+ "    document.querySelector('.ai-explanation').innerHTML = textData;\n"  // Sage explanation
+						+ "    var mathjax = document.createElement('script');\n"
+						+ "    mathjax.type = 'text/javascript';\n"
+						+ "    mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+						+ "    document.head.appendChild(mathjax);\n"
+						+ "    return;\n"
+						+ "  } catch (error) {\n"
+						+ "    document.querySelector('.ai-explanation').innerHTML = error.message;\n"  // Sage explanation
+						+ "    return;\n"
+						+ "  }"
+						+ "}\n"
+						+ "</script>");
+			}
+			buf.append("</div>"); // end of solution-container
+		}
+		
+		/*
+		 * If the answer was correct, display the current badge
+		 */
+		if (studentScore==q.pointValue) {
+			int decileScore = (int) Math.floor(s.getPctScore() / 10.0);
+			String badgeName = null;
+			switch (decileScore) {
+			case 0: badgeName="Turbo-Penguin-Alchemist";break;
+			case 1: badgeName="Glitter-Shark-Wizard";break;
+			case 2: badgeName="Electric-Llama-Prophet";break;
+			case 3: badgeName="Flamingo-Karate-Detective";break;
+			case 4: badgeName="Space-Hamster-Captain";break;
+			case 5: badgeName="Ninja-Cactus-Cowboy";break;
+			case 6: badgeName="Galactic-Taco-Wizard";break;
+			case 7: badgeName="Pirate-Samurai-Unicorn";break;
+			case 8: badgeName="Disco-Viking-Platypus";break;
+			case 9: badgeName="Quantum-Donut-Knight";break;
+			case 10: badgeName="Turbo-Racoon-Overlord";break;
+			}
+			buf.append("<div class='badge-container'>"
+					+ "<img src='/images/badges/" + badgeName + ".png' height=260px width=260px alt='Fun cartoon character'>"
+					+ "<span style='font-weight: bold;'>Your score is " + s.getPctScore() + "%<br/>" + badgeName + "</span>"
+					+ "</div>");
+		}
+		
+		/*
+		 * Display feedback request and Continue button
+		 */
+		buf.append("<div class='feedback-container'>");
+		
+		if (studentScore==q.pointValue) {
+			buf.append(Feedback.fiveStars(user.getTokenSignature()));
+		} else {
+			buf.append("<p><br/>Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<br/></p>");
+		}
+		
+		boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
+
+		buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
+				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
+				+ "</a><br/>");
+
+		buf.append("</div>"); // end of feedback-container
+		
+		return buf.toString();
+	}
+	
+	String tooManyAttempts(User user, Assignment hwa, Long questionId) {
+		StringBuffer buf = new StringBuffer();
+		// Return null if anonymous user or instructor or attemptsAllowed==null or this is an optional question
+		if (hwa==null || user.isInstructor() || hwa.attemptsAllowed == null || !hwa.questionKeys.contains(key(Question.class,questionId))) return null;
+		
+		List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
+		List<HWTransaction> priorAttempts = new ArrayList<HWTransaction>();
+		for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
+		if (priorAttempts.size() < hwa.attemptsAllowed) return null;
+		
+		// Make a List of prior attempts with a message
+		buf.append("<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
+		for (HWTransaction hwt : priorAttempts) buf.append("<tr><td>" + hwt.id + "</td><td>" + df.format(hwt.graded) + "</td><td align=center>" + hwt.score +  "</td></tr>");
+		buf.append("</table><br/>");
+
+		return buf.toString();
+	}
+	
+	String attemptTooSoon(User user,Assignment hwa,Question q,String qn,String showWork,String studentAnswer) {
+		StringBuffer buf = new StringBuffer();
+		Date now = new Date();
+		Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 1 minute ago
+		HWTransaction lastTransaction = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",q.id).filter("graded >",minutesAgo).first().now();
+		if (lastTransaction==null || lastTransaction.score>0) return null;
+		long secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastTransaction.graded.getTime())/1000L;
+		
+		buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
+		buf.append("<span id=timer0 style='color: #EE0000'></span><br/>");
+		buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
+				+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
+		buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForRetryScore(); >"
+				+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+				+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+				+ (qn==null?"":"<input type=hidden name=QNumber value=" + qn + " />")  // this is the assigned question number on the page
+				+ q.print(showWork,studentAnswer) + "<br>");
+
+		buf.append("<INPUT TYPE='submit' id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
+		buf.append("<script>"
+				+ "startTimers(" + (secondsRemaining*1000L) + ");"
+				+ "function timesUp() {"
+				+ "document.getElementById('RetryButton').disabled=false;"
+				+ "document.getElementById('RetryButton').value='Grade This Exercise';"
+				+ "}"
+				+ "</script>");
+
+		return buf.toString();
+	}
+	
+	/*
+	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		JsonObject essay_score = new JsonObject(); // contains essay score and feedback
@@ -988,7 +1386,7 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("\n<SELECT NAME=QuestionType>"
@@ -1084,6 +1482,7 @@ public class Homework extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			buf.append("<h1>Customize Homework Assignment</h1>");
+			buf.append("<a href='/Homework?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
 			buf.append("<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"

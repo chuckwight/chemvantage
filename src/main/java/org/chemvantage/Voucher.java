@@ -22,7 +22,7 @@ public class Voucher {
 	
 	public Voucher() {}
 	
-	public Voucher(String org,int price) {
+	public Voucher(String org,int months,int price) {
 		this.code = Integer.toHexString(1048576 + new Random().nextInt(15728640)).toUpperCase(); // 6-character HEX
 		Date now = new Date();
 		this.purchased = now;
@@ -30,7 +30,7 @@ public class Voucher {
         calendar.setTime(now);
         calendar.add(Calendar.MONTH, 6);
         expires = calendar.getTime();
-        this.months = 12;
+        this.months = months;
 		this.paid = price;
 		this.org = org;
 	}

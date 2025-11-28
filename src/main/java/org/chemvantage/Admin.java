@@ -140,11 +140,14 @@ public class Admin extends HttpServlet {
 				try {
 					int n = Integer.parseInt(request.getParameter("NVouchers"));
 					String org = request.getParameter("Organization");
+					int months = Integer.parseInt(request.getParameter("Months"));
 					int price = Integer.parseInt(request.getParameter("Price"));
 					if (org == null) throw new Exception();
 					List<Voucher> newVouchers = new ArrayList<Voucher>();
-					for (int i=0; i<n; i++) newVouchers.add(new Voucher(org,price));
+					for (int i=0; i<n; i++) newVouchers.add(new Voucher(org,months,price));
 					ofy().save().entities(newVouchers).now();
+					out.println(Subject.getHeader(user) + viewCodes(org) + Subject.footer);
+					return;
 				} catch (Exception e) {}
 				break;
 			}
@@ -251,50 +254,36 @@ public class Admin extends HttpServlet {
 					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a><p>");
 			
 			// Create subscription vouchers
-			buf.append("<h2>1-Year Subscription Vouchers</h2>");
+			buf.append("<h2>Subscription Vouchers</h2>");
 			List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
-			
-			if ("Create Vouchers".equals(userRequest)) {
-				Date fiveSecondsAgo = new Date(new Date().getTime()-5000L);
-				buf.append("<b>New Voucher Codes - these will only be displayed once</b>:<br/>");
-				DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
-				buf.append("<table><tr><th>Organization</th><th>Purchased</th><th>Paid</th><th>Months</th><th>Code</th></th>");
-				for (Voucher v : vouchers) {
-					if (v.purchased.before(fiveSecondsAgo)) break;
-					buf.append("<tr>"
-							+ "<td style='text-align:center'>" + v.org + "</td>"
-							+ "<td style='text-align:center'>" + df.format(v.purchased) + "</td>"
-							+ "<td style='text-align:center'>$" + v.paid + "</td>"
-							+ "<td style='text-align:center'>" + v.months + "</td>"
-							+ "<td style='text-align:center'>" + v.code + "</td>"
-							+ "</tr>");
+
+			buf.append("<a href=# onclick=document.getElementById('vouchers').style='display:block';>"
+					+ "There are " + vouchers.size() + " unclaimed vouchers.</a><br/>");
+			if (vouchers.size()>0) {
+				Map<String,Integer> voucherCounts = new HashMap<String,Integer>();
+				for (Voucher v : vouchers) { // increment count for this org
+					voucherCounts.put(v.org, voucherCounts.containsKey(v.org)?voucherCounts.get(v.org)+1:1);
 				}
-				buf.append("</table><br/>");
-			} else {
-				buf.append("<b>There are " + vouchers.size() + " unclaimed vouchers.</b><br/>");
-				if (vouchers.size()>0) {
-					Map<String,Integer> voucherCounts = new HashMap<String,Integer>();
-					for (Voucher v : vouchers) { // increment count for this org
-						voucherCounts.put(v.org, voucherCounts.containsKey(v.org)?voucherCounts.get(v.org)+1:1);
-					}
-					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></tr>");
-					for (Entry<String,Integer> e : voucherCounts.entrySet()) {
-						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'>"
-								+ "<a href='/Admin?UserRequest=ViewCodes&Org=" + URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "'>" + e.getValue() + "</a></td></tr>");
-					}
+				buf.append("<div id=vouchers style='display:none'>"
+						+ "<table><tr><th>Organization</th><th>Vouchers</th></tr>");
+				for (Entry<String,Integer> e : voucherCounts.entrySet()) {
+					buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'>"
+							+ "<a href='/Admin?UserRequest=ViewCodes&Org=" + URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "'>" + e.getValue() + "</a></td></tr>");
 				}
-				buf.append("</table><br/>");
 			}
+			buf.append("</table>");
 
 			buf.append("<form method=post>");
 			buf.append("<input type=hidden name=UserRequest value='Create Vouchers' />");
-			buf.append("Create <input type=text size=3 name=NVouchers value=0 /> new vouchers for "
+			buf.append("Create <input type=text size=2 name=NVouchers value=0 /> new "
+					+ "<input type=text size=2 name=Months value=12 />-month vouchers for "
 					+ "<input type=text name=Organization placeholder=organization /> at "
-					+ "$<input type=text size=3 name=Price value=16> each. "
+					+ "$<input type=text size=2 name=Price value=16 /> each. "
 					+ "<input type=submit value='Show Codes' />");
-			buf.append("</form><p>");
+			buf.append("</form></div><p>");
 			// Signature Code
 			buf.append("<h2>Anonymous Signature Codes</h2>"
+					+ "1 week: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 604800000L).getTime())) + "<br/>"
 					+ "1 month: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>"
 					+ "1 year: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 31536000000L).getTime())) + "<p>");	
 			buf.append("<h2>Search Questions for Text</h2><"
@@ -311,11 +300,14 @@ public class Admin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h1>Student Subscription Vouchers</h1><b>" + org + "</b><br/><br/>");
 		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
 		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
-		buf.append("<table><tr><th>Voucher Code</th><th style='text-align:center'>Expires</th></tr>");
+		buf.append("<table><tr style='text-align:center'><th>Voucher Code</th><th>Code Expires</th><th>Subscription</th><th>&nbsp;&nbsp;Paid</th></tr>");
 		for (Voucher v : vouchers) {
 			if (!org.equals(v.org)) continue;
-			buf.append("<tr><td style='text-align:center'>" + v.code + "</td>"
-					+ "<td style='text-align:center'>" + (v.expires==null?" - ":df.format(v.expires)) + "</td></tr>");
+			buf.append("<tr style='text-align:center'><td>" + v.code + "</td>"
+					+ "<td>" + (v.expires==null?" - ":df.format(v.expires)) + "</td>"
+					+ "<td>" + v.months + " month" + (v.months>1?"s":"") + "</td>"
+					+ "<td>$" + v.paid + "</td>"
+					+ "</tr>");
 		}
 		buf.append("</table>");
 		return buf.toString();

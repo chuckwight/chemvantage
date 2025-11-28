@@ -103,7 +103,7 @@ public class VideoQuiz extends HttpServlet {
 				break;
 			case "FinishQuizlet":
 				VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.getHashedId()).filter("videoId",videoId).order("-downloaded").first().now();
-				out.println(Subject.header("Video Lecture") + finishQuizlet(user,vt,response) + Subject.footer);
+				out.println(finishQuizlet(user,vt,response));
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
@@ -359,7 +359,7 @@ public class VideoQuiz extends HttpServlet {
 				ofy().save().entity(vt).now();
 			}
 
-			if (segment == v.breaks.length) response.sendRedirect("/VideoQuiz?UserRequest=FinishQuizlet&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
+			if (segment == v.breaks.length) response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=FinishQuizlet&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
 
 			// get a List of available Question keys for this segment of this video
 			int counter = 0; // skip over this many questions to the ones in the current quizlet

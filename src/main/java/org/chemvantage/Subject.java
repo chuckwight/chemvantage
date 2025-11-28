@@ -237,7 +237,7 @@ public class Subject {
 		}
 		
 		buf.append("</head>\n"
-		+ "<body class='bg-white text-body'><main id='main-content'>\n"
+		+ "<body class='bg-white text-body' style='padding: 10px'><main id='main-content'>\n"
 		+ (announcement==null || announcement.isEmpty()?"":"<FONT style='color: #B20000'>" + announcement + "</FONT><br/>\n")
 		);
 		
@@ -280,7 +280,7 @@ public class Subject {
 		+ "    }\n"
 		+ "  </style>\n"
 		+ "</head>"
-		+ "<body>\n"
+		+ "<body class='bg-white text-body' style='padding: 10px'>\n"
 		+ "  <a href='#main-content' class='visually-hidden-focusable position-absolute start-0 top-0 m-2 p-2  rounded text-dark'>Skip to main content</a>\n"
 		+ "  <div style='padding: 20px;'>"
 		+ "    <a href=/ style='padding-right:25px'>Home</a> "
@@ -298,7 +298,7 @@ public class Subject {
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "\n</main>\n"
-			+ "<footer id=footer style='max-width: 600px'><hr/>"
+			+ "<footer id=footer style='max-width: 600px;'><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
 			+ "<a href=/privacy.html>Privacy</a> | "
