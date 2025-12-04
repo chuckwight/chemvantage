@@ -559,7 +559,7 @@ public class Homework extends HttpServlet {
 					if (attemptsRemaining < 0) attemptsRemaining = 0;
 				}
 
-				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
+				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.png ALT='Check mark' align=top>&nbsp;");
 				
 				buf.append("</div>");
 
@@ -601,7 +601,7 @@ public class Homework extends HttpServlet {
 						if (attemptsRemaining < 0) attemptsRemaining = 0;
 					}
 
-					if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
+					if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.png ALT='Check mark' align=top>&nbsp;");
 					
 					buf.append("</div>");
 
@@ -1274,7 +1274,7 @@ public class Homework extends HttpServlet {
 				default:
 					buf.append("<div style='display:flex'>"
 							+ "<div>"
-							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><br/>");
+							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.png ALT='Check mark' align=bottom /><br/>");
 					buf.append(solutionBuf.toString()
 							+ "</div>");
 					
@@ -1447,7 +1447,7 @@ public class Homework extends HttpServlet {
 						if (t.studentAnswer==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
 						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + t.studentAnswer + "</td><td style='padding-right:20px'>" + t.correctAnswer + "</td>");
 						
-						if (t.score==1) buf.append("<td><img src=/images/checkmark.gif alt='checkmark' height=24 width=17></td>");
+						if (t.score==1) buf.append("<td><img src=/images/checkmark.png alt='checkmark' height=24 width=17></td>");
 						else if (q.agreesToRequiredPrecision(t.studentAnswer)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
 						else buf.append("<td><img src=/images/xmark.png alt='x-mark' height=24 width=24></td>");
 						buf.append("</tr>");

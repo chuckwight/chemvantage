@@ -612,7 +612,7 @@ public class Question implements Serializable, Cloneable {
 		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p></p>");
 		else if (getQuestionType()<6) {
 			buf.append("<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;");
-			if (this.isCorrect(studentAnswer)) buf.append("&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>");
+			if (this.isCorrect(studentAnswer)) buf.append("&nbsp;<IMG SRC=/images/checkmark.png ALT='Check mark' align=bottom>");
 			else if (this.agreesToRequiredPrecision(studentAnswer)) buf.append("<IMG SRC=/images/partCredit.png ALT='minus 1 sig figs' align=middle>"
 					+ "<br/>Your answer must have exactly " + significantFigures + " significant digits.<br/>If your answer ends in a zero, then it must also have a decimal point to indicate which digits are significant.");
 			else buf.append("<IMG SRC=/images/xmark.png ALT='X mark' align=middle>");

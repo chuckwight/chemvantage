@@ -861,7 +861,7 @@ public class Sage extends HttpServlet {
 				switch (rawScore) {  // 0, 1 or 2
 				case 2:  // correct answer
 					buf.append("<h1>Congratulations!</h1>\n"
-							+ "<b>Your answer is correct. </b><IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><p>\n"
+							+ "<b>Your answer is correct. </b><IMG SRC=/images/checkmark.png ALT='Check mark' align=bottom /><p>\n"
 							+ "<div style='width:800px;display:flex;align-items:center;'>\n"
 							
 							+ showMeLink
