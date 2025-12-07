@@ -569,6 +569,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
 				user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
 				user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator"));
+				user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/system/person#Administrator"));
 				if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Learner")) isLearner = true;
 				if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Mentor")) isMentor = true;
 			}
