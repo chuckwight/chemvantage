@@ -224,3 +224,10 @@ indexes:
   - name: activated
   - name: purchased
     direction: desc
+
+- kind: Voucher
+  properties:
+  - name: org
+  - name: activated
+  - name: purchased
+    direction: desc
