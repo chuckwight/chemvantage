@@ -18,7 +18,7 @@ public class Voucher {
 	@Index	Date expires;
 			int months;
 			int paid;
-			String org;
+	@Index	String org;
 	
 	public Voucher() {}
 	
