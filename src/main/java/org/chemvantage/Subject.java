@@ -295,7 +295,7 @@ public class Subject {
 		+ "<main id='main-content'>");
 	}
 	
-	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
+	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='" + getServerUrl() + "/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "\n</main>\n"
 			+ "<footer id=footer style='max-width: 600px;'><hr/>"
