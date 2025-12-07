@@ -32,11 +32,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.openpdf.pdf.ITextRenderer;
+
 import com.google.cloud.datastore.Cursor;
 import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.cmd.Query;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -62,13 +65,34 @@ public class Admin extends HttpServlet {
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest == null) userRequest = "";
+			
+			if ("DownloadVoucherPDF".equals(userRequest)) {
+				try {
+					String org = request.getParameter("Org");
+					response.setContentType("application/pdf");
+					response.setHeader("Content-Disposition", "attachment; filename=\"vouchers.pdf\"");
+					ServletOutputStream os = response.getOutputStream();
+					ITextRenderer renderer = new ITextRenderer();
+					renderer.setDocumentFromString(voucherTemplate(org));
+					renderer.layout();
+					renderer.createPDF(os);
+					os.flush();
+				} catch (Exception e) {
+					response.setContentType("text/html");
+					response.setHeader("Content-Disposition", "inline");
+					response.getWriter().println(e.getMessage());
+				}
+				return;
+			}
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			String searchString = request.getParameter("SearchString");
 			String cursor = request.getParameter("Cursor");
+			String org = null;
 			
-			String userRequest = request.getParameter("UserRequest");
-			if (userRequest == null) userRequest = "";
 			switch (userRequest) {
 			case "OpenStaxReport":
 				out.println(Subject.header() + Group.openStaxReport() + Subject.footer);
@@ -82,9 +106,9 @@ public class Admin extends HttpServlet {
 				out.println(Subject.getHeader(user) + searchQuestions(searchFor) + Subject.footer);
 				break;
 			case "ViewCodes":
-				String org = request.getParameter("Org");
+				org = request.getParameter("Org");
 				out.println(Subject.getHeader(user) + viewCodes(org) + Subject.footer);
-			break;
+				break;
 			default: 
 				out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
 			}
@@ -157,7 +181,35 @@ public class Admin extends HttpServlet {
 		}
 	}
 
-	private String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
+	String voucherTemplate(String org) {
+		StringBuffer buf = new StringBuffer(Subject.header());
+		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
+		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("org =",org).filter("activated =",null).order("-purchased").list();
+		for (Voucher v : vouchers) {
+			buf.append("<div" + (vouchers.indexOf(v)==0?">":" style='page-break-before: always;'>")); 
+			buf.append(Subject.banner + "An Open Educational Resource for General Chemistry<br/><br/>");
+			buf.append("<h1>Student Subscription Voucher</h1>"
+					+ "Issued: " + df.format(v.purchased) + "<br/>"
+					+ "Organization: " + v.org + "<br/>"
+					+ "Voucher Code: <b>" + v.code + "</b><br/>"
+					+ "Code Expires: " + df.format(v.expires) + "<br/><br/>");
+			buf.append("This voucher can be redeemed for a " + v.months + "-month subscription to ChemVantage at any "
+					+ "time prior to the expiration date above. Your instructor will create ChemVantage assignments in "
+					+ "your class LMS. When you launch your first ChemVantage assignment, you will be taken to a subscription "
+					+ "page similar to the one shown below. Check the two boxes to accept the terms of the subscription. "
+					+ "Then enter the voucher code shown above into the form and click Redeem. Do not use the Checkout "
+					+ "button to pay for your subscription.<br/><br/>"
+					+ "This voucher code is unique and can only be used to activate one subscription. Once your code "
+					+ "is validated, you will be able to proceed to your assignment. Your subscription will "
+					+ "be active for a period of " + v.months + " months from the date it is activated.<br/><br/>");
+			buf.append("<div><img width=600px src='" + Subject.getServerUrl() + "/images/subscription.png' /></div>");
+			buf.append("</div>");
+		}
+		buf.append("</main></body></html>");
+		return buf.toString();
+	}
+	
+	String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
 				+ "      <div class='container py-5'>"
 				+ "          <div class='col-lg-7'>"
@@ -297,19 +349,29 @@ public class Admin extends HttpServlet {
 	}
 	
 	String viewCodes(String org) {
+		/*
+		 * Temporary section to re-index all the Voucher entities
+		 */
+		List<Voucher> temp = ofy().load().type(Voucher.class).list();
+		ofy().save().entities(temp).now();
+		/*
+		 * 
+		 */
 		StringBuffer buf = new StringBuffer("<h1>Student Subscription Vouchers</h1><b>" + org + "</b><br/><br/>");
 		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
-		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
+		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("org =",org).filter("activated =",null).order("-purchased").list();
 		buf.append("<table><tr style='text-align:center'><th>Voucher Code</th><th>Code Expires</th><th>Subscription</th><th>&nbsp;&nbsp;Paid</th></tr>");
 		for (Voucher v : vouchers) {
-			if (!org.equals(v.org)) continue;
 			buf.append("<tr style='text-align:center'><td>" + v.code + "</td>"
 					+ "<td>" + (v.expires==null?" - ":df.format(v.expires)) + "</td>"
 					+ "<td>" + v.months + " month" + (v.months>1?"s":"") + "</td>"
 					+ "<td>$" + v.paid + "</td>"
 					+ "</tr>");
 		}
-		buf.append("</table>");
+		buf.append("</table><br/><br/>");
+		try {
+			buf.append("<a href='/Admin?UserRequest=DownloadVoucherPDF&Org=" + URLEncoder.encode(org,StandardCharsets.UTF_8) + "'>Download PDF file</a>");	
+		} catch (Exception e) {}
 		return buf.toString();
 	}
 	
