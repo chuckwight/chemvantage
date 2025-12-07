@@ -349,14 +349,6 @@ public class Admin extends HttpServlet {
 	}
 	
 	String viewCodes(String org) {
-		/*
-		 * Temporary section to re-index all the Voucher entities
-		 */
-		List<Voucher> temp = ofy().load().type(Voucher.class).list();
-		ofy().save().entities(temp).now();
-		/*
-		 * 
-		 */
 		StringBuffer buf = new StringBuffer("<h1>Student Subscription Vouchers</h1><b>" + org + "</b><br/><br/>");
 		DateFormat df = new SimpleDateFormat("EEE MMM d, yyyy");
 		List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("org =",org).filter("activated =",null).order("-purchased").list();
