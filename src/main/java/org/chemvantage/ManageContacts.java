@@ -73,43 +73,29 @@ public class ManageContacts extends HttpServlet {
 		
 		buf.append(searchContacts());
 		
-		/*
-		String[] email = request.getParameterValues("Email");
-		
-		if (email!=null) {
-			for (int i=0;i<email.length;i++) {
-				try {
-					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i].trim().toLowerCase()).safe()));
-				} catch (Exception e) {}
-				email[0] = null;
-			}
-		}
-		*/
 		
 		String email = request.getParameter("Email");
 		if (email!=null) {
 			// This search works by retrieving Contact keys and examining the embedded name (email) for partial matches
-			List<Key<Contact>> domainContactKeys = new ArrayList<Key<Contact>>();
 			List<Key<Contact>> contactKeys = ofy().load().type(Contact.class).limit(1000).keys().list();
+			List<Key<Contact>> matchingContactKeys = new ArrayList<Key<Contact>>();
 			while (contactKeys.size()>0) {
 				for (Key<Contact> k : contactKeys) {
-					if (k.getName().toLowerCase().contains(email.toLowerCase())) domainContactKeys.add(k);
+					if (k.getName().toLowerCase().contains(email.toLowerCase())) matchingContactKeys.add(k);
 				}
 				Key<Contact> lastKey = contactKeys.get(contactKeys.size()-1);
 				contactKeys = ofy().load().type(Contact.class).filterKey(">", lastKey).limit(1000).keys().list();
 			}
-			if (domainContactKeys.size()==1) {  // unique match; allow editing
-				buf.append(editExistingContact(ofy().load().key(domainContactKeys.get(0)).now()));
-			} else {
-				buf.append("There are " + domainContactKeys.size() + " contacts matching " + email + ":<br/>");
-				if (domainContactKeys.size()<50) {
-					Map<Key<Contact>,Contact> domainContacts = ofy().load().keys(domainContactKeys);
-					domainContacts.forEach((key,contact) ->  buf.append(key.getName() + "<br/>"));
-					buf.append("<br/>");
-				}
+			if (matchingContactKeys.size()>0) {  // allow editing
+				buf.append(editExistingContact(ofy().load().key(matchingContactKeys.get(0)).now()));
+			}
+			if (matchingContactKeys.size()>1) {
+				buf.append("There are " + matchingContactKeys.size() + " contacts matching " + email + ":<br/>");
+				if (matchingContactKeys.size()>50) matchingContactKeys.subList(50, matchingContactKeys.size()).clear();
+				matchingContactKeys.forEach((key) -> buf.append(key.getName() + "<br/>"));
+				buf.append("<br/>");
 			}
 		}
-		
 		buf.append(addNewContact());
 		buf.append(pasteNewContact());
 		buf.append(exportCSVFile());
@@ -133,18 +119,18 @@ public class ManageContacts extends HttpServlet {
 			switch (userRequest) {
 			case "Add New Contact":
 				addNewContact(request);
-				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + email);
+				response.sendRedirect("/contacts?Email=" + email);
 				break;
 			case "Paste New Contact":
 				email = pasteNewContact(request);
-				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + email);
+				response.sendRedirect("/contacts?Email=" + email);
 			case "Save Revised Contact":
 				saveRevisedContact(request);
-				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Delete This Contact":
 				deleteContact(request);
-				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Export CSV File":
 				exportCSVFile(request,response);
@@ -191,10 +177,13 @@ public class ManageContacts extends HttpServlet {
 	
 	void addNewContact(HttpServletRequest request) throws Exception {
 		Contact c = null;
+		String email = request.getParameter("Email").trim().toLowerCase();
 		try {
-			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).safe();
+			c = ofy().load().type(Contact.class).id(email).safe();
+			c.firstName = request.getParameter("FirstName");
+			c.lastName = request.getParameter("LastName");
 		} catch (Exception e) {
-			c = new Contact(request.getParameter("FirstName"),request.getParameter("LastName"),request.getParameter("Email").trim().toLowerCase());
+			c = new Contact(request.getParameter("FirstName"),request.getParameter("LastName"),email);
 		}
 		c.role = request.getParameter("Role");
 		c.vetted = true;
