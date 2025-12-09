@@ -73,13 +73,40 @@ public class ManageContacts extends HttpServlet {
 		
 		buf.append(searchContacts());
 		
+		/*
 		String[] email = request.getParameterValues("Email");
+		
 		if (email!=null) {
 			for (int i=0;i<email.length;i++) {
 				try {
 					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i].trim().toLowerCase()).safe()));
 				} catch (Exception e) {}
 				email[0] = null;
+			}
+		}
+		*/
+		
+		String email = request.getParameter("Email");
+		if (email!=null) {
+			// This search works by retrieving Contact keys and examining the embedded name (email) for partial matches
+			List<Key<Contact>> domainContactKeys = new ArrayList<Key<Contact>>();
+			List<Key<Contact>> contactKeys = ofy().load().type(Contact.class).limit(1000).keys().list();
+			while (contactKeys.size()>0) {
+				for (Key<Contact> k : contactKeys) {
+					if (k.getName().toLowerCase().contains(email.toLowerCase())) domainContactKeys.add(k);
+				}
+				Key<Contact> lastKey = contactKeys.get(contactKeys.size()-1);
+				contactKeys = ofy().load().type(Contact.class).filterKey(">", lastKey).limit(1000).keys().list();
+			}
+			if (domainContactKeys.size()==1) {  // unique match; allow editing
+				buf.append(editExistingContact(ofy().load().key(domainContactKeys.get(0)).now()));
+			} else {
+				buf.append("There are " + domainContactKeys.size() + " contacts matching " + email + ":<br/>");
+				if (domainContactKeys.size()<50) {
+					Map<Key<Contact>,Contact> domainContacts = ofy().load().keys(domainContactKeys);
+					domainContacts.forEach((key,contact) ->  buf.append(key.getName() + "<br/>"));
+					buf.append("<br/>");
+				}
 			}
 		}
 		
