@@ -51,6 +51,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	static Map<String,String> authTokens = new HashMap<String,String>();
 	
 	static String getAccessToken(String platformDeploymentId,String scope) throws IOException {
+		return getAccessToken(platformDeploymentId, scope, false);
+	}
+	
+	static String getAccessToken(String platformDeploymentId,String scope, boolean retry) throws IOException {
 
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
@@ -151,9 +155,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				throw new Exception("Failed AuthToken Request");
 			}
 		} catch (Exception e) {
+			try {  // This overcomes a timeout problem with some servers getting our jwks
+				if (retry) throw new Exception();
+				Thread.sleep(5000);
+				return getAccessToken(platformDeploymentId,scope,true);
+			} catch (Exception e1) {}
 			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
-			if (Subject.getProjectId().equals("chem-vantage-hrd"))
-				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
 			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    
 	}
