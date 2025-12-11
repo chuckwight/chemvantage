@@ -928,7 +928,7 @@ public class Homework extends HttpServlet {
 		}
 		
 		// This will contain the badge and feedback containers:
-		buf.append("<div style='display:flex;justify-content:center;align-items: center;width: 800px;max-width: 100%;gap: 20px;'>"); 
+		if (studentScore==q.pointValue) buf.append("<div style='display:flex;justify-content:center;align-items: center;width: 800px;max-width: 100%;gap: 20px;'>"); 
 		
 		/*
 		 * Display feedback request and Continue button
@@ -973,7 +973,7 @@ public class Homework extends HttpServlet {
 					+ "</div>");
 		}
 		
-		buf.append("</div>"); // end of badge+feedback container
+		if (studentScore==q.pointValue) buf.append("</div>"); // end of badge+feedback container
 		return buf.toString();
 	}
 	
