@@ -927,6 +927,27 @@ public class Homework extends HttpServlet {
 			buf.append("</div>"); // end of solution-container
 		}
 		
+		// This will contain the badge and feedback containers:
+		buf.append("<div style='display:flex;justify-content:center;align-items: center;width: 800px;max-width: 100%;gap: 20px;'>"); 
+		
+		/*
+		 * Display feedback request and Continue button
+		 */
+		buf.append("<div class='feedback-container'>");
+		
+		if (studentScore==q.pointValue) {
+			buf.append(Feedback.fiveStars(user.getTokenSignature()));
+		} else {
+			buf.append("<p><br/>Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<br/></p>");
+		}
+		
+		boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
+
+		buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
+				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
+				+ "</a><br/>");
+
+		buf.append("</div>"); // end of feedback-container
 		/*
 		 * If the answer was correct, display the current badge
 		 */
@@ -952,25 +973,7 @@ public class Homework extends HttpServlet {
 					+ "</div>");
 		}
 		
-		/*
-		 * Display feedback request and Continue button
-		 */
-		buf.append("<div class='feedback-container'>");
-		
-		if (studentScore==q.pointValue) {
-			buf.append(Feedback.fiveStars(user.getTokenSignature()));
-		} else {
-			buf.append("<p><br/>Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<br/></p>");
-		}
-		
-		boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
-
-		buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
-				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
-				+ "</a><br/>");
-
-		buf.append("</div>"); // end of feedback-container
-		
+		buf.append("</div>"); // end of badge+feedback container
 		return buf.toString();
 	}
 	
