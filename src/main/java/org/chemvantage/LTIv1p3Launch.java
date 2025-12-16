@@ -157,6 +157,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
+		if (user == null) throw new Exception("User could not be created from claims.");
 		
 		// Check to see if registration is complete and gather required info if necessary:
 		if (user.isInstructor() && "auto".equals(d.status)) {
@@ -189,9 +190,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				d.lastLogin = now;
 				if (user.isInstructor()) d.claims = claims.toString();
 
-				JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
-				JsonElement je = platform.get("email_contact");
-				if (je != null) d.email = je.getAsString();
+				JsonElement platformElem = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform");
+				if (platformElem != null) {
+					JsonObject platform = platformElem.getAsJsonObject();
+					JsonElement je = platform.get("email_contact");
+					if (je != null) d.email = je.getAsString();
+				}
 			} catch (Exception e) {
 			}	
 
@@ -200,7 +204,9 @@ public class LTIv1p3Launch extends HttpServlet {
 			String lti_ags_lineitem_url = null;
 			String lti_ags_lineitems_url = null;
 			try {  
-				JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
+			JsonElement agsElem = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint");
+			if (agsElem != null) {
+				JsonObject lti_ags_claims = agsElem.getAsJsonObject();
 
 				// get the list of AGS capabilities allowed by the platform
 				JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
@@ -208,154 +214,181 @@ public class LTIv1p3Launch extends HttpServlet {
 				while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
 				lti_ags_lineitems_url = (lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString());
 				lti_ags_lineitem_url = (lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString());
-			} catch (Exception e) {				
 			}
-
-			// Process information for LTI Advantage Names and Roles Provisioning (NRPS)
-			String lti_nrps_context_memberships_url = null;
-			try { 
-				JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
-				if (lti_nrps_claims != null) scope += (scope.length()>0?" ":"") + "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
-				lti_nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
-			} catch (Exception e) {
-			}
-
-			d.scope = scope;
-			debug.append(scope.isEmpty()?"Scope is empty. ":"Scope is " + scope + ". ");
-			
-			// Launch only premium users
-			boolean isPremiumUser = user.isPremium();
-			if (!isPremiumUser) {
-				debug.append("t1");
-				if (d.getNLicensesRemaining()>0) {
-					d.nLicensesRemaining--;
-					new PremiumUser(user.getHashedId(),12,0,d.organization,"allocated");
-					isPremiumUser = true;
-				} else if (d.price == 0) {
-					new PremiumUser(user.getHashedId(),12,0,d.organization,"comped");
-					isPremiumUser = true;
+		} catch (Exception e) {				
+		}
+		
+		String lti_nrps_context_memberships_url = null;
+		try { 
+			JsonElement nrpsElem = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice");
+			if (nrpsElem != null) {
+				JsonObject lti_nrps_claims = nrpsElem.getAsJsonObject();
+				if (lti_nrps_claims != null) {
+					scope += (scope.length()>0?" ":"") + "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+					JsonElement membershipUrl = lti_nrps_claims.get("context_memberships_url");
+					if (membershipUrl != null) lti_nrps_context_memberships_url = membershipUrl.getAsString();
 				}
 			}
-			
-			// Save the updated Deployment entity, if necessary
-			if (!d.equivalentTo(original_d) || original_d.lastLogin == null || original_d.lastLogin.before(yesterday)) {
-				ofy().save().entity(d).now();
-				debug.append("Deployment saved. ");
+		} catch (Exception e) {
+		}
+		
+		d.scope = scope;
+		debug.append(scope.isEmpty()?"Scope is empty. ":"Scope is " + scope + ". ");
+		
+		// Launch only premium users
+		boolean isPremiumUser = user.isPremium();
+		if (!isPremiumUser) {
+			debug.append("t1");
+			if (d.getNLicensesRemaining()>0) {
+				d.nLicensesRemaining--;
+				new PremiumUser(user.getHashedId(),12,0,d.organization,"allocated");
+				isPremiumUser = true;
+			} else if (d.price == 0) {
+				new PremiumUser(user.getHashedId(),12,0,d.organization,"comped");
+				isPremiumUser = true;
 			}
-			/* Find assignment (try the following, in order, until an assignment is found):
-			 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
-			 *   2. Find an assignment with matching resourceId value (tool-defined assignmentId set during Deep Linking)
-			 *   3. Find an assignment with matching domain and resourceLinkId (should work for all established ungraded assignments)
-			 *   4. Create a new assignment and send the user to the resourcePicker page
-			 */
+		}
+		
+		// Save the updated Deployment entity, if necessary
+		if (!d.equivalentTo(original_d) || original_d.lastLogin == null || original_d.lastLogin.before(yesterday)) {
+			ofy().save().entity(d).now();
+			debug.append("Deployment saved. ");
+		}
+		/* Find assignment (try the following, in order, until an assignment is found):
+		 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
+		 *   2. Find an assignment with matching resourceId value (tool-defined assignmentId set during Deep Linking)
+		 *   3. Find an assignment with matching domain and resourceLinkId (should work for all established ungraded assignments)
+		 *   4. Create a new assignment and send the user to the resourcePicker page
+		 */
 
-			Assignment myAssignment = null;
-			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
-			String resourceId = null;  // this is a String representation of the assignmentId that is set during the DeepLinking flow
-			JsonObject lineitem = null;
+		Assignment myAssignment = null;
+		JsonElement resourceLinkElem = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link");
+		if (resourceLinkElem == null || !resourceLinkElem.isJsonObject()) throw new Exception("Resource link claim is missing or invalid.");
+		JsonElement resourceLinkIdElem = resourceLinkElem.getAsJsonObject().get("id");
+		if (resourceLinkIdElem == null) throw new Exception("Resource link ID is missing.");
+		String resourceLinkId = resourceLinkIdElem.getAsString();
+		String resourceId = null;  // this is a String representation of the assignmentId that is set during the DeepLinking flow
+		JsonObject lineitem = null;
 
-			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment
-				debug.append("Retrieving assignment by lineitem. ");
-				myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-				
-				if (myAssignment==null) {  // this may be a fresh copy of an assignment; try to find the original by its resourceLinkId history
+		if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment
+			debug.append("Retrieving assignment by lineitem. ");
+			myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+			
+			if (myAssignment==null) {  // this may be a fresh copy of an assignment; try to find the original by its resourceLinkId history
+				try {
+					JsonElement customElem = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom");
+					if (customElem != null && customElem.isJsonObject()) {
+						JsonObject custom = customElem.getAsJsonObject();
+						JsonElement resLinkHistElem = custom.get("resource_link_id_history");
+						if (resLinkHistElem != null) {
+							String resourceLinkIdHistory = resLinkHistElem.getAsString();
+							switch (resourceLinkIdHistory) {
+							case "": break;  // not supported by the LMS
+							case "$ResourceLink.id.history": break;  // no parent lineitem known
+							default:
+								int i = resourceLinkIdHistory.indexOf(",");
+								if (i>0) resourceLinkIdHistory = resourceLinkIdHistory.substring(0,i);  // shorten to most recent parent value
+								myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkIdHistory).first().now();						
+								if (myAssignment != null) {
+									myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy to be saved
+									myAssignment.created = new Date();  // with a new created Date
+								}
+							}
+						}
+					}
+				} catch (Exception ex1) {}
+			}
+			
+			if (myAssignment==null) {  // this may be the first launch of a deeplinking item; check for the resourceId in custom parameters, launch parameters or lineitem
+				debug.append("not found. Now looking for resourceId.");
+				try {
+					JsonElement customElem = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom");
+					if (customElem != null && customElem.isJsonObject()) {
+						JsonObject custom = customElem.getAsJsonObject();
+						JsonElement resIdElem = custom.get("resourceId");
+						if (resIdElem == null) resIdElem = custom.get("resourceid");
+						if (resIdElem != null) resourceId = resIdElem.getAsString();  // schoology changes "resourceId" to lowercase
+					}
+				} catch (Exception e2) {
+					debug.append("custom parameter not found.");
+					switch (d.lms_type) {
+					case "canvas": // older canvas assignments may have this in the launch URL query
+						resourceId = request.getParameter("resourceId");
+						break;
+					default:  // all other lms platforms may have this in the lineitem from DeepLinking
+						try {
+							if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
+							if (lineitem != null) {
+								JsonElement resIdLineitemElem = lineitem.get("resourceId");
+								if (resIdLineitemElem != null) resourceId = resIdLineitemElem.getAsString();
+							}
+						} catch (Exception ex2) {}
+					}
+				}
+				debug.append("resourceId=" + resourceId + ".");
+				if (resourceId != null) {  // found an ancestor Assignment but could be parent, grandparent, etc
 					try {
-						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
-						String resourceLinkIdHistory = custom.get("resource_link_id_history").getAsString();
-						switch (resourceLinkIdHistory) {
-						case "": break;  // not supported by the LMS
-						case "$ResourceLink.id.history": break;  // no parent lineitem known
-						default:
-							int i = resourceLinkIdHistory.indexOf(",");
-							if (i>0) resourceLinkIdHistory = resourceLinkIdHistory.substring(0,i);  // shorten to most recent parent value
-							myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkIdHistory).first().now();						
-							myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy to be saved
+						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
+						if (myAssignment != null && myAssignment.lti_ags_lineitem_url != null) {  // current launch is for a copy (descendant) assignment
+							myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy Assignment entity to be saved
 							myAssignment.created = new Date();  // with a new created Date
 						}
-					} catch (Exception e) {}
+					} catch (Exception ex3) {}
 				}
-				
-				if (myAssignment==null) {  // this may be the first launch of a deeplinking item; check for the resourceId in custom parameters, launch parameters or lineitem
-					debug.append("not found. Now looking for resourceId.");
-					try {
-						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
-						resourceId = custom.get("resourceId")==null?custom.get("resourceid").getAsString():custom.get("resourceId").getAsString();  // schoology changes "resopurceId" to lowercase 
-					} catch (Exception e2) {
-						debug.append("custom parameter not found.");
-						switch (d.lms_type) {
-						case "canvas": // older canvas assignments may have this in the launch URL query
-							resourceId = request.getParameter("resourceId");
-							break;
-						default:  // all other lms platforms may have this in the lineitem from DeepLinking
-							try {
-							if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-							resourceId = lineitem.get("resourceId").getAsString();	
-							} catch (Exception e) {}
-						}
-					}
-					debug.append("resourceId=" + resourceId + ".");
-					if (resourceId != null) {  // found an ancestor Assignment but could be parent, grandparent, etc
-						try {
-							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-							if (myAssignment.lti_ags_lineitem_url != null) {  // current launch is for a copy (descendant) assignment
-								myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy Assignment entity to be saved
-								myAssignment.created = new Date();  // with a new created Date
-							}
-						} catch (Exception e) {}
-					}
-				}	
-			}
-			
-			// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
-			if (myAssignment == null) {
-				debug.append("Retrieving assignment by resourceLinkId. ");
-				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
-			}
+			}	
+		}
+		
+		// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
+		if (myAssignment == null) {
+			debug.append("Retrieving assignment by resourceLinkId. ");
+			myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+		}
 
-			// After all that, if the assignment still cannot be found, create a new (incomplete) one. This will be updated after the ResourcePicker
-			if (myAssignment == null) {
-				debug.append("Creating new assignment. ");
-				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
-			}
-			
-			// At this point we should have a valid (but possibly incomplete) Assignment entity
-			
-			// Update the Assignment parameters:
-			try {
-				Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
-				myAssignment.resourceLinkId = resourceLinkId;		
-				if (lti_ags_lineitems_url != null) myAssignment.lti_ags_lineitems_url = lti_ags_lineitems_url;
-				if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-				else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
+		// After all that, if the assignment still cannot be found, create a new (incomplete) one. This will be updated after the ResourcePicker
+		if (myAssignment == null) {
+			debug.append("Creating new assignment. ");
+			myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+		}
+		
+		// At this point we should have a valid (but possibly incomplete) Assignment entity
+		
+		// Update the Assignment parameters:
+		try {
+			Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
+			myAssignment.resourceLinkId = resourceLinkId;		
+			if (lti_ags_lineitems_url != null) myAssignment.lti_ags_lineitems_url = lti_ags_lineitems_url;
+			if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+			else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
 
-				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
-				
-				myAssignment.valid=now;
-				
-				// If required, save the updated Assignment entity now so its id will be accessible
-				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
-					ofy().save().entity(myAssignment).now();
-					Group.update(d,myAssignment);
-					Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&AssignmentId=" + myAssignment.id);
-				}
-			} catch (Exception e) {
-				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
-			}
-			// Create a cross-site request forgery (CSRF) token containing the Assignment.id
-			user.setAssignment(myAssignment.id);  // this sets the assignment and token and saves the user to the database
-			debug.append("User credentials set OK. ");
+			if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 			
-			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
-			if (!myAssignment.isValid()) {  //Show the the pickResource form:
-				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
-				return;
-			} else if (!isPremiumUser) {
-				String url = Subject.getServerUrl() + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
-				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
-				else url += "&n=5";
-				response.sendRedirect(url);
+			myAssignment.valid=now;
+			
+			// If required, save the updated Assignment entity now so its id will be accessible
+			if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
+				ofy().save().entity(myAssignment).now();
+				Group.update(d,myAssignment);
+				Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&AssignmentId=" + myAssignment.id);
 			}
-			else launchResourceRequest(user,myAssignment,request,response);
+		} catch (Exception e) {
+			throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
+		}
+		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
+		user.setAssignment(myAssignment.id);  // this sets the assignment and token and saves the user to the database
+		debug.append("User credentials set OK. ");
+		
+		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
+		if (!myAssignment.isValid()) {  //Show the the pickResource form:
+			response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
+			return;
+		} else if (!isPremiumUser) {
+			String url = Subject.getServerUrl() + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
+			if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
+			else url += "&n=5";
+			response.sendRedirect(url);
+		} else {
+			launchResourceRequest(user,myAssignment,request,response);
+		}
 			
 		} catch (Exception e) {
 			ofy().save().entity(d);
@@ -627,12 +660,14 @@ public class LTIv1p3Launch extends HttpServlet {
 				text = ofy().load().type(Text.class).id(a.textId).safe();
 				Chapter ch = null;
 				for (Chapter c : text.chapters) if (c.chapterNumber == a.chapterNumber) ch = c;
-				a.title = ch.title;
-				a.conceptIds = ch.conceptIds;
-				if ("Sage".equals(a.assignmentType)) break;  // don't store questionKeys for this assignment
-				a.questionKeys.clear();
-				for (Long conceptId : ch.conceptIds) {
-					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
+				if (ch != null) {
+					a.title = ch.title;
+					a.conceptIds = ch.conceptIds;
+					if ("Sage".equals(a.assignmentType)) break;  // don't store questionKeys for this assignment
+					a.questionKeys.clear();
+					for (Long conceptId : ch.conceptIds) {
+						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
+					}
 				}
 				break;
 			case "PracticeExam":
@@ -751,7 +786,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				buf.append("<br/>");
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-				oneHalf = text.chapters.size()/2;
+				oneHalf = text!=null?text.chapters.size()/2:0;
+				if (text != null) {
 					for (Chapter ch : text.chapters) {
 					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
 					i++;
@@ -759,10 +795,13 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 				}
 				buf.append("</div></div></div>");
-				buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
+			}
+			buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
-				for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				if (texts != null) {
+					for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
 			}		
 			break;
 		case "Quiz":
@@ -773,25 +812,29 @@ public class LTIv1p3Launch extends HttpServlet {
 				texts = ofy().load().type(Text.class).list();
 				buf.append("<div>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
-				for (Text txt : texts) {
-					if (txt.chapters.isEmpty()) continue;
-					if (txt.id==textId) text = txt;
-					if (txt.title.equals("View All Topics")) {
-						allTopics = txt;
-						continue;
+				if (texts != null) {
+					for (Text txt : texts) {
+						if (txt.chapters.isEmpty()) continue;
+						if (txt.id==textId) text = txt;
+						if (txt.title.equals("View All Topics")) {
+							allTopics = txt;
+							continue;
+						}
+						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 					}
-					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
 				
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the topics below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-				oneHalf = text.chapters.size()/2;
+				oneHalf = text!=null?text.chapters.size()/2:0;
+				if (text != null) {
 					for (Chapter ch : text.chapters) {
-					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
-					i++;
-					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
-						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+						if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+						i++;
+						buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
+							+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+					}
 				}
 				buf.append("</div></div></div>");
 				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
@@ -799,7 +842,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
 				texts = ofy().load().type(Text.class).list();
 				Text allTopics = null;
-				for (Text txt : texts) {
+				if (texts != null) {
+					for (Text txt : texts) {
 					if (txt.chapters.isEmpty()) continue;
 					if (txt.id==textId) text = txt;
 					if (txt.title.equals("View All Topics")) {
@@ -808,7 +852,8 @@ public class LTIv1p3Launch extends HttpServlet {
 					}
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				}
 			}	
 			break;
 		case "PracticeExam":
@@ -826,32 +871,36 @@ public class LTIv1p3Launch extends HttpServlet {
 					}
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
 				
 				buf.append("<div style='color:red'>Select at least three of the topics below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-				oneHalf = text.chapters.size()/2;
+				oneHalf = text!=null?text.chapters.size()/2:0;
+				if (text != null) {
 					for (Chapter ch : text.chapters) {
-					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
-					i++;
-					buf.append("<div><label><input type=checkbox name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
-						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+						if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+						i++;
+						buf.append("<div><label><input type=checkbox name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
+							+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+					}
 				}
 				buf.append("</div></div></div>");
 				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least three topics' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
-				for (Text txt : texts) {
-					if (txt.chapters.isEmpty()) continue;
-					if (txt.id==textId) text = txt;
-					if (txt.title.equals("View All Topics")) {
-						allTopics = txt;
-						continue;
+				if (texts != null) {
+					for (Text txt : texts) {
+						if (txt.chapters.isEmpty()) continue;
+						if (txt.id==textId) text = txt;
+						if (txt.title.equals("View All Topics")) {
+							allTopics = txt;
+							continue;
+						}
+						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 					}
-					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
 			}	
 			break;
 		case "VideoQuiz":

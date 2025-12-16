@@ -68,6 +68,7 @@ public class Sage extends HttpServlet {
 			}
 			
 			// Get the SageTransaction for this assignment
+			if (a == null) throw new Exception("Assignment not found.");
 			SageTransaction st = null;
 			try {
 				st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().safe();
@@ -90,7 +91,7 @@ public class Sage extends HttpServlet {
 			} catch (Exception e) {
 				if (userRequest.isEmpty()) userRequest = "menu";
 			}
-			Concept concept = conceptMap.get(conceptId); // might be null 
+			Concept concept = conceptId == null ? null : conceptMap.get(conceptId);
 			
 			switch (userRequest) {
 			case "AssignSageConcepts":
@@ -136,9 +137,10 @@ public class Sage extends HttpServlet {
 
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			if (a == null) throw new Exception("Assignment not found.");
 			
 			SageTransaction st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().safe();
-			
+				
 			Concept concept = null;
 			try {  // request from menuPage
 				Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
@@ -151,7 +153,7 @@ public class Sage extends HttpServlet {
 
 			switch (userRequest) {
 			case "AddConcept":
-				if (!a.conceptIds.contains(concept.id)) {
+				if (concept != null && !a.conceptIds.contains(concept.id)) {
 					a.conceptIds.add(concept.id);
 					ofy().save().entity(a).now();
 				}
@@ -159,6 +161,7 @@ public class Sage extends HttpServlet {
 				break;
 			case "Ask Sage":
 				try {
+					if (concept == null) throw new Exception("Concept not found.");
 					String userPrompt = request.getParameter("UserPrompt");
 					if (userPrompt.isEmpty()) throw new Exception("The question was blank.");
 					String nonce = request.getParameter("Nonce");
@@ -172,17 +175,18 @@ public class Sage extends HttpServlet {
 							+ (e.getMessage()==null?e.toString():e.getMessage()) + "<p>"
 							+ "Your session will continue in a moment."
 							+ "<script>"
-							+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'); }, 2000);"  // pause, then continue
+							+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + (concept != null ? concept.id : 0) + "'); }, 2000);"  // pause, then continue
 							+ "</script>"
 							+ Subject.footer);
 				}
 				break;
 			case "DeleteConcept":
-				if (a.conceptIds.remove(concept.id)) ofy().save().entity(a).now();
+				if (concept != null && a.conceptIds.remove(concept.id)) ofy().save().entity(a).now();
 				out.println(assignConcepts(user,a));
 				break;
 			case "Score This Response":  
 				try {			
+					if (concept == null) throw new Exception("Concept not found.");
 					out.println(printScore(user,request,concept.id,st));
 				} catch (Exception e) {
 					out.println(e.getMessage()==null?e.toString():e.getMessage());
@@ -976,6 +980,7 @@ public class Sage extends HttpServlet {
 		}
 
 		// Find the output text buried in the response JSON:
+		if (api_response == null) throw new Exception("Invalid API response.");
 		JsonArray output = api_response.get("output").getAsJsonArray();
 		JsonObject message = null;
 		JsonObject output_text = null;

@@ -400,6 +400,7 @@ public class PlacementExam extends HttpServlet {
 				try {
 					Key<Question> k = questionKeys_02pt.remove(resumingExam?0:rand.nextInt(questionKeys_02pt.size()));
 					Question q = questions.get(k);
+					if (q == null) continue;
 					i++;
 					possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 					q.setParameters((int)(pt.id ^ q.id));
@@ -418,6 +419,7 @@ public class PlacementExam extends HttpServlet {
 				try {
 					Key<Question> k = questionKeys_04pt.remove(resumingExam?0:rand.nextInt(questionKeys_04pt.size()));
 					Question q = questions.get(k);
+					if (q == null) continue;
 					i++;
 					possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 					q.setParameters((int)(pt.id ^ q.id));
@@ -1243,6 +1245,7 @@ public class PlacementExam extends HttpServlet {
 					q = ofy().load().key(k).safe();
 					questions.put(k,q);
 				} catch (Exception e) {}  // might fail if the question is deleted from the database (too bad, sorry)
+				if (q==null) continue;  // skip if question cannot be loaded
 				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
 				pet.questionScores.put(k, score);
 				pet.scores[a.conceptIds.indexOf(q.conceptId)] += score;
