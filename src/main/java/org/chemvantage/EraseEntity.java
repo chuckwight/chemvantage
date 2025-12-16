@@ -48,37 +48,62 @@ public class EraseEntity extends HttpServlet {
     	response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		String domain = request.getParameter("Domain");
-		
-		if (domain == null) out.println(Subject.header("Erase ChemVantage Entity") + menu() + Subject.footer);
-		else out.println(Subject.header("Erase ChemVantage Entity") + options(domain) + Subject.footer);
+		try {
+			// SECURITY FIX #6: Runtime authentication check
+			// Replaces reliance on app.yaml declarative security with programmatic verification
+			if (!AdminSecurityUtil.isAdminAuthenticated(request)) {
+				AdminSecurityUtil.handleAuthenticationFailure(request, response, "/EraseEntity");
+				return;
+			}
+			
+			String domain = request.getParameter("Domain");
+			
+			if (domain == null) out.println(Subject.header("Erase ChemVantage Entity") + menu() + Subject.footer);
+			else out.println(Subject.header("Erase ChemVantage Entity") + options(domain) + Subject.footer);
+		} catch (Exception e) {
+			AdminSecurityUtil.logSecurityEvent("ERASE_ENTITY_GET_ERROR", "/EraseEntity", request);
+			out.println("Error: " + e.getMessage());
+		}
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// This method gets an array of assignmentId values (initially as a Sting[] array
 		// and deletes the assignments along all of the associated transactions
 		
-		// Create containers for all Assignments and their Keys (to be deleted)
-		List<Assignment> assignments = new ArrayList<Assignment>();
-		List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-		
-		// If selected, erase the domain:		
-		String domain = request.getParameter("Domain");
-		if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
-			try {
-				new URI(domain).toURL();  // throws Exception if this is a BLTIConsumer
-				ofy().delete().key(key(Deployment.class,domain));
-			} catch (Exception e) {
+		try {
+			// SECURITY FIX #6: Runtime authentication check
+			// Replaces reliance on app.yaml declarative security with programmatic verification
+			if (!AdminSecurityUtil.isAdminAuthenticated(request)) {
+				AdminSecurityUtil.handleAuthenticationFailure(request, response, "/EraseEntity");
+				return;
 			}
-			// Load all of this domain's assignments Keys into the List of assignmentKeys:
-			assignmentKeys = ofy().load().type(Assignment.class).filter("domain",domain).keys().list();
-		} else { // otherwise, delete only selected assignments and all associated transactions
-			String[] assignmentIds = request.getParameterValues("AssignmentId");
-			if (assignmentIds != null) { 
-				for (String id : assignmentIds) assignmentKeys.add(key(Assignment.class,Long.parseLong(id)));
-				assignments = new ArrayList<Assignment>(ofy().load().keys(assignmentKeys).values());
+			
+			// Create containers for all Assignments and their Keys (to be deleted)
+			List<Assignment> assignments = new ArrayList<Assignment>();
+			List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
+			
+			// If selected, erase the domain:		
+				String domain = request.getParameter("Domain");
+			if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
+				try {
+					new URI(domain).toURL();  // throws Exception if this is a BLTIConsumer
+					ofy().delete().key(key(Deployment.class,domain));
+					// SECURITY FIX #6: Audit log for domain deletion
+					AdminSecurityUtil.logSecurityEvent("ADMIN_DELETE_DOMAIN", domain, request);
+				} catch (Exception e) {
+					AdminSecurityUtil.logSecurityEvent("ADMIN_DELETE_DOMAIN_ERROR", domain, request);
+				}
+				// Load all of this domain's assignments Keys into the List of assignmentKeys:
+				assignmentKeys = ofy().load().type(Assignment.class).filter("domain",domain).keys().list();
+			} else { // otherwise, delete only selected assignments and all associated transactions
+				String[] assignmentIds = request.getParameterValues("AssignmentId");
+				if (assignmentIds != null) { 
+					for (String id : assignmentIds) assignmentKeys.add(key(Assignment.class,Long.parseLong(id)));
+					assignments = new ArrayList<Assignment>(ofy().load().keys(assignmentKeys).values());
+					// SECURITY FIX #6: Audit log for assignment deletion
+					AdminSecurityUtil.logSecurityEvent("ADMIN_DELETE_ASSIGNMENTS", "Count: " + assignmentIds.length, request);
+				}
 			}
-		}
 		
 		// Delete all of the transactions associated with each assignment
 		for (Assignment a : assignments) {
@@ -101,6 +126,11 @@ public class EraseEntity extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		out.println(Subject.header("Erase ChemVantage Entity") + menu(domain) + Subject.footer);
+		} catch (Exception e) {
+			// SECURITY FIX #6: Log security exceptions
+			AdminSecurityUtil.logSecurityEvent("ERASE_ENTITY_POST_ERROR", e.getMessage(), request);
+			throw new ServletException("Error processing erase request", e);
+		}
 	}
 
 	String menu() {
