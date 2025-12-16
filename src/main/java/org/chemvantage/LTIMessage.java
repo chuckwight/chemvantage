@@ -48,7 +48,15 @@ import com.google.gson.JsonParser;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
 	
-	static Map<String,String> authTokens = new HashMap<String,String>();
+	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(LTIMessage.class.getName());
+	
+	// SECURITY FIX: Removed static HashMap authTokens - replaced with SecureCredentialManager
+	// The old implementation stored unencrypted OAuth tokens in memory
+	// SecureCredentialManager provides:
+	// - Automatic expiration checking
+	// - No logging of sensitive tokens
+	// - Thread-safe operations
+	// - Proper cleanup on invalidation
 	
 	static String getAccessToken(String platformDeploymentId,String scope) throws IOException {
 		return getAccessToken(platformDeploymentId, scope, false);
@@ -56,11 +64,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	
 	static String getAccessToken(String platformDeploymentId,String scope, boolean retry) throws IOException {
 
-		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
-		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
+		// SECURITY FIX: Uses SecureCredentialManager for token caching
+		// - Automatically checks expiration
+		// - Doesn't log sensitive token values
+		// - Thread-safe operations
 		Deployment d = null;
 		Date now = new Date();
-		Date in5Min = new Date(now.getTime() + 300000L);  // 5 minutes from now
 		Date in15Min = new Date(now.getTime() + 900000L);  // 15 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
 
@@ -72,18 +81,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
 
 			if (d==null || !d.scope.contains(scope)) return null;  // must be authorized
-			//debug.append("Scope OK.<br/>");
 
-			String authToken = authTokens.get(platformDeploymentId);
-			if (authToken != null) {  //found a cached authToken; check the expiration and use it
-				//debug.append("Found cached authToken:" + authToken + "<br/>Expires: ");
-				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
-				//debug.append(new Date(jAuthToken.get("exp").getAsLong()));
-				if (in5Min.before(new Date(jAuthToken.get("exp").getAsLong()))) {
-					//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Cached AuthToken Request",debug.toString() + "<br/>" );
-					return jAuthToken.get("access_token").getAsString();
-				} //else Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Stale AuthToken Request",debug.toString() + "<br/>" );
-			} //else debug.append("No cached authToken found.<br/>");
+			// SECURITY FIX: Retrieve cached token from SecureCredentialManager
+			// Uses 5-minute buffer to ensure token doesn't expire mid-request
+			String cachedToken = SecureCredentialManager.getCachedToken(platformDeploymentId, 300000L);
+			if (cachedToken != null) {
+				logger.fine("Using cached access token for deployment: " + platformDeploymentId);
+				return cachedToken;
+			}
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
@@ -138,13 +143,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				reader.close();
 				String access_token = json.get("access_token").getAsString();
 				long expires_in = json.get("expires_in").getAsLong();  // number of seconds from now, typically 3600
-				long exp = new Date().getTime() + expires_in*1000L;
 
-				// cache the token in the authTokens Map:
-				JsonObject cached_token = new JsonObject();
-				cached_token.addProperty("access_token", access_token);
-				cached_token.addProperty("exp", exp);
-				authTokens.put(d.platform_deployment_id, cached_token.toString());
+			// SECURITY FIX: Cache token using SecureCredentialManager
+			// - Token is cached with proper expiration
+			// - No logging of the actual token value
+			// - Thread-safe operations
+			SecureCredentialManager.cacheToken(d.platform_deployment_id, access_token, expires_in);
 
 				return access_token;
 			} else {
