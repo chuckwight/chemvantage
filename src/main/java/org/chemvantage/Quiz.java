@@ -111,24 +111,30 @@ public class Quiz extends HttpServlet {
 			
 			switch (userRequest) {
 			case "UpdateAssignment":
-				a.updateQuestions(request);
-				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+				if (a != null) {
+					a.updateQuestions(request);
+					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+				}
 				break;
 			case "Save New Title":
-				a.title = request.getParameter("AssignmentTitle");
-				ofy().save().entity(a).now();
-				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+				if (a != null) {
+					a.title = request.getParameter("AssignmentTitle");
+					ofy().save().entity(a).now();
+					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+				}
 				break;
 			case "Set Allowed Time":
-				try {
-					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
-					if (minutes > 60.) minutes = 60.;
-					a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
-				} catch (Exception e) {
-					a.timeAllowed = 900;
+				if (a != null) {
+					try {
+						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+						if (minutes > 60.) minutes = 60.;
+						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
+					} catch (Exception e) {
+						a.timeAllowed = 900;
+					}
+					ofy().save().entity(a).now();
+					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				}
-				ofy().save().entity(a).now();
-				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Attempts":
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();

@@ -328,11 +328,13 @@ public class SmartText extends HttpServlet {
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
 			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/><br/>");
 				//	   + "Please return to the textbook and review this chapter. ");
-			   buf.append("<a href='" + chapter.url + "' target=_blank>"
+			   if (chapter != null) {
+				   buf.append("<a href='" + chapter.url + "' target=_blank>"
 			   		+ "<button style='border: none; color: white; padding: 10px 10px; margin: 4px 2px; font-size: 16px; cursor: pointer; border-radius: 10px; background-color: blue;'>"
 			   		+ "To continue, click here to review this chapter in the textbook."
 			   		+ "</button>"
 			   		+ "</a><br/>");
+			   }
 			   if (completed) buf.append("Don't worry. Your score on this assignment is still 100%.<br/><br/>");
 			   else buf.append("Don't worry. You can still earn 100% by relaunching this assignment after completing your review.<br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
@@ -372,7 +374,7 @@ public class SmartText extends HttpServlet {
 		try {
 			lmsScore = LTIMessage.readUserScore(a, for_user_id);
 			double lmsPctScore = Double.parseDouble(lmsScore);
-			if (Math.abs(lmsPctScore-myScore.getPctScore())<1.0) buf.append("This score is correctly recorded in your LMS grade book.<br/><br/>");
+			if (myScore != null && Math.abs(lmsPctScore-myScore.getPctScore())<1.0) buf.append("This score is correctly recorded in your LMS grade book.<br/><br/>");
 			else buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%.<br/>The difference may be due to "
 					+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br/><br/>");
 		} catch (Exception e) {

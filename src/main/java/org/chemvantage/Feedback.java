@@ -305,7 +305,7 @@ public class Feedback extends HttpServlet {
 			buf.append("Feel free to email any additional comments to us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
 		}
 		
-		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
+		if (user != null && user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
 	}
 
@@ -334,10 +334,10 @@ public class Feedback extends HttpServlet {
 			reader.close();
 		} catch (Exception e) {
 		} finally {
-			writer.close();
-			reader.close();
+			if (writer != null) writer.close();
+			if (reader != null) reader.close();
 		}
-		return captchaResponse.get("success").getAsBoolean();
+		return captchaResponse != null && captchaResponse.get("success").getAsBoolean();
 	}
 
 	String viewUserFeedback(User user) {

@@ -120,7 +120,7 @@ public class PlacementExam extends HttpServlet {
 			
 			switch(userRequest) {
 				case "UpdateAssignment":
-					if (user.isInstructor()) {
+					if (user.isInstructor() && a != null) {
 						a.updateQuestions(request);
 						out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 					}
@@ -130,7 +130,7 @@ public class PlacementExam extends HttpServlet {
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
-					if (user.isInstructor()) {
+					if (user.isInstructor() && a != null) {
 						try {
 							double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 							if (minutes > 300.) minutes = 300.;
@@ -143,7 +143,7 @@ public class PlacementExam extends HttpServlet {
 					}
 					break;
 				case "Set Allowed Attempts":
-					if (user.isInstructor()) {
+					if (user.isInstructor() && a != null) {
 						try {
 							a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
 							if (a.attemptsAllowed<1) a.attemptsAllowed = null;
@@ -167,7 +167,7 @@ public class PlacementExam extends HttpServlet {
 					}
 					break;
 				case "Set Password":
-					if (user.isInstructor()) {
+					if (user.isInstructor() && a != null) {
 						a.password = request.getParameter("ExamPassword");
 						if (a.password != null) a.password = a.password.trim();
 						ofy().save().entity(a).now();
@@ -618,7 +618,9 @@ public class PlacementExam extends HttpServlet {
 			if (user.isAnonymous()) pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).order("downloaded").list();
 			else pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
-			if (pets==null || pets.isEmpty()) {
+			if (pets==null) pets = new ArrayList<PlacementExamTransaction>();
+			
+			if (pets.isEmpty()) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 			} else {
 				debug.append("2");
@@ -820,16 +822,18 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h3>Detailed Scores for the Best Placement Exam</h3>");
 			buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 					+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
-			for (int i=0;i<a.conceptIds.size();i++) {
-				int pct = (bestPt.possibleScores[i]>0?bestPt.scores[i]*100/bestPt.possibleScores[i]:0);
-				String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
-				buf.append("<TR>"
-						+ "<TD>" + conceptTitles.get(i) + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + bestPt.scores[i] + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + bestPt.possibleScores[i] + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
-						+ "<TD><div style='background-color:" + color + ";width:" + pct 
-						+ "px;'/>&nbsp;</TD></TR>");
+			if (bestPt != null) {
+				for (int i=0;i<a.conceptIds.size();i++) {
+					int pct = (bestPt.possibleScores[i]>0?bestPt.scores[i]*100/bestPt.possibleScores[i]:0);
+					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
+					buf.append("<TR>"
+							+ "<TD>" + conceptTitles.get(i) + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + bestPt.scores[i] + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + bestPt.possibleScores[i] + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
+							+ "<TD><div style='background-color:" + color + ";width:" + pct 
+							+ "px;'/>&nbsp;</TD></TR>");
+				}
 			}
 			buf.append("</TABLE><p>");
 	

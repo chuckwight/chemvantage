@@ -283,6 +283,7 @@ public class LTIDeepLinks extends HttpServlet {
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
 				}
 				buf.append("<br/>");
+			if (text != null) {
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
@@ -294,9 +295,12 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 				buf.append("</div></div></div>");
 				buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
+			}
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
-				for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
+				if (texts != null) {
+					for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
+				}
 			}		
 			buf.append("<br/>");
 			break;
@@ -317,8 +321,9 @@ public class LTIDeepLinks extends HttpServlet {
 					}
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
 				
+			if (text != null) {
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the topics below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
@@ -330,10 +335,13 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 				buf.append("</div></div></div>");
 				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
-			} catch (Exception e) {
-				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
-				texts = ofy().load().type(Text.class).list();
-				Text allTopics = null;
+			}
+
+		} catch (Exception e) {
+			buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+			texts = ofy().load().type(Text.class).list();
+			Text allTopics = null;
+			if (texts != null) {
 				for (Text txt : texts) {
 					if (txt.chapters.isEmpty()) continue;
 					if (txt.id==textId) text = txt;
@@ -343,26 +351,30 @@ public class LTIDeepLinks extends HttpServlet {
 					}
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
-			}	
-			break;
+				if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
+			}
+		}
+		break;
 		case "PracticeExam":
 			try {
 				texts = ofy().load().type(Text.class).list();
 				textId = Long.parseLong(request.getParameter("TextId"));
 				buf.append("<div>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
-				for (Text txt : texts) {
-					if (txt.chapters.isEmpty()) continue;
-					if (txt.id==textId) text = txt;
-					if (txt.title.equals("View All Topics")) {
-						allTopics = txt;
-						continue;
+				if (texts != null) {
+					for (Text txt : texts) {
+						if (txt.chapters.isEmpty()) continue;
+						if (txt.id==textId) text = txt;
+						if (txt.title.equals("View All Topics")) {
+							allTopics = txt;
+							continue;
+						}
+						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
 					}
-					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
+					if (allTopics != null) buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
 				
+			if (text != null) {
 				buf.append("<div style='color:red'>Select at least three of the topics below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
@@ -373,20 +385,25 @@ public class LTIDeepLinks extends HttpServlet {
 						+ "value=" + ch.chapterNumber + " />&nbsp;" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 				}
 				buf.append("</div></div></div>");
-				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least three topics' />");
-			} catch (Exception e) {
+			buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least three topics' />");
+			}
+		} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
-				for (Text txt : texts) {
-					if (txt.chapters.isEmpty()) continue;
-					if (txt.id==textId) text = txt;
-					if (txt.title.equals("View All Topics")) {
-						allTopics = txt;
-						continue;
+				if (texts != null) {
+					for (Text txt : texts) {
+						if (txt.chapters.isEmpty()) continue;
+						if (txt.id==textId) text = txt;
+						if (txt.title.equals("View All Topics")) {
+							allTopics = txt;
+							continue;
+						}
+						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
 					}
-					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + txt.title + "</label></div>");
+					if (allTopics != null) {
+						buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
+					}
 				}
-				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />&nbsp;" + allTopics.title + "</label></div><br/>");
 			}	
 			break;
 		case "VideoQuiz":
@@ -538,11 +555,11 @@ public class LTIDeepLinks extends HttpServlet {
 				a.assignmentType = "PracticeExam";
 				a.created = now;
 				a.domain = d.platform_deployment_id;
-				a.textId = textId;
-				a.title = "";
-				text = ofy().load().type(Text.class).id(textId).safe();
+			if (textId != null) a.textId = textId;
+			a.title = "";
+			if (textId != null) text = ofy().load().type(Text.class).id(textId).safe();
 				a.questionKeys = new ArrayList<Key<Question>>();
-				for (Chapter ch : text.chapters) {
+				if (text != null) for (Chapter ch : text.chapters) {
 					if (chapterNumbers.contains(ch.chapterNumber)) {
 						a.title += ch.title + ", ";
 						for (Long conceptId : ch.conceptIds) {
@@ -553,7 +570,7 @@ public class LTIDeepLinks extends HttpServlet {
 						}
 					}
 				}
-				a.title = a.title.substring(0, a.title.lastIndexOf(", "));
+				if (a.title.contains(", ")) a.title = a.title.substring(0, a.title.lastIndexOf(", "));
 				a.valid = now;
 				assignments.add(a);
 				break;
@@ -590,8 +607,8 @@ public class LTIDeepLinks extends HttpServlet {
 			case "Quiz":
 			case "Sage":
 			case "Homework":
-				text = ofy().load().type(Text.class).id(textId).safe();
-				for (Integer chN : chapterNumbers) {
+				if (textId != null) text = ofy().load().type(Text.class).id(textId).safe();
+				if (text != null) for (Integer chN : chapterNumbers) {
 					a = new Assignment(assignmentType,d.platform_deployment_id);
 					a.textId = textId;
 					a.chapterNumber = chN;
@@ -611,7 +628,8 @@ public class LTIDeepLinks extends HttpServlet {
 					a.valid = now;
 					assignments.add(a);
 				}
-				break;		
+				break;
+
 			case "VideoQuiz":
 				for (Long vId : videoIds) {
 					a = new Assignment();

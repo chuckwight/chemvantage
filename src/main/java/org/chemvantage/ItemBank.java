@@ -110,7 +110,9 @@ public class ItemBank extends HttpServlet {
 			if (!showQuestions) return "<br/><br/>Please select a topic and assignment type.";
 			
 			List<Key<Question>> keys = new ArrayList<Key<Question>>();
-			for (Long cId : chapter.conceptIds)	keys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).keys().list());
+			if (chapter != null) {
+				for (Long cId : chapter.conceptIds)	keys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).keys().list());
+			}
 			if (keys.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
 			
 			Random rand = new Random();

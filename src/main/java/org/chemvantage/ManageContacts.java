@@ -231,7 +231,7 @@ public class ManageContacts extends HttpServlet {
 			while (contacts.size()>0) {
 				for (Contact c : contacts) {
 					String domainName = c.email.substring(c.email.indexOf("@") + 1);
-					domainMap.merge(domainName, 1, Integer::sum);
+				domainMap.merge(domainName, 1, (a, b) -> a + b);
 				}
 				String email = contacts.get(contacts.size()-1).email;
 				contacts = ofy().load().type(Contact.class).filterKey(">",key(Contact.class,email)).limit(1000).list();

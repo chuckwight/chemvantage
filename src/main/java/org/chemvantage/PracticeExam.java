@@ -109,8 +109,10 @@ public class PracticeExam extends HttpServlet {
 				out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,a,request) + Subject.footer);
 				break;
 			case "UpdateAssignment":
-				a.updateQuestions(request);
-				out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a) + Subject.footer);
+				if (a != null) {
+					a.updateQuestions(request);
+					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a) + Subject.footer);
+				}
 				break;
 			case "Submit Revised Exam Score":
 				if (submitRevisedExamScore(user,a,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user,a) + Subject.footer);
@@ -126,7 +128,7 @@ public class PracticeExam extends HttpServlet {
 				}
 				break;
 			case "Set Allowed Time":
-				if (user.isInstructor()) {
+				if (user.isInstructor() && a != null) {
 					try {
 						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 						if (minutes > 300.) minutes = 300.;
@@ -139,7 +141,7 @@ public class PracticeExam extends HttpServlet {
 				}
 				break;
 			case "Set Allowed Attempts":
-				if (user.isInstructor()) {
+				if (user.isInstructor() && a != null) {
 					try {
 						a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
 						if (a.attemptsAllowed<1) a.attemptsAllowed = null;
@@ -151,7 +153,7 @@ public class PracticeExam extends HttpServlet {
 				}
 				break;
 			case "Set Password":
-				if (user.isInstructor()) {
+				if (user.isInstructor() && a != null) {
 					a.password = request.getParameter("ExamPassword");
 					if (a.password != null) a.password = a.password.trim();
 					ofy().save().entity(a).now();
@@ -276,6 +278,7 @@ public class PracticeExam extends HttpServlet {
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+			if (pets == null) pets = new ArrayList<PracticeExamTransaction>();
 			int nAttempts = pets.size();
 			debug.append("4");
 			
@@ -550,17 +553,17 @@ public class PracticeExam extends HttpServlet {
 						s = Score.getInstance(user.getId(), a);
 						ofy().save().entity(s);
 					}
-
+	
 					buf.append("<h3>Your Scores for This Practice Exam Assignment</h3>");
-
+	
 					buf.append("Your best score on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
-
+	
 					if (!user.isAnonymous()) {  // try to validate the score with the LMS grade book entry
 						String lmsScore = null;
 						try {
 							double lmsPctScore = 0;
 							boolean gotScoreOK = false;
-
+	
 							if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
 								lmsScore = LTIMessage.readUserScore(a,user.getId());
 								try {
@@ -590,10 +593,12 @@ public class PracticeExam extends HttpServlet {
 				debug.append("2");
 				
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
-				for (PracticeExamTransaction pet : pets) {
-					int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
-					debug.append("a");
-					buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+				if (pets != null) {
+					for (PracticeExamTransaction pet : pets) {
+						int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
+						debug.append("a");
+						buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+					}
 				}
 				buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			}

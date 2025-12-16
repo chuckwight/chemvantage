@@ -703,39 +703,40 @@ public class LTIRegistration extends HttpServlet {
 			domain = "chemvantage.org";
 		}
 		JsonArray redirectUris = new JsonArray();
-		redirectUris.add(iss + "/lti/launch");
-		redirectUris.add(iss + "/lti/deeplinks");
-		regJson.add("redirect_uris", redirectUris);
-		regJson.addProperty("initiate_login_uri", iss + "/auth/token");
-		regJson.addProperty("client_name", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
-		regJson.addProperty("jwks_uri", iss + "/jwks");
-		regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
-		regJson.addProperty("token_endpoint_auth_method", "private_key_jwt");
-		JsonArray contactEmails = new JsonArray();
-		contactEmails.add("admin@chemvantage.org");
-		regJson.add("contacts", contactEmails);		
-		regJson.addProperty("client_uri", iss);
-		regJson.addProperty("tos_uri", iss + "/terms_and_conditions.html");
-		regJson.addProperty("policy_uri", iss + "/privacy_policy.html");
-		regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
-		JsonObject ltiToolConfig = new JsonObject();
-		ltiToolConfig.addProperty("domain", domain);
-		ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for General Chemistry.");
-		ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
-		JsonArray idTokenClaims = new JsonArray();
-		idTokenClaims.add("iss");
-		idTokenClaims.add("sub");
-		idTokenClaims.add("email");
-		idTokenClaims.add("name");
-		idTokenClaims.add("given_name");
-		idTokenClaims.add("family_name");
-		ltiToolConfig.add("claims", idTokenClaims);
-		debug.append("b");
-		JsonArray ltiMessages = new JsonArray();
-		JsonObject deepLinking = new JsonObject();
-		deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
-		deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
-		deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+		if (iss != null) {
+			redirectUris.add(iss + "/lti/launch");
+			redirectUris.add(iss + "/lti/deeplinks");
+			regJson.add("redirect_uris", redirectUris);
+			regJson.addProperty("initiate_login_uri", iss + "/auth/token");
+			regJson.addProperty("client_name", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+			regJson.addProperty("jwks_uri", iss + "/jwks");
+			regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
+			regJson.addProperty("token_endpoint_auth_method", "private_key_jwt");
+			JsonArray contactEmails = new JsonArray();
+			contactEmails.add("admin@chemvantage.org");
+			regJson.add("contacts", contactEmails);		
+			regJson.addProperty("client_uri", iss);
+			regJson.addProperty("tos_uri", iss + "/terms_and_conditions.html");
+			regJson.addProperty("policy_uri", iss + "/privacy_policy.html");
+			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+			JsonObject ltiToolConfig = new JsonObject();
+			ltiToolConfig.addProperty("domain", domain);
+			ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for General Chemistry.");
+			ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
+			JsonArray idTokenClaims = new JsonArray();
+			idTokenClaims.add("iss");
+			idTokenClaims.add("sub");
+			idTokenClaims.add("email");
+			idTokenClaims.add("name");
+			idTokenClaims.add("given_name");
+			idTokenClaims.add("family_name");
+			ltiToolConfig.add("claims", idTokenClaims);
+			debug.append("b");
+			JsonArray ltiMessages = new JsonArray();
+			JsonObject deepLinking = new JsonObject();
+			deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
+			deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
+			deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
 		debug.append("c");
 		try {
 			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
@@ -755,25 +756,26 @@ public class LTIRegistration extends HttpServlet {
 		JsonObject resourceLaunch = new JsonObject();
 		resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
 		resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
-		resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
-		debug.append("e");
-		try {
-			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
-			Iterator<JsonElement> iterator = messagesSupported.iterator();
-			JsonObject message;
-			while (iterator.hasNext()) {
-				message = iterator.next().getAsJsonObject();
-				if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
-					resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
-					break;
-				};
+			resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+			debug.append("e");
+			try {
+				JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+				Iterator<JsonElement> iterator = messagesSupported.iterator();
+				JsonObject message;
+				while (iterator.hasNext()) {
+					message = iterator.next().getAsJsonObject();
+					if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
+						resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
+						break;
+					};
+				}
+			} catch (Exception e) {
 			}
-		} catch (Exception e) {
+			ltiMessages.add(resourceLaunch);
+			debug.append("f");
+			ltiToolConfig.add("messages", ltiMessages);
+			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 		}
-		ltiMessages.add(resourceLaunch);
-		debug.append("f");
-		ltiToolConfig.add("messages", ltiMessages);
-		regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 		byte[] json_bytes = regJson.toString().getBytes("utf-8");
 
 		String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
@@ -790,7 +792,7 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
 			case "moodle": 
-				if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
+				if (iss != null && iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
 				break;
 			default:
 			}
@@ -856,7 +858,8 @@ public class LTIRegistration extends HttpServlet {
 			lms = openid_configuration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
 		} catch (Exception e) {}
 		
-		switch (lms) {
+		if (lms != null) {
+			switch (lms) {
 		case "moodle":
 			buf.append("<h2>For the Instructor</h2>"
 					+ "To add ChemVantage assignments to your course, turn editing ON and:<ol>"
@@ -884,7 +887,9 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Select ChemVantage from a list of preconfigured tools</li>"
 					+ "<li>Select one or more ChemVantage assignments to add</li>"
 					+ "<li>Enable grading. Recommended points is 10 for quizzes or homework, 100 for practice exams.</li>"
-					+ "</ol>");	
+					+ "</ol>");
+				break;
+			}
 		}
 		buf.append(	"If you need assistance, contact us at admin@chemvantage.org");
 		
@@ -911,7 +916,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
 				+ "Client ID: " + d.client_id + "<br/><br/>");
 		
-		if (iss.contains("dev-vantage-hrd.appspot.com")) {
+		if (iss != null && iss.contains("dev-vantage-hrd.appspot.com")) {
 			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
 					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
 		} else {

@@ -90,6 +90,12 @@
       <version>3.0.0</version>
     </dependency>
     
+  <!-- App Engine SDK dependency for admin authentication-->
+    <dependency>
+      <groupId>com.google.appengine</groupId>
+      <artifactId>appengine-api-1.0-sdk</artifactId>
+      <version>1.9.76</version>
+    </dependency>
   </dependencies>
     
   <build>

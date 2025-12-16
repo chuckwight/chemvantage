@@ -147,7 +147,8 @@ public class Homework extends HttpServlet {
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			
+			if (a == null) throw new Exception("No assignment found for this user.");
+
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 
@@ -272,7 +273,7 @@ public class Homework extends HttpServlet {
 		try {
 			q = ofy().load().type(Question.class).id(Long.parseLong(request.getParameter("QuestionId"))).safe();
 		} catch (Exception e) {}
-		if (user.getId().equals(q.authorId)) ofy().delete().entity(q).now();
+		if (q != null && user.getId().equals(q.authorId)) ofy().delete().entity(q).now();
 	}
 	
 	void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
@@ -451,10 +452,10 @@ public class Homework extends HttpServlet {
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			q = ofy().load().type(Question.class).id(questionId).safe();
-		} catch (Exception e) {}
-		try {
-			q = assembleQuestion(request);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			return null;
+		}
+		q = assembleQuestion(request);
 		
 		if (q.requiresParser()) q.setParameters();
 
@@ -769,22 +770,24 @@ public class Homework extends HttpServlet {
 				}
 
 				// Find the output text buried in the response JSON:
-				JsonArray output = api_response.get("output").getAsJsonArray();
-				JsonObject message = null;
-				JsonObject output_text = null;
-				for (JsonElement element0 : output) {
-					message = element0.getAsJsonObject();
-					if (message.has("content")) {
-						JsonArray content = message.get("content").getAsJsonArray();
-						for (JsonElement element1 : content) {
-							output_text = element1.getAsJsonObject();
-							if (output_text.has("text")) {
-								essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
-								studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
-								break;
+				if (api_response != null) {
+					JsonArray output = api_response.get("output").getAsJsonArray();
+					JsonObject message = null;
+					JsonObject output_text = null;
+					for (JsonElement element0 : output) {
+						message = element0.getAsJsonObject();
+						if (message.has("content")) {
+							JsonArray content = message.get("content").getAsJsonArray();
+							for (JsonElement element1 : content) {
+								output_text = element1.getAsJsonObject();
+								if (output_text.has("text")) {
+									essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
+									studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
+									break;
+								}
 							}
+							break;
 						}
-						break;
 					}
 				}
 				debug.append("e");
@@ -951,7 +954,7 @@ public class Homework extends HttpServlet {
 		/*
 		 * If the answer was correct, display the current badge
 		 */
-		if (studentScore==q.pointValue) {
+		if (studentScore==q.pointValue && s != null) {
 			int decileScore = (int) Math.floor(s.getPctScore() / 10.0);
 			String badgeName = null;
 			switch (decileScore) {

@@ -199,7 +199,8 @@ public class OneQuestion extends HttpServlet {
 					// Find the output text buried in the response JSON:
 					
 					JsonObject essay_score = new JsonObject(); // to contain score and feedback
-					JsonArray output = api_response.get("output").getAsJsonArray();
+					if (api_response != null) {
+						JsonArray output = api_response.get("output").getAsJsonArray();
 					JsonObject message = null;
 					JsonObject output_text = null;
 					for (JsonElement element0 : output) {
@@ -216,6 +217,8 @@ public class OneQuestion extends HttpServlet {
 							break;
 						}
 					}
+					}
+
 					
 					// get the ChatGPT score from the response:
 					try {
@@ -241,7 +244,7 @@ public class OneQuestion extends HttpServlet {
 						} catch (Exception e) {
 							buf.append("<h3>Oops, an error occurred. Please <a href=/Feedback>report a problem</a> with this question.</h3>" 
 									+ (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>");
-							buf.append(api_response.toString() + "<br/><br/>");
+						if (api_response != null) buf.append(api_response.toString() + "<br/><br/>");
 						}
 						break;
 					} catch (Exception e) {}

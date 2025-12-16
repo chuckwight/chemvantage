@@ -541,7 +541,7 @@ public class VideoQuiz extends HttpServlet {
 			vt.missedQuestions.clear();
 			ofy().save().entity(vt).now();
 		}
-		if (reportScoreToLms) {
+		if (reportScoreToLms && a != null) {
 			try {
 				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
 			} catch (Exception e) {}

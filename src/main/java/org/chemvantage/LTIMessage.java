@@ -71,7 +71,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (d==null) debug.append("ChemVantage Deployment unknown<br/>");
 			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
 
-			if (!d.scope.contains(scope)) return null;  // must be authorized
+			if (d==null || !d.scope.contains(scope)) return null;  // must be authorized
 			//debug.append("Scope OK.<br/>");
 
 			String authToken = authTokens.get(platformDeploymentId);
@@ -500,12 +500,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
 			String hashedId = Subject.hashId(userId);
 			buf.append("User hashedId=" + hashedId + "<br/>");
-			buf.append("ScoreKey: " + key(key(User.class,hashedId),Score.class,a.id).toString() + "<br/>");
+			if (a != null) buf.append("ScoreKey: " + key(key(User.class,hashedId),Score.class,a.id).toString() + "<br/>");
 			
-			String authToken = getAccessToken(a.domain,scope);
+			String authToken = a != null ? getAccessToken(a.domain,scope) : null;
 			buf.append("AuthToken:" + authToken + "<br/>");
 
-			if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
+			if (authToken != null && authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
 			String bearerAuth = "Bearer " + authToken;
 			
 			String raw_id = userId.substring(userId.lastIndexOf("/")+1);
@@ -526,56 +526,57 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
 			URL u = null;
-			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
-			u = new URI(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i)).toURL();
+			if (a != null && a.lti_ags_lineitem_url != null) {
+				int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
+				u = new URI(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i)).toURL();
 
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
-			uc.setDoOutput(true);
+				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+				uc.setRequestMethod("POST");
+				uc.setRequestProperty("Authorization", bearerAuth);
+				uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
+				uc.setDoOutput(true);
 
-			// send the message
-			//OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = json.getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
+				// send the message
+				//OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
+				OutputStream os = uc.getOutputStream();
+				byte[] json_bytes = json.getBytes("utf-8");
+				os.write(json_bytes, 0, json_bytes.length);           
+				os.close();
 
-			int responseCode = uc.getResponseCode(); // success if 200-202
-			buf.append("Response Code = " + responseCode + "<br/>");
+				int responseCode = uc.getResponseCode(); // success if 200-202
+				buf.append("Response Code = " + responseCode + "<br/>");
 
-			boolean success = responseCode>199 && responseCode<203;
-			if (success) {  
-				s.lisReportComplete = true;
-				ofy().save().entity(s);
-				buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
-				//sendEmailToAdmin("Score submission success",buf.toString());
-			} else if (responseCode==422) {
-				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
-				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
-			} else {			
-				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
-						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
-						+ "Authorization: " + bearerAuth + "<p>"
-						+ json + "<p>");
-				Map<String,List<String>> headers = uc.getHeaderFields();
-				for (Entry<String,List<String>> e : headers.entrySet()) {
-					buf.append(e.getKey() + ": ");
-					for (String es : e.getValue()) buf.append(es + " ");
-					buf.append("<br>");
+				boolean success = responseCode>199 && responseCode<203;
+				if (success) {  
+					s.lisReportComplete = true;
+					ofy().save().entity(s);
+					buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
+					//sendEmailToAdmin("Score submission success",buf.toString());
+				} else if (responseCode==422) {
+					buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
+					//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
+				} else {			
+					buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
+							+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
+							+ "Authorization: " + bearerAuth + "<p>"
+							+ json + "<p>");
+					Map<String,List<String>> headers = uc.getHeaderFields();
+					for (Entry<String,List<String>> e : headers.entrySet()) {
+						buf.append(e.getKey() + ": ");
+						for (String es : e.getValue()) buf.append(es + " ");
+						buf.append("<br>");
+					}
+
+					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+					String line;
+					while ((line = reader.readLine()) != null) {
+						buf.append(line);
+					}
+					reader.close();
+					//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 				}
-
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					buf.append(line);
-				}
-				reader.close();
-				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 		}
 		return buf.toString();
@@ -620,10 +621,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				next_url = null;
 				String[] links = null;
 				if ( uc.getHeaderField("Link") != null) links = uc.getHeaderField("Link").split(",");
-				for (String l : links) {
-					if (l.contains("next")) {
-						next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
-						next_url = next_url.substring(0,next_url.indexOf(">"));
+				if (links != null) {
+					for (String l : links) {
+						if (l.contains("next")) {
+							next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
+							next_url = next_url.substring(0,next_url.indexOf(">"));
+						}
 					}
 				}
 				uc.disconnect();

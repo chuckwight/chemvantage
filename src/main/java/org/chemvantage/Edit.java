@@ -65,12 +65,18 @@ public class Edit extends HttpServlet {
  * 
  */
 	
-	public void doGet(HttpServletRequest request,HttpServletResponse response)
+	public void doGet(HttpServletRequest request, HttpServletResponse response)
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
 		try {
+			// Defense-in-depth: verify admin authentication
+			if (!AdminSecurityUtil.isAdminAuthenticated(request)) {
+				AdminSecurityUtil.handleAuthenticationFailure(request, response, "/Edit");
+				return;
+			}
+			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -130,12 +136,18 @@ public class Edit extends HttpServlet {
 		out.println(Subject.footer);
 	}
 
-	public void doPost(HttpServletRequest request,HttpServletResponse response)
+	public void doPost(HttpServletRequest request, HttpServletResponse response)
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
 		try {
+			// Defense-in-depth: verify admin authentication
+			if (!AdminSecurityUtil.isAdminAuthenticated(request)) {
+				AdminSecurityUtil.handleAuthenticationFailure(request, response, "/Edit");
+				return;
+			}
+			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -875,14 +887,12 @@ void assignToConcept(User user, HttpServletRequest request) {
 		}
 
 		orphan.setParameters();
-		Long conceptId = null;
 		buf.append("<table><tr><td valign=top>");
 		buf.append("Assignment Type: " + orphan.assignmentType + "<br/>");
 		Topic topic = null;
 		try {
 			topic = ofy().load().type(Topic.class).id(orphan.topicId).safe();
 			buf.append("Topic: " + topic.title + "<br/>");
-			if (topic.conceptIds.size()>0) conceptId = topic.conceptIds.get(0);
 		} catch (Exception e) {
 			buf.append("Topic: unknown<br/>");
 		}
@@ -900,29 +910,25 @@ void assignToConcept(User user, HttpServletRequest request) {
 		Concept hide = null;
 		for (Concept c : concepts) if ("Hide".equals(c.title)) hide = c;
 		
-		for (Long cId : topic.conceptIds) {
+		if (topic != null) for (Long cId : topic.conceptIds) {
 			Concept c = conceptMap.get(cId);
 			if (c==null) continue;
 			buf.append("<label><input type=radio name=ConceptId value=" + cId + " onclick=document.getElementById('conceptForm').submit(); />" + conceptMap.get(cId).title + "</label><br/>");
 		}
+	if (hide != null) {
 		buf.append("<label><input type=radio name=ConceptId value=" + hide.id + " onclick=document.getElementById('conceptForm').submit(); />Hide</label><br/>");
-		
-		buf.append("<select name=ConceptId onchange=document.getElementById('conceptForm').submit(); >"
-				+ "<option value=null>Select a concept</option>");
-		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
-		buf.append("</select>"
-				//+ "<input type=submit value='Assign' />"
-				+ "</form>");
-		buf.append("</td></tr></table><p>");
-		
-		buf.append(orphan.printAll() + "<br/>");
+	}
+	
+	buf.append("<input type=submit value='Assign' />"
+		+ "</form>");
 		
 		StringBuffer comp = new StringBuffer();
-		Question prev = questions.get(questions.indexOf(orphan)-1);
-		Question next = questions.get(questions.indexOf(orphan)+1);
+		Question prev = (questions != null) ? questions.get(questions.indexOf(orphan)-1) : null;
+		Question next = (questions != null) ? questions.get(questions.indexOf(orphan)+1) : null;
 		
 		comp.append("<div style='display:table'><div style='display:table-cell;width:400px'>");
 		comp.append("<h3>Previous Question</h3>");
+	if (prev != null) {
 		prev.setParameters();
 		comp.append("Assignment Type: " + prev.assignmentType + "<br/>");
 		try {
@@ -936,11 +942,13 @@ void assignToConcept(User user, HttpServletRequest request) {
 			comp.append("Concept: " + c.title + "<br/>");
 		} catch (Exception e) {}
 		comp.append("Question ID: " + prev.id + "<br/>");
-		comp.append(prev.printAll());			
-
-		comp.append("</div><div style='display:table-cell;width:400px'>");
+		comp.append(prev.printAll());
+	} else {
+		comp.append("No previous question available.<br/>");
+	}
 		
-		comp.append("<h3>Next Question</h3>");
+	comp.append("<h3>Next Question</h3>");
+	if (next != null) {
 		next.setParameters();
 		comp.append("Assignment Type: " + next.assignmentType + "<br/>");
 		try {
@@ -955,7 +963,10 @@ void assignToConcept(User user, HttpServletRequest request) {
 		} catch (Exception e) {}
 		comp.append("Question ID: " + next.id + "<br/>");
 		comp.append(next.printAll());
-		comp.append("</div></div>");
+	} else {
+		comp.append("No next question available.<br/>");
+	}
+	comp.append("</div></div>");
 		
 		buf.append(comp);
 
@@ -1442,7 +1453,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
 							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
 							+ ((nQuiz==0 && nHW==0 && nExam==0 && nVideo==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
-									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
+									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\" />":"")
 									+ "</TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Quiz&TopicId=" + t.id + "><b>" + nQuiz + "</b></a></TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Homework&TopicId=" + t.id + "><b>" + nHW + "</b></a></TD>");

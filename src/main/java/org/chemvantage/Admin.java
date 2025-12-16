@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 
 import org.openpdf.pdf.ITextRenderer;
 
+import com.google.appengine.api.users.UserServiceFactory;
 import com.google.cloud.datastore.Cursor;
 import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.cmd.Query;
@@ -61,6 +62,14 @@ public class Admin extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
+			// Verify admin authentication
+			if (!isAdminAuthenticated(request)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
+					"Admin access required");
+				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
+				return;
+			}
+			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -119,6 +128,14 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
+			// Verify admin authentication
+			if (!isAdminAuthenticated(request)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
+					"Admin access required");
+				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
+				return;
+			}
+			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -395,5 +412,61 @@ public class Admin extends HttpServlet {
 		return buf.toString();
 	}
 
+	/**
+	 * Verify the request is from an authenticated admin user or service account
+	 */
+	private boolean isAdminAuthenticated(HttpServletRequest request) {
+		try {
+			// Check for App Engine User API authentication
+			com.google.appengine.api.users.UserService userService = 
+					UserServiceFactory.getUserService();
+			
+			com.google.appengine.api.users.User appEngineUser = userService.getCurrentUser();
+			
+			if (appEngineUser == null) {
+				return false;  // No authenticated user
+			}
+			
+			// Verify the user is an admin
+			if (!userService.isUserAdmin()) {
+				return false;  // User is not admin
+			}
+			
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Log security events for audit trail
+	 */
+	private void logSecurityEvent(String eventType, HttpServletRequest request) {
+		try {
+			System.err.println(String.format(
+				"SECURITY_EVENT: %s | IP: %s | Time: %s",
+				eventType,
+				getClientIp(request),
+				System.currentTimeMillis()
+			));
+		} catch (Exception e) {
+			// Silently fail logging
+		}
+	}
+
+	/**
+	 * Extract real client IP, accounting for proxies
+	 */
+	private String getClientIp(HttpServletRequest request) {
+		String ip = request.getHeader("X-Forwarded-For");
+		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("X-Real-IP");
+		}
+		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getRemoteAddr();
+		}
+		// Return only the first IP if multiple are present
+		return ip.split(",")[0].trim();
+	}
 }
 

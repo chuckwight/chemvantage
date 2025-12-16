@@ -708,8 +708,9 @@ public class Question implements Serializable, Cloneable {
 			}
 			
 			// Find the output text buried in the response JSON:
+			if (api_response != null) {
 			JsonArray output = api_response.get("output").getAsJsonArray();
-			JsonObject message = null;
+		JsonObject message = null;
 			JsonObject output_text = null;
 			for (JsonElement element0 : output) {
 				message = element0.getAsJsonObject();
@@ -727,6 +728,7 @@ public class Question implements Serializable, Cloneable {
 				}
 			}
 			debug.append("e");
+			}
 			
 			if (!this.requiresParser()) ofy().save().entity(this);
 			buf.append(this.explanation);

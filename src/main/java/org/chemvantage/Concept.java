@@ -94,6 +94,9 @@ public class Concept implements Serializable {
 				}
 
 				// Find the output text buried in the response JSON:
+				if (api_response == null) {
+					return "Sorry, Sage is unable to provide a summary of this concepot at the moment.";
+				}
 				JsonArray output = api_response.get("output").getAsJsonArray();
 				JsonObject message = null;
 				JsonObject output_text = null;
