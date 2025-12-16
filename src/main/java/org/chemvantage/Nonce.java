@@ -21,7 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
+import java.util.UUID;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -42,12 +42,7 @@ public class Nonce {
 	static long interval = 5400000L;  // 90 minutes in milliseconds
 	
 	static String generateNonce() {
-		Random random =  new Random(new Date().getTime());
-        long r1 = random.nextLong();
-        long r2 = random.nextLong();
-        String hash1 = Long.toHexString(r1);
-        String hash2 = Long.toHexString(r2);
-        return hash1 + hash2;
+		return UUID.randomUUID().toString();
 	}
 
 	public static boolean isUnique(String nonce) {
