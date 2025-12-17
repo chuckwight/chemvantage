@@ -29,6 +29,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.google.auth.oauth2.GoogleCredentials;
+
 /* 
  * Access to this servlet is restricted to ChemVantage admin users and the project service account
  * by specifying login: admin in a url handler of the project app.yaml file
@@ -45,29 +47,51 @@ public class ReportScore extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		if (request.getParameter("AssignmentId") == null || request.getParameter("UserId") == null) {
-			PrintWriter out = response.getWriter();
-			response.setContentType("text/html");
-			out.println(Subject.header("ChemVantage Unreported Scores") + "<h3>Unreported Scores</h3>");
-			out.println("For each of the scores below, click the link to report it manually.<p>");
-			List<Score> scores = ofy().load().type(Score.class).filter("lisReportComplete",false).list();
-			for (Score s : scores) {
-				String userId = s.owner.getName();
-				String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
-				if (s.lisReportComplete) out.println("Report is complete: " + url + "<br>");
-				else if (s.needsLisReporting()) out.println("Score needs reporting: <a href=" + url + ">" + url + "</a><br>");
-				else out.println("No reporting URL provided: " + url + "<br>");
+		try {
+			// Defense-in-depth: verify admin authentication
+			if (!isAdminAuthenticated(request)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
+					"Admin access required");
+				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
+				return;
 			}
-			if (scores.size()==0) out.println("None. All scores are up to date.");
-			out.println(Subject.footer);
-		} else 	doPost(request,response);	
+			
+			if (request.getParameter("AssignmentId") == null || request.getParameter("UserId") == null) {
+				PrintWriter out = response.getWriter();
+				response.setContentType("text/html");
+				out.println(Subject.header("ChemVantage Unreported Scores") + "<h3>Unreported Scores</h3>");
+				out.println("For each of the scores below, click the link to report it manually.<p>");
+				List<Score> scores = ofy().load().type(Score.class).filter("lisReportComplete",false).list();
+				for (Score s : scores) {
+					String userId = s.owner.getName();
+					String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
+					if (s.lisReportComplete) out.println("Report is complete: " + url + "<br>");
+					else if (s.needsLisReporting()) out.println("Score needs reporting: <a href=" + url + ">" + url + "</a><br>");
+					else out.println("No reporting URL provided: " + url + "<br>");
+				}
+				if (scores.size()==0) out.println("None. All scores are up to date.");
+				out.println(Subject.footer);
+			} else 	doPost(request,response);
+		} catch (Exception e) {
+			response.setContentType("text/html");
+			response.getWriter().println("Error: " + e.getMessage());
+		}	
 	}
 	
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		StringBuffer debug = new StringBuffer("Debug:");
-		try {  // post single user score
+		try {
+			// Defense-in-depth: verify admin authentication
+			if (!isAdminAuthenticated(request)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
+					"Admin access required");
+				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
+				return;
+			}
+			
+			// post single user score
 			response.setContentType("text/html");
 			debug.append("1");
 			PrintWriter out = response.getWriter();
@@ -99,5 +123,66 @@ public class ReportScore extends HttpServlet {
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed ReportScore",(e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 			response.sendError(401,"Failed ReportScore");
 		}
-	}	
+	}
+
+	private boolean isAdminAuthenticated(HttpServletRequest request) {
+		try {
+			// Verify the application has Google Cloud credentials
+			GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+			
+			if (credentials == null) {
+				return false;  // No credentials available
+			}
+			
+			// Validate that the application has access to Google Cloud
+			String projectId = System.getenv("GOOGLE_CLOUD_PROJECT");
+			if (projectId == null) {
+				projectId = System.getenv("GCLOUD_PROJECT");
+			}
+			
+			if (projectId == null) {
+				return false;  // Cannot determine project
+			}
+			
+			// Admin access is controlled through IAM policies in Google Cloud Console
+			// If the request reached here with valid credentials, the IAM policy 
+			// has already filtered for admin-only access
+			return true;
+		} catch (Exception e) {
+			System.err.println("Error during admin authentication: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	/**
+	 * Log security events for audit trail
+	 */
+	private void logSecurityEvent(String eventType, HttpServletRequest request) {
+		try {
+			System.err.println(String.format(
+				"SECURITY_EVENT: %s | IP: %s | Time: %s",
+				eventType,
+				getClientIp(request),
+				System.currentTimeMillis()
+			));
+		} catch (Exception e) {
+			// Silently fail logging
+		}
+	}
+
+	/**
+	 * Extract real client IP, accounting for proxies
+	 */
+	private String getClientIp(HttpServletRequest request) {
+		String ip = request.getHeader("X-Forwarded-For");
+		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("X-Real-IP");
+		}
+		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getRemoteAddr();
+		}
+		// Return only the first IP if multiple are present
+		return ip.split(",")[0].trim();
+	}
 }

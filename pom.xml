@@ -75,27 +75,34 @@
 	<dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-tasks</artifactId>
-    </dependency>
+  </dependency>
     
-    <!-- SendGrid API third=party email sender trough GCP -->
-    <dependency>
+  <!-- Google Cloud Service Account -->
+  <dependency>
+      <groupId>com.google.auth</groupId>
+      <artifactId>google-auth-library-oauth2-http</artifactId>
+      <version>1.11.0</version>
+  </dependency>
+    
+  <!-- SendGrid API third=party email sender trough GCP -->
+  <dependency>
       <groupId>com.sendgrid</groupId>
       <artifactId>sendgrid-java</artifactId>
-    </dependency>
+  </dependency>
 
 	<!-- OpenPDF html-to-pdf converter -->
 	<dependency>
       <groupId>com.github.librepdf</groupId>
       <artifactId>openpdf-html</artifactId>
       <version>3.0.0</version>
-    </dependency>
+  </dependency>
     
   <!-- App Engine SDK dependency for admin authentication-->
-    <dependency>
+  <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-1.0-sdk</artifactId>
       <version>1.9.76</version>
-    </dependency>
+  </dependency>
   </dependencies>
     
   <build>
