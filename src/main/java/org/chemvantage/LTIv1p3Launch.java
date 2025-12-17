@@ -535,7 +535,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			URL jwks_url = new URI(d.well_known_jwks_url).toURL();
 			String kid = id_token.getKeyId();
 			
-			// Header may be necessary to jet the JWKS from Moodle
+			// Header may be necessary to get the JWKS from Moodle
 			Map<String, String> headers = new HashMap<>();
             headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
             JwkProvider provider = new UrlJwkProvider(jwks_url, null, null, null, headers);
@@ -997,29 +997,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
-	static String validationPage(User user,String assignmentType,String nonce) {
-		StringBuffer buf = new StringBuffer();
-		String sig = user.getTokenSignature();
-		String shortSig = "";
-		try {
-			shortSig = String.valueOf(Long.parseLong(sig) - nonce.hashCode());
-		} catch (Exception e) {			
-		}
-		buf.append(Subject.header());
-		buf.append("<script>"
-				+ "const urlParams = new URLSearchParams(window.location.seach);"
-				+ "try {"
-				+ " let sig = parseInt(" + shortSig + ",10) + parseInt(window.sessionStorage.getItem('sig'),10);"
-				+ " window.sessionStorage.clear();"
-				+ " window.location.replace('/" + assignmentType + "?sig=' + sig + '&validated=true');"
-				+ "} catch (error) {"
-				+ " window.location.replace('/" + assignmentType + "?sig=" + sig + "&validated=false');"
-				+ "}"
-				+ "</script>");
-		buf.append(Subject.footer);
-		return buf.toString();
-	}
+
 	
 	boolean registrationCompleted(HttpServletRequest request, Deployment d) {
 		try {
