@@ -669,6 +669,7 @@ public class Homework extends HttpServlet {
 				+ "}\n"
 				+ ".feedback-container {\n"
 				+ "    text-align: left;\n"
+				+ "    width: 60%;\n"
 				+ "}\n"
 				+ "</style>");
 		StringBuffer debug = new StringBuffer("Homework.printScore...");
