@@ -64,7 +64,7 @@ public class EraseEntity extends HttpServlet {
 			if (domain == null) out.println(Subject.header("Erase ChemVantage Entity") + menu() + Subject.footer);
 			else out.println(Subject.header("Erase ChemVantage Entity") + options(domain) + Subject.footer);
 		} catch (Exception e) {
-			AdminSecurityUtil.logSecurityEvent("ERASE_ENTITY_GET_ERROR", "/EraseEntity", request);
+			logSecurityEvent("ERASE_ENTITY_GET_ERROR", request);
 			out.println("Error: " + e.getMessage());
 		}
 	}
@@ -104,8 +104,8 @@ public class EraseEntity extends HttpServlet {
 				if (assignmentIds != null) { 
 					for (String id : assignmentIds) assignmentKeys.add(key(Assignment.class,Long.parseLong(id)));
 					assignments = new ArrayList<Assignment>(ofy().load().keys(assignmentKeys).values());
-					// SECURITY FIX #6: Audit log for assignment deletion
-					AdminSecurityUtil.logSecurityEvent("ADMIN_DELETE_ASSIGNMENTS", "Count: " + assignmentIds.length, request);
+				// Audit log for assignment deletion
+				logSecurityEvent("ADMIN_DELETE_ASSIGNMENTS", request);
 				}
 			}
 		
@@ -131,8 +131,8 @@ public class EraseEntity extends HttpServlet {
 		
 		out.println(Subject.header("Erase ChemVantage Entity") + menu(domain) + Subject.footer);
 		} catch (Exception e) {
-			// SECURITY FIX #6: Log security exceptions
-			AdminSecurityUtil.logSecurityEvent("ERASE_ENTITY_POST_ERROR", e.getMessage(), request);
+			// Log security exceptions
+			logSecurityEvent("ERASE_ENTITY_POST_ERROR", request);
 			throw new ServletException("Error processing erase request", e);
 		}
 	}
