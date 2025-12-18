@@ -434,9 +434,9 @@ public class LTIRegistration extends HttpServlet {
 			case "blackboard":
 				client_id = (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
 				platform_id = "https://blackboard.com";
-				oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
-				well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
-				oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
+				oidc_auth_url = "https://developer.anthology.com/api/v1/gateway/oidcauth";
+				well_known_jwks_url = "https://developer.anthology.com/.well-known/jwks.json";
+				oauth_access_token_url = "https://developer.anthology.com/api/v1/gateway/oauth2/jwttoken";
 				break;
 			case "schoology":
 				client_id = (iss.equals("https://www.chemvantage.org")?"6558245496":"");
