@@ -50,12 +50,12 @@ public class STTransaction implements Serializable {
 			
 	STTransaction() {}
 
-	STTransaction(String userId,long assignmentId,List<Long> conceptIds) {
+	STTransaction(String userId, Assignment a) {
 		this.userId = userId;
 		this.created = new Date();
 		this.graded = null;
-		this.assignmentId = assignmentId;
-		this.conceptIds = conceptIds;
+		this.assignmentId = a.id;
+		this.conceptIds = a.conceptIds;
 		scores = new int[conceptIds.size()];
 		possibleScores = new int[conceptIds.size()];
 		Arrays.fill(possibleScores, 2);
