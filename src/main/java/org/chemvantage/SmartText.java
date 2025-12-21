@@ -124,12 +124,11 @@ public class SmartText extends HttpServlet {
 
             buf.append("<h1>Reading Assignment</h1>");
             buf.append("<h2>Instructor Page</h2>");
-            buf.append("Text: <b>" + text.title + "</b><br/>");
-            buf.append("Chapter " + chapter.chapterNumber + ": " + chapter.title + "<br/><br/>");
             buf.append("<a href='/SmartText?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>View This Assignment</a><br/><br/>");     
-
-            buf.append("<h3>Customize Key Concepts</h3>");
-            buf.append("Select the key concepts from this chapter to include in this assignment:<br/>");
+            buf.append("<h3>Text: " + text.title + "<br/>");
+            buf.append("Chapter " + chapter.chapterNumber + ": " + chapter.title + "</h3>");
+            
+            buf.append("Select/unselect the key concepts to include in this assignment:<br/>");
 
             // Build a form with checkboxes for concepts in this chapter
             buf.append("<form method=post action=/SmartText>");
@@ -174,9 +173,8 @@ public class SmartText extends HttpServlet {
         buf.append("<div style=display:table><div style='display:table-row;'><div style='display:table-cell;vertical-align:top;width:450px;padding-right:20px'>");
         buf.append("<h1>Reading Assignment</h1>");
         buf.append("Textbook: <b>" + t.title + "</b><br/>"
-            + "Author: " + t.author + "<br/><br/>"
-            + "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
-        buf.append("<h2>Reading Options</h2>");
+            + "Author: " + t.author + "<br/>"
+            + "<h2>Chapter " + c.chapterNumber + ": " + c.title + "</h2>");
         buf.append("<ul>");
         if (c.url != null) buf.append("<li><a aria-label='Opens in a new tab' href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
         buf.append("<li><a aria-label='Opens in a new tab' href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
@@ -276,8 +274,12 @@ public class SmartText extends HttpServlet {
                 List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list();
                 
                 // Remove any question keys already answered correctly and select one remaining key at random
-                if (!complete) questionKeys.removeAll(st.answeredKeys);
-					
+                if (!complete) {  // only prune if the assignment is not yet complete
+                    List<Key<Question>> prunedKeys = new ArrayList<Key<Question>>(questionKeys);
+                    prunedKeys.removeAll(st.answeredKeys);
+                    if (!prunedKeys.isEmpty()) questionKeys = prunedKeys;
+                }
+
 				if (questionKeys.isEmpty()) {
 					availableConceptIds.remove(conceptId);
 					if (availableConceptIds.isEmpty()) return "Sorry, there are no available questions.";
