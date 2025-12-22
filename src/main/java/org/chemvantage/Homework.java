@@ -197,6 +197,18 @@ public class Homework extends HttpServlet {
 					out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				}
 				break;
+			case "AddKeyConcept":
+				if (user.isInstructor()) {
+					try {
+						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+						if (!a.conceptIds.contains(conceptId)) {
+							a.conceptIds.add(conceptId);
+							ofy().save().entity(a).now();
+						}
+					} catch (Exception e) {}
+					out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				}
+				break;
 			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
@@ -308,15 +320,71 @@ public class Homework extends HttpServlet {
 			
 			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
 			
-			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items.<br/>");
+			buf.append("<form action=/Homework method=post>"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n");
+							
+			buf.append("Currently, the number of attempts allowed for each question is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>");
+			buf.append("<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>\n");
 			
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("An unlimited number of submissions is allowed for each question.<br/>");
-			else buf.append("Only " + a.attemptsAllowed + (a.attemptsAllowed==1?" submission is ":" submissions are ") + "allowed for each question.<br/>");
+			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items:<br/>");
 			
-			buf.append("<UL>"
-					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items and selecting the number of submissions allowed for each question.</LI>"
-					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
-					+ "</UL>");
+			List<Question> questions = new ArrayList<>(ofy().load().keys(a.questionKeys).values());
+			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
+			questions.forEach(q -> {
+				Integer n = conceptQuestionCounts.get(q.conceptId);
+				if (n==null) n = 0;
+				conceptQuestionCounts.put(q.conceptId, n+1);
+			});
+
+			// Print a table of concepts with the number of assigned questions for each concept
+			List<Concept> conceptList = ofy().load().type(Concept.class).list();
+			Map<Long, Concept> conceptMap = new HashMap<>();
+			for (Concept c : conceptList) {
+				conceptMap.put(c.id, c);
+			}
+
+			buf.append("<table style='padding: 5px 5px;'>"
+					+ "<tr><th>Concept</th><th># Questions</th><th>Customize</th></tr>");
+			a.conceptIds.forEach(cId -> {
+				Concept c = conceptMap.get(cId);
+				int nQuestions = conceptQuestionCounts.get(cId)==null?0:conceptQuestionCounts.get(cId);
+				int nTotalQuestions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).count();
+				buf.append("<tr>"
+						+ "<td>" + (c==null?"(deleted concept)":c.title) + "</td>"
+						+ "<td align=center>" + nQuestions + " of " + nTotalQuestions + "</td>"
+						+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId=" + cId + "'>Select Questions</a></td>"
+						+ "</tr>");
+			});
+			if (conceptQuestionCounts.containsKey(null) && conceptQuestionCounts.get(null) > 0) {
+				buf.append("<tr>"
+						+ "<td>Custom Questions</td>"
+						+ "<td align=center>" + conceptQuestionCounts.get(null) + "</td>"
+						+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId'>Create Questions</a></td>"
+						+ "</tr>");
+			}
+			buf.append("</table><br/>");
+
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Homework>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<label>You may include additional question items from: "
+					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+			for (Concept c : conceptList) {
+				try {
+					if (a.conceptIds.contains(c.id) || c.orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + c.id + "'>" + c.title + "</option>");
+				} catch (Exception e) {}
+			}
+			buf.append("</select></label></form><br/>\n<hr>\n");
+			
+			buf.append((supportsMembership?"<a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a><br/>":""));
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -1032,368 +1100,6 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	/*
-	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer("Start...");
-		JsonObject essay_score = new JsonObject(); // contains essay score and feedback
-		
-		try {
-			// The Homework grader scores only one Question at a time, so first identify and load it
-			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			String qn = request.getParameter("QNumber");
-			Key<Question> k = key(Question.class,questionId);
-			Question q = ofy().load().key(k).safe();
-			
-			if (hwa==null) {  // anonymous user; use the assignment on Chapter 1 of the first smartText entity
-				hwa = new Assignment();
-				hwa.id = 0L;
-				hwa.assignmentType = "Homework";
-				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
-				hwa.title = text.chapters.get(0).title;
-			}
-			
-			if (hwa.attemptsAllowed != null) {
-				List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
-				List<HWTransaction> priorAttempts = new ArrayList<HWTransaction>();
-				for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
-				
-				if (priorAttempts.size() >= hwa.attemptsAllowed) {
-					buf.append("<h1>Homework</h1>"
-						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
-					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-					buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
-					for (HWTransaction hwt : priorAttempts) buf.append("<tr><td>" + hwt.id + "</td><td>" + df.format(hwt.graded) + "</td><td align=center>" + hwt.score +  "</td></tr>");
-					buf.append("</table><br/>");
-					
-					buf.append("<a href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Return to this homework assignment" + "</a> or "
-							+ "<a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
-				
-					return buf.toString();
-				}
-			}
-			
-			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
-			String hashMe = user.getId() + hwa.id;
-			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-			debug.append("questionId " + q.id + (q.requiresParser()?" parameters set with " + hashMe.hashCode():"") + "...");
-			
-			String studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
-			
-			String showWork = request.getParameter("ShowWork"+q.id);
-			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
-			
-			debug.append("student answer:" + studentAnswer + "...");
-			
-			// This section checks for recent submissions to enforce the retry delay (discourages guessing)
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Date now = new Date();
-			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
-			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",q.id).filter("graded >",minutesAgo).list();
-			long secondsRemaining = 0;
-			boolean solvedRecently = false;
-			
-			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
-				Date lastSubmission = new Date(0L);
-				for (HWTransaction ht : recentTransactions) {
-					if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
-					if (ht.score>0) solvedRecently=true;
-				}
-				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000L;
-			}
-			debug.append("recent transactions = "+recentTransactions.size() + "...");
-			if (secondsRemaining > 0 && !solvedRecently) {  
-				buf.append("<h1>Homework</h1>"
-						+ "<h2>Please Wait For The Retry Delay To Complete</h2>");
-				//buf.append(df.format(now));
-				buf.append("<span id=timer0 style='color: #EE0000'></span><br/>");
-				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
-						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
-				buf.append("Alternatively, you may wish to "
-						+ "<a href=/Homework?AssignmentId=" + hwa.id
-						+ "&sig=" + user.getTokenSignature() + (qn==null?"":"#q" + qn) + ">" 
-						+ "return to this homework assignment</a> to work on another problem.<p>");
-				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForRetryScore(); >"
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ (qn==null?"":"<input type=hidden name=QNumber value=" + qn + " />")  // this is the assigned question number on the page
-						+ q.print(showWork,studentAnswer) + "<br>");
-
-				buf.append("<INPUT TYPE='submit' id='RetryButton' class='btn btn-primary' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
-				buf.append("<script>"
-						+ "startTimers(" + (secondsRemaining*1000L) + ");"
-						+ "function timesUp() {"
-						+ "document.getElementById('RetryButton').disabled=false;"
-						+ "document.getElementById('RetryButton').value='Grade This Exercise';"
-						+ "}"
-						+ "</script>");
-
-				return buf.toString();
-			}
-			
-			buf.append("<h1>Homework Results</h1><h2>" + hwa.title + "</h2>\n");
-			
-			buf.append(df.format(now));
-			
-			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
-			int possibleScore = q.pointValue;
-			
-			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
-			HWTransaction ht = null;
-			
-			showWork = request.getParameter("ShowWork"+questionId);
-			Score s = null;
-			if (!studentAnswer.isEmpty()) { // an answer was submitted
-				switch (q.getQuestionType()) {
-				case 6:  // Handle five-star rating response
-					studentScore = q.pointValue;  // full marks for submitting a response
-					break;
-				case 7:  // New section for scoring essay questions with Chat GPT
-					debug.append("essay question...");
-					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
-					
-					BufferedReader reader = null;
-					JsonObject api_request = new JsonObject();
-					api_request.addProperty("model", Subject.getGPTModel());
-					JsonObject prompt = new JsonObject();
-					prompt.addProperty("id", "pmpt_68b05dd3c7e88190b02ec3c4a41e412003d177cd13da4c5d");
-					JsonObject variables = new JsonObject();
-					variables.addProperty("question_item", q.printForSage());
-					variables.addProperty("student_answer", studentAnswer);
-					prompt.add("variables", variables);
-					api_request.add("prompt", prompt);
-
-					URL u = new URI("https://api.openai.com/v1/responses").toURL();
-					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-					uc.setRequestMethod("POST");
-					uc.setDoInput(true);
-					uc.setDoOutput(true);
-					uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-					uc.setRequestProperty("Content-Type", "application/json");
-					uc.setRequestProperty("Accept", "application/json");
-					OutputStream os = uc.getOutputStream();
-					byte[] json_bytes = api_request.toString().getBytes("utf-8");
-					os.write(json_bytes, 0, json_bytes.length);           
-					os.close();
-
-					int response_code = uc.getResponseCode();
-					debug.append("HTTP Response Code: " + response_code);
-
-					JsonObject api_response = null;
-					if (response_code/100==2) {
-						reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-						api_response = JsonParser.parseReader(reader).getAsJsonObject();
-						debug.append(api_response.toString());
-						reader.close();
-					} else {
-						reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
-						debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
-						reader.close();
-					}
-
-					// Find the output text buried in the response JSON:
-					JsonArray output = api_response.get("output").getAsJsonArray();
-					JsonObject message = null;
-					JsonObject output_text = null;
-					for (JsonElement element0 : output) {
-						message = element0.getAsJsonObject();
-						if (message.has("content")) {
-							JsonArray content = message.get("content").getAsJsonArray();
-							for (JsonElement element1 : content) {
-								output_text = element1.getAsJsonObject();
-								if (output_text.has("text")) {
-									essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
-									studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
-									break;
-								}
-							}
-							break;
-						}
-					}
-					debug.append("e");
-					break;
-				default:
-				}
-				
-				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
-				ht.studentAnswer = studentAnswer;
-				ht.correctAnswer = q.getCorrectAnswer();				
-				ofy().save().entity(ht).now();
-				
-				// create/update/store a HomeworkScore object
-				try {  // throws exception if hwa==null
-					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
-						q.addAttemptSave(studentScore>0);
-						s = Score.getInstance(user.getId(),hwa);
-						ofy().save().entity(s).now();
-						String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
-						Utilities.createTask("/ReportScore",payload);
-						//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
-					}
-				} catch (Exception e2) {
-				}
-			}
-			
-			StringBuffer solutionBuf = new StringBuffer();
-			if (studentScore>0 || user.isInstructor()) { // prepare the solution
-				solutionBuf.append(q.printAllToStudents(studentAnswer)
-						+ " <p>\n"
-						+ " <div id=explanation style='max-width:800px'>"
-						+ " <button id=explainThis class='btn btn-primary' onclick=getExplanation();>Please explain this answer</button>"
-						+ " </div>\n"
-						+ "<script>\n"
-						+ "function getExplanation() {\n"
-						+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
-						+ "  try {\n"
-						+ "    var xmlhttp = GetXmlHttpObject();\n"
-						+ "    if (xmlhttp==null) {\n"
-						+ "      alert('Sorry, your browser does not support AJAX!');\n"
-						+ "	     return false;\n"
-						+ "    }\n"
-						+ "	   xmlhttp.onreadystatechange=function() {\n"
-						+ "      if (xmlhttp.readyState==4) {\n"
-						+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
-						+ "        var mathjax = document.createElement('script');\n"
-						+ "        mathjax.type = 'text/javascript';\n"
-						+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
-						+ "        document.head.appendChild(mathjax);\n"
-						+ "      }\n"
-						+ "    }\n"
-						+ "  } catch (error) {}\n"
-						+ "  xmlhttp.open('GET','/Homework?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + hashMe.hashCode() + "',true);\n"
-						+ "  xmlhttp.send(null);\n"
-						+ "}\n"
-						+ "</script>\n"
-						+ "<br/><br/>\n");				
-			}
-			
-			// Send response to the user:
-			if (studentScore > 0) {
-				switch (q.getQuestionType()) {
-				case 6: // Five star response
-					buf.append("<h3>Thank you for the rating.</h3>");
-					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
-					break;
-				case 7: // Essay response
-						studentAnswer += "<br/><br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString() 
-								+ "<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)" + "<br/>";
-				default:
-					buf.append("<div style='display:flex'>"
-							+ "<div>"
-							+ "<h3>Congratulations!</h3><b>Your answer is correct.</b> <IMG SRC=/images/checkmark.png ALT='Check mark' align=bottom /><br/>");
-					buf.append(solutionBuf.toString()
-							+ "</div>");
-					
-					int decileScore = (int) Math.floor(s.getPctScore() / 10.0);
-					String badgeName = null;
-					switch (decileScore) {
-					case 0: badgeName="Turbo-Penguin-Alchemist";break;
-					case 1: badgeName="Glitter-Shark-Wizard";break;
-					case 2: badgeName="Electric-Llama-Prophet";break;
-					case 3: badgeName="Flamingo-Karate-Detective";break;
-					case 4: badgeName="Space-Hamster-Captain";break;
-					case 5: badgeName="Ninja-Cactus-Cowboy";break;
-					case 6: badgeName="Galactic-Taco-Wizard";break;
-					case 7: badgeName="Pirate-Samurai-Unicorn";break;
-					case 8: badgeName="Disco-Viking-Platypus";break;
-					case 9: badgeName="Quantum-Donut-Knight";break;
-					case 10: badgeName="Turbo-Racoon-Overlord";break;
-					}
-					buf.append("<div id=badge style='text-align: center; max-width:30%; height:auto; margin:10px'>"
-							+ "<img src='/images/badges/" + badgeName + ".png' alt='Fun cartoon character'><br/>"
-							+ "Your score is " + s.getPctScore() + "%<br/>" + badgeName
-							+ "</div>"
-						+ "</div>");
-				}
-			}
-			else if (studentAnswer.length() > 0) {
-				switch (q.getQuestionType()) {
-					case 5:  // Numeric question
-						try {
-							@SuppressWarnings("unused")
-							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h2>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>"
-									+ "Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
-							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h2>Almost there!</h2>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
-									+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant or (better!) use <a href=https://en.wikipedia.org/wiki/Scientific_notation#E_notation>scientific E notation</a>.<br/><br/>");
-						}
-						catch (Exception e2) {
-							buf.append("<h2>Wrong Format</h2>"
-									+ "This question requires a numeric response expressed as an integer, decimal number, "
-									+ "or in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the computer "
-									+ "was unable to recognize your answer as one of these types.<br/>");
-						}
-						break;
-					case 6:  // Five star rating
-						buf.append("<h2>No rating was submitted for this item.</h2>");
-						break;
-					case 7:  // Essay question
-						int score = essay_score.get("score").getAsInt();
-						if (score<=1) buf.append("<h2>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>");
-						else buf.append("<h2>Your answer is partly correct, but needs improvement.</h2>");
-						buf.append(essay_score.get("feedback").getAsString() + "<br/><br/>");
-						break;
-					default:  // All other types of questions
-						buf.append("<h2>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h2>Your answer was scored incorrect because it does not agree with the "
-							+ "answer in the database.<br/>");
-				}
-				
-				int nAttempts = 0;
-				if (hwa.attemptsAllowed != null) {
-					nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).count();
-					buf.append("The maximum number of attempts for each question on this assignment is " + hwa.attemptsAllowed + "<br/>");
-					if (nAttempts<hwa.attemptsAllowed) buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
-				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
-			
-				if (user.isInstructor() || user.isTeachingAssistant()) {
-					buf.append("<br/>Instructor only: <a role='button' href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a>"
-							+ "<div id=solution style='display:none'>"
-							+ solutionBuf.toString()
-							+ "</div>"
-							+ "<br/><br/>");
-				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
-					buf.append("<br/><form method=post action=/Help>"
-							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
-							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
-					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
-					buf.append("<input type='submit' value='Get Some Help Here'></form><br/>");
-				}				
-			}  
-			else {
-				buf.append("<h3>The answer to the question was left blank.</h3>");
-			}
-
-			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
-
-			if (!user.isAnonymous()) {
-				//if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-				//	buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a aria-label='Opens in a new tab' href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
-
-				// if the user response was correct, seek five-star feedback:
-				if (studentScore > 0) buf.append(Feedback.fiveStars(user.getTokenSignature()));
-				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
-
-				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
-						+ (offerHint?"Please give me a hint":"Continue with this assignment") 
-						+ "</a><br clear=left /><br/>");
-
-				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
-						+ "or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
-			} else { // user is anonymous
-				buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
-
-				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
-			}
-		} catch (Exception e) {
-			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
-			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
-			return Logout.now(request,e);
-		}
-		return buf.toString();
-	}
-*/
 	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("\n<SELECT NAME=QuestionType>"
@@ -1490,18 +1196,6 @@ public class Homework extends HttpServlet {
 		try {
 			buf.append("<h1>Customize Homework Assignment</h1>");
 			buf.append("<a href='/Homework?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
-			buf.append("<form action=/Homework method=post>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
-					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n");
-							
-			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
-					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
-					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/>\n");
 			
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Select the homework questions below to be assigned for grading, "
@@ -1513,40 +1207,19 @@ public class Homework extends HttpServlet {
 					+ "reported to the class LMS.<p>\n");
 	
 			// Show a List of concepts covered by this assignment
-			Long newConceptId = null;
+			Long conceptId = null;
+			Concept concept = null;
 			try {  // add a new conceptId
-				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
-				a.conceptIds.add(0,newConceptId);
-			} catch (Exception e) {}
+				conceptId = Long.parseLong(request.getParameter("ConceptId"));
+				if (!a.conceptIds.contains(conceptId)) a.conceptIds.add(conceptId);
+				concept = ofy().load().type(Concept.class).id(conceptId).now();
+			} catch (Exception e) {
+				return "Error: no concept selected.";
+			}
 			
-			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
-			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
-			if (a.conceptIds.size()>0) {
-				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : a.conceptIds) {
-					Concept c = keyConcepts.get(key(Concept.class,cId));
-					try {
-						buf.append("<li>" + c.title + "</li>");
-					} catch (Exception e) {
-						a.conceptIds.remove(cId);  // remove id for null Concept
-					}
-				}
-				buf.append("</ul>\n");
-			}
-	
-			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
-			buf.append("<form method=get action=/Homework>"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
-					+ "<label>You may include additional question items from: "
-					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
-			for (Key<Concept> k : conceptKeys) {
-				try {
-					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
-					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
-				} catch (Exception e) {}
-			}
-			buf.append("</select></label></form><br/>\n<hr>\n");
+			buf.append("<h2>Concept: " + (concept==null?"":concept.title) + "</h2>");
+			buf.append("Select/unselect the questions below for this assignment:<ul>");
+			
 			
 			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
 			StringBuffer assignedQuestions = new StringBuffer();
@@ -1626,7 +1299,7 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
-					+ (newConceptId==null?"":"<input type=hidden name=NewConceptId value=" + newConceptId + " />")
+					+ (concept==null ||concept.id==null?"":"<input type=hidden name=NewConceptId value=" + concept.id + " />")
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
 			
 			// Make a table of assigned and optional questions
