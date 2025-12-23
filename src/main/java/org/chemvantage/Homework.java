@@ -316,28 +316,32 @@ public class Homework extends HttpServlet {
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h1>Homework</h1>"
-					+ "<h2>" + a.title + "</h2>");
-			buf.append("<h3>Instructor Page</h3>");
-			
-			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
-			
-			buf.append("<form action=/Homework method=post>"
+					+ "<h2>" + a.title + "</h2>"
+					+ "<h3>Instructor Page</h3>"
+					+ "<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>"
+					+ "<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
-					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n");
-							
-			buf.append("Currently, the number of attempts allowed for each question is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>");
-			buf.append("<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n"
+					+ "Currently, the number of attempts allowed for each question is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>"
+					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
 					+ "</form><br/>\n");
 			
+			Map<Key<Question>, Question> questionMap = ofy().load().keys(a.questionKeys);
+			
+			// Ensure that all question keys in the assignment are valid; if not, remove them
+			if (a.questionKeys.size() != questionMap.size()) {
+				a.questionKeys = new ArrayList<Key<Question>>(questionMap.keySet());
+				ofy().save().entity(a).now();
+			}
 			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items:<br/>");
 			
-			List<Question> questions = new ArrayList<>(ofy().load().keys(a.questionKeys).values());
+			// Create a map of conceptId to number of questions assigned for that concept
 			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
-			questions.forEach(q -> {
+			questionMap.values().forEach(q -> {
 				Integer n = conceptQuestionCounts.get(q.conceptId);
 				if (n==null) n = 0;
 				conceptQuestionCounts.put(q.conceptId, n+1);
@@ -368,9 +372,9 @@ public class Homework extends HttpServlet {
 			buf.append("<tr>"
 				+ "<td>Custom Questions</td>"
 				+ "<td align=center>" + nQuestionsInAssignment + " of " + nCustomQuestions + "</td>"
-				+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId'>Create/Select Questions</a></td>"
-				+ "</tr>");
-			buf.append("</table><br/>");
+				+ "<td><a href='/Homework?UserRequest=" + (nCustomQuestions==0?"CreateCustomQuestion":"AssignHomeworkQuestions") + "&sig=" + user.getTokenSignature() + "&ConceptId'>Create/Select Questions</a></td>"
+				+ "</tr>"
+				+ "</table><br/>");
 
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=post action=/Homework>"
@@ -491,10 +495,13 @@ public class Homework extends HttpServlet {
 		if (!user.isInstructor()) throw new Exception("You must be an instructor for this.");
 		StringBuffer buf = new StringBuffer();
 		
-		Question q = assembleQuestion(request);
-		try {
-			q.id = Long.parseLong(request.getParameter("QuestionId"));
-		} catch (Exception e) {}
+		Question q = null;
+		if (request.getParameter("QuestionType") != null) {
+			q = assembleQuestion(request);
+		} else { 
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			q = ofy().load().type(Question.class).id(questionId).now();
+		}
 		
 		if (q.requiresParser()) q.setParameters();
 
@@ -1170,8 +1177,6 @@ public class Homework extends HttpServlet {
 			c = ofy().load().type(Concept.class).id(conceptId).now();
 		} catch (Exception e) {
 			c = new Concept("Custom","0");
-			int nCustomQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).count();
-			if (nCustomQuestionKeys==0) return newQuestionForm(user,request);
 		}
 			
 		buf.append("<h2>" + (c.title.equals("Custom")?"Custom Questions":"Concept: " + c.title) + "</h2>");
@@ -1182,23 +1187,28 @@ public class Homework extends HttpServlet {
 				+ "onclick=\"location.href='/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() + "';\">Create New Custom Question</button><br/><br/>");
 		}
 
-		// Allow instructor to pick individual question items from all active questions:
-		buf.append("Select/unselect the homework questions below to be assigned for grading, "
-			+ "then click the 'Use Selected Items' button. All questions have equal point value.");
-		if (!c.title.equals("Custom")) buf.append(" Questions not selected will be available to students as optional practice problems.<p>");
-		
-		// Show questions for only the selected concept. Make 2 lists of Assigned and Optional questions:
-		StringBuffer assignedQuestions = new StringBuffer();
-		StringBuffer optionalQuestions = new StringBuffer();
-		int i = 1;  // counter for assigned questions
-		int j = 1;  // counter for optional questions
-		
 		List<Question> questions = null;
 		if (c.title.equals("Custom")) {
 			questions = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).list();
 		} else {
 			questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",c.id).list();
 		}
+		
+		if (questions.isEmpty()) {
+			buf.append("There are currently no active questions available.<br/>");
+			return buf.toString();
+		} else {  // Allow instructor to pick individual question items from all active questions:
+			buf.append("Select/unselect the homework questions below to be assigned for grading, "
+				+ "then click the 'Use Selected Items' button. All questions have equal point value.");
+			if (!c.title.equals("Custom")) buf.append(" Questions not selected will be available to students as optional practice problems.<p>");
+		}
+
+		// Show questions for only the selected concept. Make 2 lists of Assigned and Optional questions:
+		StringBuffer assignedQuestions = new StringBuffer();
+		StringBuffer optionalQuestions = new StringBuffer();
+		int i = 1;  // counter for assigned questions
+		int j = 1;  // counter for optional questions
+		
 		if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
 		for (Question q : questions) {
 			boolean assigned = a.questionKeys.remove(key(q));
