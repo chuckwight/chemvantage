@@ -154,7 +154,7 @@ public class Homework extends HttpServlet {
 
 			switch (userRequest) {
 			case "UpdateAssignment":
-				a.updateQuestions(request);
+				a.updateConceptQuestions(user,request);
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
@@ -203,10 +203,11 @@ public class Homework extends HttpServlet {
 						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 						if (!a.conceptIds.contains(conceptId)) {
 							a.conceptIds.add(conceptId);
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list());	
 							ofy().save().entity(a).now();
 						}
 					} catch (Exception e) {}
-					out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				}
 				break;
 			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
@@ -350,7 +351,7 @@ public class Homework extends HttpServlet {
 			}
 
 			buf.append("<table style='padding: 5px 5px;'>"
-					+ "<tr><th>Concept</th><th># Questions</th><th>Customize</th></tr>");
+					+ "<tr><th>Concept</th><th># Questions</th><th style='text-align: center;'>Customize</th></tr>");
 			a.conceptIds.forEach(cId -> {
 				Concept c = conceptMap.get(cId);
 				int nQuestions = conceptQuestionCounts.get(cId)==null?0:conceptQuestionCounts.get(cId);
@@ -358,31 +359,32 @@ public class Homework extends HttpServlet {
 				buf.append("<tr>"
 						+ "<td>" + (c==null?"(deleted concept)":c.title) + "</td>"
 						+ "<td align=center>" + nQuestions + " of " + nTotalQuestions + "</td>"
-						+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId=" + cId + "'>Select Questions</a></td>"
+						+ "<td align=center><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId=" + cId + "'>Select Questions</a></td>"
 						+ "</tr>");
 			});
-			if (conceptQuestionCounts.containsKey(null) && conceptQuestionCounts.get(null) > 0) {
-				buf.append("<tr>"
-						+ "<td>Custom Questions</td>"
-						+ "<td align=center>" + conceptQuestionCounts.get(null) + "</td>"
-						+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId'>Create Questions</a></td>"
-						+ "</tr>");
-			}
+			int nCustomQuestions = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).count();
+			int nQuestionsInAssignment = conceptQuestionCounts.get(null)==null?0:conceptQuestionCounts.get(null);
+			
+			buf.append("<tr>"
+				+ "<td>Custom Questions</td>"
+				+ "<td align=center>" + nQuestionsInAssignment + " of " + nCustomQuestions + "</td>"
+				+ "<td><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "&ConceptId'>Create/Select Questions</a></td>"
+				+ "</tr>");
 			buf.append("</table><br/>");
 
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
-			buf.append("<form method=get action=/Homework>"
+			buf.append("<form method=post action=/Homework>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<input type=hidden name=UserRequest value=AddKeyConcept />"
 					+ "<label>You may include additional question items from: "
-					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+					+ "<select name=ConceptId><option value='Select'>Select a key concept</option>");
 			for (Concept c : conceptList) {
 				try {
 					if (a.conceptIds.contains(c.id) || c.orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
 					buf.append("<option value='" + c.id + "'>" + c.title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("</select></label></form><br/>\n<hr>\n");
+			buf.append("</select></label><input type=submit value='Add Concept' /></form><br/>");
 			
 			buf.append((supportsMembership?"<a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a><br/>":""));
 			
@@ -418,43 +420,16 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + user.getAssignmentId() + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=QuestionType>"
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=1;submit()\" VALUE='Multiple Choice'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
-					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=1;submit();' VALUE='Multiple Choice'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=2;submit();' VALUE='True/False'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=3;submit();' VALUE='Select Multiple'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=4;submit();' VALUE='Fill in Word'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=5;submit();' VALUE='Numeric'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=6;submit();' VALUE='Five Star'> "
+					+ "<INPUT TYPE=BUTTON onCLick='document.NewQuestion.QuestionType.value=7;submit();' VALUE='Essay'>"
 					+ "</FORM><p><p>");
 			
-			List<Question> myCustomQuestions = ofy().load().type(Question.class).filter("assignmentType =","Custom").filter("authorId =",user.getId()).list();
-			
-			if (myCustomQuestions.isEmpty()) return buf.toString();  // done
-			
-			// Print a list of this user's custom questions
-			buf.append("<hr><p>"
-					+ "Or, you may include selected questions below that you created previously.<br/>"
-					+ "<form method=post action=/Homework>"
-					+ "<input type=hidden name=UserRequest value=IncludeCustomQuestions />"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
-					+ "<input type=submit value='Add the selected questions below to this assignment' /><p>");
-			buf.append("<TABLE>");
-			
-			for (Question q : myCustomQuestions) {
-				q.setParameters();  // creates randomly selected parameters
-				buf.append("\n<TR>"
-						+ "<TD style='vertical-align:top;' NOWRAP>"
-						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'>Select</label><br/>"
-						+ "&nbsp;or&nbsp;<a href=/Homework?UserRequest=Preview&sig=" + user.getTokenSignature() + "&QuestionId=" + q.id + ">Edit</a>"
-						+ "</TD>"
-						+ "<TD style='width:20px'></TD>"
-						+ "<TD>" + q.printAll() + "</TD>"
-						+ "</TR>");
-			}
-			buf.append("</TABLE><p>"
-					+ "<input type=submit value='Add the selected questions below to this assignment' />"
-					+ "</form><p>");
-			return buf.toString();
+			return buf.toString();  // done
 		}
 		
 		// if questionType has already been selected:
@@ -516,14 +491,10 @@ public class Homework extends HttpServlet {
 		if (!user.isInstructor()) throw new Exception("You must be an instructor for this.");
 		StringBuffer buf = new StringBuffer();
 		
-		Question q = null;
+		Question q = assembleQuestion(request);
 		try {
-			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			q = ofy().load().type(Question.class).id(questionId).safe();
-		} catch (Exception e) {
-			return null;
-		}
-		q = assembleQuestion(request);
+			q.id = Long.parseLong(request.getParameter("QuestionId"));
+		} catch (Exception e) {}
 		
 		if (q.requiresParser()) q.setParameters();
 
@@ -1192,130 +1163,98 @@ public class Homework extends HttpServlet {
 
 	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer("Debug: ");
+		Concept c = null;
 		try {
 			buf.append("<h1>Customize Homework Assignment</h1>");
-			buf.append("<a href='/Homework?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
-			
-			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Select the homework questions below to be assigned for grading, "
-					+ "then click the 'Use Selected Items' button. All questions have equal point value. "
-					+ "If you want to include a question that is not included here, you may "
-					+ "<a href=/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() 
-					+ ">create a custom question for this assignment</a>.<p>"
-					+ "Students may work the optional problems; however, these are not included in the scores "
-					+ "reported to the class LMS.<p>\n");
-	
-			// Show a List of concepts covered by this assignment
-			Long conceptId = null;
-			Concept concept = null;
-			try {  // add a new conceptId
-				conceptId = Long.parseLong(request.getParameter("ConceptId"));
-				if (!a.conceptIds.contains(conceptId)) a.conceptIds.add(conceptId);
-				concept = ofy().load().type(Concept.class).id(conceptId).now();
-			} catch (Exception e) {
-				return "Error: no concept selected.";
-			}
-			
-			buf.append("<h2>Concept: " + (concept==null?"":concept.title) + "</h2>");
-			buf.append("Select/unselect the questions below for this assignment:<ul>");
-			
-			
-			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
-			StringBuffer assignedQuestions = new StringBuffer();
-			StringBuffer optionalQuestions = new StringBuffer();
-			int i = 1;  // counter for assigned questions
-			int j = 1;  // counter for optional questions
-			
-			for (Long cId : a.conceptIds) {
-				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).list();		
-				if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
-				for (Question q : questions) {
-					boolean assigned = a.questionKeys.remove(key(q));
-					StringBuffer qbuf = new StringBuffer();
-					q.setParameters();  // creates randomly selected parameters
-					int successRate = q.getPctSuccess();
-					qbuf.append("\n<TR>"
-							+ "<TD style='vertical-align:top;' NOWRAP>"
-							+ "<label>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED />":" />")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
-							+ "</label><br/>"
-							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
-							+ "<TD>" + q.printAll() + "</TD>"
-							+ "</TR>");
-					if (assigned) {
-						assignedQuestions.append(qbuf);
-						i++;
-					} else {
-						optionalQuestions.append(qbuf);
-						j++;
-					}
-				}
-			}
-			
-			// If any orphan questions remain, add them to assignedQuestions (this is uncommon)
-			if (!a.questionKeys.isEmpty()) {
-				List<Question> questions = new ArrayList<Question>(ofy().load().keys(a.questionKeys).values());		
-				for (Question q : questions) {
-					boolean assigned = a.questionKeys.remove(key(q));
-					StringBuffer qbuf = new StringBuffer();
-					q.setParameters();  // creates randomly selected parameters
-					int successRate = q.getPctSuccess();
-					qbuf.append("\n<TR>"
-							+ "<TD style='vertical-align:top;' NOWRAP>"
-							+ "<label>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED >":" />")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
-							+ "</label><br/>"
-							+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span></TD>"
-							+ "<TD>" + q.printAll() + "</TD>"
-							+ "</TR>");
-					if (assigned) {
-						assignedQuestions.append(qbuf);
-						i++;
-					} else {
-						optionalQuestions.append(qbuf);
-						j++;
-					}
-				}
-			}
-			
-			buf.append("Currently, this assignment has " + (i-1) + " assigned question items and " + (j-1) + " optional questions.<br/><br/>");
-			
-			buf.append("<b>Select the assigned question items for this assignment</b><br/>");
-			
-			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM style='display:inline;' NAME=DummyForm><label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
-					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
-					+ "> Select/Unselect All</label></FORM>&nbsp;&nbsp;&nbsp;");
-			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
-			
-			// Make a list of individual questions that can be selected or deselected for this assignment
-			buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Homework />"
-					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
-					+ (concept==null ||concept.id==null?"":"<input type=hidden name=NewConceptId value=" + concept.id + " />")
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
-			
-			// Make a table of assigned and optional questions
-			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-			if (!assignedQuestions.isEmpty()) {
-				buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
-				buf.append(assignedQuestions);
-			}
-			if (!optionalQuestions.isEmpty()) {
-				buf.append("<TR><TD COLSPAN=2><b>Optional Questions:</b></TD></TR>");
-				buf.append(optionalQuestions);
-			}
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
+			Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			c = ofy().load().type(Concept.class).id(conceptId).now();
 		} catch (Exception e) {
-			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());
+			c = new Concept("Custom","0");
+			int nCustomQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).count();
+			if (nCustomQuestionKeys==0) return newQuestionForm(user,request);
 		}
+			
+		buf.append("<h2>" + (c.title.equals("Custom")?"Custom Questions":"Concept: " + c.title) + "</h2>");
+		buf.append("<a href='/Homework?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
+		
+		if (c.title.equals("Custom")) {
+			buf.append("<button class='btn btn-secondary' "
+				+ "onclick=\"location.href='/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() + "';\">Create New Custom Question</button><br/><br/>");
+		}
+
+		// Allow instructor to pick individual question items from all active questions:
+		buf.append("Select/unselect the homework questions below to be assigned for grading, "
+			+ "then click the 'Use Selected Items' button. All questions have equal point value.");
+		if (!c.title.equals("Custom")) buf.append(" Questions not selected will be available to students as optional practice problems.<p>");
+		
+		// Show questions for only the selected concept. Make 2 lists of Assigned and Optional questions:
+		StringBuffer assignedQuestions = new StringBuffer();
+		StringBuffer optionalQuestions = new StringBuffer();
+		int i = 1;  // counter for assigned questions
+		int j = 1;  // counter for optional questions
+		
+		List<Question> questions = null;
+		if (c.title.equals("Custom")) {
+			questions = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).list();
+		} else {
+			questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",c.id).list();
+		}
+		if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
+		for (Question q : questions) {
+			boolean assigned = a.questionKeys.remove(key(q));
+			StringBuffer qbuf = new StringBuffer();
+			q.setParameters();  // creates randomly selected parameters
+			int successRate = q.getPctSuccess();
+			qbuf.append("<TR>"
+					+ "<TD style='vertical-align:top;' NOWRAP>"
+					+ "<label>"
+					+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+					+ (assigned?" CHECKED />":" />")
+					+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
+					+ "</label><br/>"
+					+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span><br/>"
+					+ (c.title.equals("Custom")?"<a href=/Homework?UserRequest=Preview&sig=" + user.getTokenSignature() + "&QuestionId=" + q.id + ">Edit</a>":"")
+					+ "</TD>"
+					+ "<TD>" + q.printAll() + "</TD>"
+					+ "</TR>");
+			if (assigned) {
+				assignedQuestions.append(qbuf);
+				i++;
+			} else {
+				optionalQuestions.append(qbuf);
+				j++;
+			}
+		}
+		
+		if (c.title.equals("Custom")) buf.append("Currently, there are " + (i-1) + " custom question items included in this assignment.<br/><br/>");
+		else buf.append("Currently, this concept has " + (i-1) + " assigned question items and " + (j-1) + " optional questions.<br/><br/>");
+			
+		// This dummy form uses javascript to select/deselect all questions
+		buf.append("<FORM style='display:inline;' NAME=DummyForm><label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+			+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+			+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
+			+ "> Select/Unselect All</label></FORM>&nbsp;&nbsp;&nbsp;");
+		buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
+		// Make a list of individual questions that can be selected or deselected for this assignment
+		buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Homework />"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
+				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
+				+ (c.title.equals("Custom")?"":"<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />")
+				+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
+				+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
+	
+		// Make a table of assigned and optional questions
+		buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+		if (!assignedQuestions.isEmpty()) {
+			buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
+			buf.append(assignedQuestions);
+		}
+		if (!optionalQuestions.isEmpty()) {
+			buf.append("<TR><TD COLSPAN=2><b>" + (c.title.equals("Custom")?"Available Questions":"Optional Questions") + ":</b></TD></TR>");
+			buf.append(optionalQuestions);
+		}
+		buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		return buf.toString();
 	}
 

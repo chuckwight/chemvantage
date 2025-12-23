@@ -80,6 +80,32 @@ public class Assignment implements java.lang.Cloneable {
 		return questionKeys==null?new ArrayList<Key<Question>>():this.questionKeys;
 	}
 
+	void updateConceptQuestions(User user, HttpServletRequest request) {
+		if (!user.isInstructor()) return;
+		List<Key<Question>> qkeys = null;
+		Long conceptId = null;
+		try {
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			qkeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("conceptId",conceptId).keys().list();
+		} catch (Exception e) {
+			qkeys = ofy().load().type(Question.class).filter("assignmentType","Custom").filter("authorId",user.getId()).keys().list();
+		}
+		this.questionKeys.removeAll(qkeys);  // remove any existing question keys for this conceptId
+		String[] questionIds = request.getParameterValues("QuestionId");
+		if (questionIds != null) {
+			for (String id : questionIds) {  // eliminate any duplicate question keys
+				try {
+					Key<Question> k = key(Question.class,Long.parseLong(id));
+					if (!this.questionKeys.contains(k)) this.questionKeys.add(k);
+				} catch (Exception e) {}
+			}
+		} else {
+			// no questions selected for this conceptId
+			if (conceptId != null) this.conceptIds.remove(conceptId);
+		}
+		ofy().save().entity(this).now();	
+	}
+	
 	void updateQuestions(HttpServletRequest request) {
 		try {
 			String[] questionIds = request.getParameterValues("QuestionId");
