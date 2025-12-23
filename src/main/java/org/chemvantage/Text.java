@@ -48,6 +48,15 @@ public class Text implements Serializable {
         this.imgUrl = imgUrl;
         this.printCopyUrl = printCopyUrl;
     }
+    
+    Chapter getChapterByNumber(int chapterNumber) {
+        for (Chapter chapter : chapters) {
+            if (chapter.chapterNumber == chapterNumber) {
+                return chapter;
+            }
+        }
+        return null;
+    }
 }
 
 // Note: to create a new Chapter object for the textbook txt, use
