@@ -161,7 +161,7 @@ public class Quiz extends HttpServlet {
 						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 						if (!a.conceptIds.contains(conceptId)) {
 							a.conceptIds.add(conceptId);
-							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list());	
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list());	
 							ofy().save().entity(a).now();
 						}
 					} catch (Exception e) {}
@@ -189,9 +189,9 @@ public class Quiz extends HttpServlet {
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label><b>Title:</b>&nbsp;Quiz - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
 					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n"
-					+ "Currently, the number of attempts allowed for this quiz is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>"
+					+ "The number of attempts allowed for this quiz is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>"
 					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
+					+ "<label><b>Attempts allowed:</b>&nbsp;<input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
 					+ "</form><br/>\n");
@@ -203,7 +203,7 @@ public class Quiz extends HttpServlet {
 				a.questionKeys = new ArrayList<Key<Question>>(questionMap.keySet());
 				ofy().save().entity(a).now();
 			}
-			buf.append("Currently, this quiz draws from " + a.questionKeys.size() + " question items:<br/>");
+			buf.append("Each quiz draws 10 questions at random from a bank of " + a.questionKeys.size() + " assigned question items:<br/>");
 			
 			// Create a map of conceptId to number of questions assigned for that concept
 			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
@@ -230,9 +230,10 @@ public class Quiz extends HttpServlet {
 						+ "<td>" + (c==null?"(deleted concept)":c.title) + "</td>"
 						+ "<td align=center>" + nQuestions + " of " + nTotalQuestions + "</td>"
 						+ "<td align=center><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "&ConceptId=" + cId + "'>Select Questions</a></td>"
-						+ "</tr></table><br/>");
+						+ "</tr>");
 			});
-			
+			buf.append("</table><br/>");
+
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=post action=/Quiz>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
@@ -648,7 +649,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 
-		String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
+	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		Concept c = null;
 		try {
