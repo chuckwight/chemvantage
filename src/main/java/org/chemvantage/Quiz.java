@@ -203,8 +203,20 @@ public class Quiz extends HttpServlet {
 				a.questionKeys = new ArrayList<Key<Question>>(questionMap.keySet());
 				ofy().save().entity(a).now();
 			}
-			buf.append("Each quiz draws 10 questions at random from a bank of " + a.questionKeys.size() + " assigned question items:<br/>");
+			buf.append("The quiz draws " + (a.questionKeys.size()>10?"10 questions at random":"all questions") + " from a bank of " + a.questionKeys.size() + " assigned question items:<br/>");
 			
+			// Ensure that the assignment concepts include all concepts in the text chapter
+			Text text = ofy().load().type(Text.class).id(a.textId).now();
+			Chapter ch = text.getChapterByNumber(a.chapterNumber);
+			List<Long> chapterConceptsToAdd = new ArrayList<>();
+			for (Long cId : ch.conceptIds) {
+				if (!a.conceptIds.contains(cId)) chapterConceptsToAdd.add(cId);
+			}
+			if (chapterConceptsToAdd.size() > 0) {
+				a.conceptIds.addAll(chapterConceptsToAdd);
+				ofy().save().entity(a).now();
+			}
+
 			// Create a map of conceptId to number of questions assigned for that concept
 			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
 			questionMap.values().forEach(q -> {

@@ -101,7 +101,13 @@ public class Assignment implements java.lang.Cloneable {
 			}
 		} else {
 			// no questions selected for this conceptId
-			if (conceptId != null) this.conceptIds.remove(conceptId);
+			try {
+				Text text = ofy().load().type(Text.class).id(this.textId).now();
+				Chapter chapter = text.getChapterByNumber(this.chapterNumber);
+			if (conceptId != null && !chapter.conceptIds.contains(conceptId)) this.conceptIds.remove(conceptId);
+			} catch (Exception e) {
+				if (conceptId != null) this.conceptIds.remove(conceptId);
+			}
 		}
 		ofy().save().entity(this).now();	
 	}
