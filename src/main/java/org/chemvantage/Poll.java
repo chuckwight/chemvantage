@@ -86,11 +86,6 @@ public class Poll extends HttpServlet {
 				String forUserHashedId = request.getParameter("ForUserHashedId");
 				out.println(Subject.header("Poll Submission Review") + resultsPage(user,forUserHashedId,a));
 				break;
-			/*
-			case "Synch":
-				out.println(new Date().getTime());
-				break;
-			*/
 			case "Edit":
 				out.println(Subject.header() + editQuestion(user,request) + Subject.footer);
 				break;
@@ -137,8 +132,7 @@ public class Poll extends HttpServlet {
 				try { a.pollClosesAt = new Date(new Date().getTime() + Long.parseLong(request.getParameter("TimeLimit"))*60000L); } catch (Exception e) { a.pollClosesAt = null; }
 				a.pollIsClosed = false;
 				ofy().save().entity(a).now();
-				if ("InstructorPage".equals(request.getParameter("Destination"))) out.println(Subject.header() + instructorPage(user,a) + Subject.footer);
-				else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
+				out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
 				break;
 			case "Reset":
 				if (!user.isInstructor()) break;
@@ -238,14 +232,16 @@ public class Poll extends HttpServlet {
 		}
 		
 		// If the poll is open, provide a quick way to close it while staying on this page
-		buf.append("<b>This class poll is currently " + (a.pollIsClosed?"closed.</b>":"open.</b> <form style='display:inline;' method=post action=/Poll >"
+		buf.append("<b>This class poll is currently " + (a.pollIsClosed?"closed.</b>":"open.</b> "
+				+ "<form style='display:inline;' method=post action=/Poll >"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> <div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div><br/>") + "<br/>");
+				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> "
+				+ "<div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div><br/>") + "<br/>");
 
 		// Here is a simpler version of the tool below
 		if (a.pollIsClosed) buf.append("<form style=display:inline method=post action=/Poll >"
 				+ "<label>Set a time limit for this poll (in minutes): <input type=text size=8 name=TimeLimit placeholder=unlimited /></label>"
-				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=submit name=UserRequest value='Open the Poll' /> " 
 				+ "</form><br/><br/>");
 
