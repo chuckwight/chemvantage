@@ -307,14 +307,6 @@ public class Homework extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.title==null) {  // legacy assignment only provided topicId
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-				a.title = t.title;
-				if (a.conceptIds.isEmpty()) a.conceptIds = t.conceptIds;
-				ofy().save().entity(a).now();
-			}
-			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
-			
 			buf.append("<h1>Homework</h1>"
 					+ "<h2>" + a.title + "</h2>"
 					+ "<h3>Instructor Page</h3>"
@@ -390,7 +382,9 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</select></label><input type=submit value='Add Concept' /></form><br/>");
 			
-			buf.append((supportsMembership?"<a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a><br/>":""));
+			// Link to review student scores if membership service is supported
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+			if (supportsMembership) buf.append("<a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a><br/>");
 			
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			

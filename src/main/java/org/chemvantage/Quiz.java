@@ -26,6 +26,8 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -86,6 +88,9 @@ public class Quiz extends HttpServlet {
 			case "Logout":
 				out.println(Subject.header() + Logout.now(user) + Subject.footer);
 				break;
+			case "Instructor":
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
 			default: 
 				out.println(Subject.header("Quiz") + printQuiz(user,a) + Subject.footer);
 			}
@@ -108,13 +113,12 @@ public class Quiz extends HttpServlet {
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			
+			if (a == null) throw new Exception("No assignment found for this user.");
+
 			switch (userRequest) {
 			case "UpdateAssignment":
-				if (a != null) {
-					a.updateQuestions(request);
-					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
-				}
+				a.updateConceptQuestions(user,request);
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
 				if (a != null) {
@@ -151,6 +155,19 @@ public class Quiz extends HttpServlet {
 				if (synchronizeScores(user,a)) out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
 				break;
+			case "AddKeyConcept":
+				if (user.isInstructor()) {
+					try {
+						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+						if (!a.conceptIds.contains(conceptId)) {
+							a.conceptIds.add(conceptId);
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list());	
+							ofy().save().entity(a).now();
+						}
+					} catch (Exception e) {}
+					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+				}
+				break;
 			default:
 				out.println(Subject.header("Quiz Results") + printScore(user,a,request) + Subject.footer);
 			}
@@ -159,37 +176,167 @@ public class Quiz extends HttpServlet {
 		}
 	}
 	
-	static String instructorPage(User user, Assignment a) {
+		static String instructorPage(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.title==null) {  // legacy Quiz only provided topicId
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-				a.title = t.title;
-				if (a.conceptIds.isEmpty()) a.conceptIds = t.conceptIds;
+			buf.append("<h1>Quiz</h1>"
+					+ "<h2>" + a.title + "</h2>"
+					+ "<h3>Instructor Page</h3>"
+					+ "<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>"
+					+ "<form action=/Quiz method=post>"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label><b>Title:</b>&nbsp;Quiz - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>\n"
+					+ "Currently, the number of attempts allowed for this quiz is " + (a.attemptsAllowed==null?"unlimited":a.attemptsAllowed) + ".<br/>"
+					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label>Attempts allowed:&nbsp;<input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>\n");
+			
+			Map<Key<Question>, Question> questionMap = ofy().load().keys(a.questionKeys);
+			
+			// Ensure that all question keys in the assignment are valid; if not, remove them
+			if (a.questionKeys.size() != questionMap.size()) {
+				a.questionKeys = new ArrayList<Key<Question>>(questionMap.keySet());
 				ofy().save().entity(a).now();
 			}
+			buf.append("Currently, this quiz draws from " + a.questionKeys.size() + " question items:<br/>");
 			
+			// Create a map of conceptId to number of questions assigned for that concept
+			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
+			questionMap.values().forEach(q -> {
+				Integer n = conceptQuestionCounts.get(q.conceptId);
+				if (n==null) n = 0;
+				conceptQuestionCounts.put(q.conceptId, n+1);
+			});
+
+			// Print a table of concepts with the number of assigned questions for each concept
+			List<Concept> conceptList = ofy().load().type(Concept.class).list();
+			Map<Long, Concept> conceptMap = new HashMap<>();
+			for (Concept c : conceptList) {
+				conceptMap.put(c.id, c);
+			}
+
+			buf.append("<table style='padding: 5px 5px;'>"
+					+ "<tr><th>Concept</th><th># Questions</th><th style='text-align: center;'>Customize</th></tr>");
+			a.conceptIds.forEach(cId -> {
+				Concept c = conceptMap.get(cId);
+				int nQuestions = conceptQuestionCounts.get(cId)==null?0:conceptQuestionCounts.get(cId);
+				int nTotalQuestions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).count();
+				buf.append("<tr>"
+						+ "<td>" + (c==null?"(deleted concept)":c.title) + "</td>"
+						+ "<td align=center>" + nQuestions + " of " + nTotalQuestions + "</td>"
+						+ "<td align=center><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "&ConceptId=" + cId + "'>Select Questions</a></td>"
+						+ "</tr></table><br/>");
+			});
+			
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=post action=/Quiz>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value=AddKeyConcept />"
+					+ "<label>You may include additional question items from: "
+					+ "<select name=ConceptId><option value='Select'>Select a key concept</option>");
+			for (Concept c : conceptList) {
+				try {
+					if (a.conceptIds.contains(c.id) || c.orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + c.id + "'>" + c.title + "</option>");
+				} catch (Exception e) {}
+			}
+			buf.append("</select></label><input type=submit value='Add Concept' /></form><br/>");
+			
+			// Link to review student scores if membership service is supported
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+			if (supportsMembership) buf.append("<a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a><br/>");
 			
+			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+			}
+			
+		} catch (Exception e) {
+			buf.append("<br/>Instructor page error: " + e.getMessage());
+		}
+		return buf.toString();
+	}
+
+	/*
+	static String instructorPage(User user, Assignment a) {
+		return instructorPage(user,a,"");
+	}
+
+	static String instructorPage(User user, Assignment a, String msg) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
+		StringBuffer buf = new StringBuffer();		
+		try {
 			buf.append("<h1>Quiz</h1>"
 					+ "<h2>" + a.title + "</h2>"
 					+ "<h3>Instructor Page</h3>");
 			
-			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/>");			
-			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/>");
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/>");
-			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/>");
-			buf.append("<br/>");
-			
-			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
-					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
-					+ "</UL><br/>");
-			
 			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
 			
+			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/>");			
+			
+			buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/>");
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label><input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes</label> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+					+ "</form><p>");
+			
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/>");
+			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/>");
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<label><input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>");
+			
+			// Link to review student scores if membership service is supported
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+			if (supportsMembership) buf.append("<a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a>");
+			
+			// Build a form with checkboxes for concepts in this chapter
+            buf.append("<form method=post action=/SmartText>");
+            buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+            buf.append("<input type=hidden name=UserRequest value='UpdateConcepts' />");
+
+            Text text = ofy().load().type(Text.class).id(a.textId).now();
+			Chapter chapter = null;
+            for (Chapter ch : text.chapters) {
+                if (ch.chapterNumber == a.chapterNumber) {
+                    chapter = ch;
+                    break;
+                }
+            }
+            if (chapter==null) return "Sorry, we were unable to find the assigned chapter for this textbook.";
+			
+			Map<Long,Concept> conceptMap = ofy().load().type(Concept.class).ids(chapter.conceptIds);
+			if (chapter.conceptIds.isEmpty()) {
+                buf.append("<p><b>This chapter has no concepts available.</b></p>");
+            } else {
+                for (Long conceptId : chapter.conceptIds) {
+                    Concept c = conceptMap.get(conceptId);
+                    if (c != null) {
+                        buf.append("<div><label><input type=checkbox name=ConceptId value='" + conceptId + "' "
+                        + (a.conceptIds.contains(conceptId)?"checked ":"") + "/> " + c.title + "</label></div>");
+                    }
+                }
+                buf.append("<span id=successMsg>" + msg + "</span><br/>"
+                + "<input type=submit value='Save Changes' class='btn btn-secondary' onclick='showSuccess()' />");
+            }
+			buf.append("</form><br/><br/>");
+			
+			// JavaScript to hide success message after 3 seconds
+			buf.append("<script>"
+            + "var successMsg = document.getElementById('successMsg');"
+            + "setTimeout(function() { successMsg.style.display = 'none'; }, 3000);"
+            + "</script>");
+
 			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
@@ -201,7 +348,7 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+ */
 	String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
@@ -500,7 +647,96 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+
+		String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		Concept c = null;
+		try {
+			buf.append("<h1>Customize Quiz</h1>");
+			Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			c = ofy().load().type(Concept.class).id(conceptId).now();
+		} catch (Exception e) {
+			buf.append("Error: " + e.getMessage());
+			return buf.toString();
+		}
+			
+		buf.append("<h2>Concept: " + c.title + "</h2>");
+		buf.append("<a href='/Quiz?UserRequest=Instructor&sig=" + user.getTokenSignature() + "'>Return to the Instructor Page</a><br/><br/>");
+		
+		List<Question> questions =  ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",c.id).list();
+		if (questions.isEmpty()) {
+			buf.append("There are currently no active questions available.<br/>");
+			return buf.toString();
+		} else {  // Allow instructor to pick individual question items from all active questions:
+			buf.append("Select/unselect the quiz questions below to be assigned for grading, "
+				+ "then click the 'Use Selected Items' button. All questions have equal point value. ");
+		}
+
+		// Show questions for only the selected concept. Make 2 lists of Assigned and Optional questions:
+		StringBuffer assignedQuestions = new StringBuffer();
+		StringBuffer optionalQuestions = new StringBuffer();
+		int i = 1;  // counter for assigned questions
+		int j = 1;  // counter for optional questions
+		
+		if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
+		for (Question q : questions) {
+			boolean assigned = a.questionKeys.remove(key(q));
+			StringBuffer qbuf = new StringBuffer();
+			q.setParameters();  // creates randomly selected parameters
+			int successRate = q.getPctSuccess();
+			qbuf.append("<TR>"
+					+ "<TD style='vertical-align:top;' NOWRAP>"
+					+ "<label>"
+					+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+					+ (assigned?" CHECKED />":" />")
+					+ "<b>&nbsp;" + (assigned?i:j) + ".</b>"
+					+ "</label><br/>"
+					+ "<span style='font-size:0.5em'>" + (successRate==0?"new item&nbsp;&nbsp;":successRate + "% correct&nbsp;&nbsp;") + "</span><br/>"
+					+ (c.title.equals("Custom")?"<a href=/Quiz?UserRequest=Preview&sig=" + user.getTokenSignature() + "&QuestionId=" + q.id + ">Edit</a>":"")
+					+ "</TD>"
+					+ "<TD>" + q.printAll() + "</TD>"
+					+ "</TR>");
+			if (assigned) {
+				assignedQuestions.append(qbuf);
+				i++;
+			} else {
+				optionalQuestions.append(qbuf);
+				j++;
+			}
+		}
+		
+		buf.append("Currently, this concept has " + (i-1) + " assigned question items and " + (j-1) + " unassigned questions.<br/><br/>");
+			
+		// This dummy form uses javascript to select/deselect all questions
+		buf.append("<FORM style='display:inline;' NAME=DummyForm><label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+			+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+			+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
+			+ "> Select/Unselect All</label></FORM>&nbsp;&nbsp;&nbsp;");
+		buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
+		// Make a list of individual questions that can be selected or deselected for this assignment
+		buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Quiz />"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
+				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
+				+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />"
+				+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
+				+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
 	
+		// Make a table of assigned and optional questions
+		buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+		if (!assignedQuestions.isEmpty()) {
+			buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
+			buf.append(assignedQuestions);
+		}
+		if (!optionalQuestions.isEmpty()) {
+			buf.append("<TR><TD COLSPAN=2><b>Available Questions:</b></TD></TR>");
+			buf.append(optionalQuestions);
+		}
+		buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
+		return buf.toString();
+	}
+
+/* 
 	String selectQuestionsForm(User user,Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
@@ -611,7 +847,7 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 	static String showQuiz (User user, Assignment a, String quizTransactionId) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -812,4 +1048,14 @@ public class Quiz extends HttpServlet {
 		return true;
 	}
 
+	class SortBySuccessPct implements Comparator<Question> {
+		
+		SortBySuccessPct() {}
+		
+		public int compare(Question q1, Question q2) {
+			int rank = q2.getPctSuccess() - q1.getPctSuccess(); 
+			if (rank==0) rank = q2.id.compareTo(q1.id);
+			return rank;
+		}
+	}	
 }
