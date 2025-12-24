@@ -331,6 +331,18 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items:<br/>");
 			
+			// Ensure that the assignment concepts include all concepts in the text chapter
+			Text text = ofy().load().type(Text.class).id(a.textId).now();
+			Chapter ch = text.getChapterByNumber(a.chapterNumber);
+			List<Long> chapterConceptsToAdd = new ArrayList<>();
+			for (Long cId : ch.conceptIds) {
+				if (!a.conceptIds.contains(cId)) chapterConceptsToAdd.add(cId);
+			}
+			if (chapterConceptsToAdd.size() > 0) {
+				a.conceptIds.addAll(chapterConceptsToAdd);
+				ofy().save().entity(a).now();
+			}
+
 			// Create a map of conceptId to number of questions assigned for that concept
 			Map<Long,Integer> conceptQuestionCounts = new HashMap<Long,Integer>();
 			questionMap.values().forEach(q -> {
