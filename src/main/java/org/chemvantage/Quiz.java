@@ -176,7 +176,7 @@ public class Quiz extends HttpServlet {
 		}
 	}
 	
-		static String instructorPage(User user,Assignment a) {
+	static String instructorPage(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
@@ -277,91 +277,6 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 
-	/*
-	static String instructorPage(User user, Assignment a) {
-		return instructorPage(user,a,"");
-	}
-
-	static String instructorPage(User user, Assignment a, String msg) {
-		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
-		
-		StringBuffer buf = new StringBuffer();		
-		try {
-			buf.append("<h1>Quiz</h1>"
-					+ "<h2>" + a.title + "</h2>"
-					+ "<h3>Instructor Page</h3>");
-			
-			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>");
-			
-			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/>");			
-			
-			buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/>");
-			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<label><input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes</label> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-					+ "</form><p>");
-			
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/>");
-			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/>");
-			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<label><input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /></label> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/>");
-			
-			// Link to review student scores if membership service is supported
-			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
-			if (supportsMembership) buf.append("<a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a>");
-			
-			// Build a form with checkboxes for concepts in this chapter
-            buf.append("<form method=post action=/SmartText>");
-            buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
-            buf.append("<input type=hidden name=UserRequest value='UpdateConcepts' />");
-
-            Text text = ofy().load().type(Text.class).id(a.textId).now();
-			Chapter chapter = null;
-            for (Chapter ch : text.chapters) {
-                if (ch.chapterNumber == a.chapterNumber) {
-                    chapter = ch;
-                    break;
-                }
-            }
-            if (chapter==null) return "Sorry, we were unable to find the assigned chapter for this textbook.";
-			
-			Map<Long,Concept> conceptMap = ofy().load().type(Concept.class).ids(chapter.conceptIds);
-			if (chapter.conceptIds.isEmpty()) {
-                buf.append("<p><b>This chapter has no concepts available.</b></p>");
-            } else {
-                for (Long conceptId : chapter.conceptIds) {
-                    Concept c = conceptMap.get(conceptId);
-                    if (c != null) {
-                        buf.append("<div><label><input type=checkbox name=ConceptId value='" + conceptId + "' "
-                        + (a.conceptIds.contains(conceptId)?"checked ":"") + "/> " + c.title + "</label></div>");
-                    }
-                }
-                buf.append("<span id=successMsg>" + msg + "</span><br/>"
-                + "<input type=submit value='Save Changes' class='btn btn-secondary' onclick='showSuccess()' />");
-            }
-			buf.append("</form><br/><br/>");
-			
-			// JavaScript to hide success message after 3 seconds
-			buf.append("<script>"
-            + "var successMsg = document.getElementById('successMsg');"
-            + "setTimeout(function() { successMsg.style.display = 'none'; }, 3000);"
-            + "</script>");
-
-			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
-			
-			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-			if (d.price > 0 && d.nLicensesRemaining > 0) {		
-				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
-			}
-		} catch (Exception e) {
-			buf.append("<br/>Instructor page error: " + e.getMessage());
-		}
-		return buf.toString();
-	}
- */
 	String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
