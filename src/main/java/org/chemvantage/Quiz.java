@@ -553,8 +553,8 @@ public class Quiz extends HttpServlet {
 						buf.append("</OL>");
 						buf.append("</div>");
 					}  else buf.append("You must answer at least one question correctly to view the correct answers to questions that you missed. ");
-					buf.append("<br/><br/>");
 				}
+				buf.append("<br/><br/>");
 			}
 			
 			// if the user response was correct, seek five-star feedback:
