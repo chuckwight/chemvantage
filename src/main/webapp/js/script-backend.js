@@ -35,26 +35,43 @@ function startTimers(m) {  // m is the start value of the timer in milliseconds
 }
 function confirmSubmission() {
 	var elements = document.getElementById('quizForm').elements;
-	var nAnswers;
+	var nQuestions = 0;
+  var nAnswers = 0;
 	var i;
 	var checkboxes;
 	var lastCheckboxIndex;
-	nAnswers = 0;
 	for (i=0;i<elements.length;i++) {
 		if (isNaN(elements[i].name)) continue;
-		if (elements[i].type=='text' && elements[i].value.length>0) nAnswers++;
-		else if (elements[i].type=='radio' && elements[i].checked) nAnswers++;
+		if (elements[i].type=='text') {
+			nQuestions++;
+			if (elements[i].value.length>0) nAnswers++;
+		}
+		else if (elements[i].type=='radio') {
+			nQuestions++;
+			let radioButtons = document.getElementsByName(elements[i].name);
+			let lastRadioIndex = i + radioButtons.length - 1;
+			for (let k=0; k<radioButtons.length; k++) {
+				if (radioButtons[k].checked) {
+					nAnswers++;
+					break;
+				}
+			}
+			i = lastRadioIndex;
+		}
 		else if (elements[i].type=='checkbox') {
+			nQuestions++;
 			checkboxes = document.getElementsByName(elements[i].name);
 			lastCheckboxIndex = i + checkboxes.length - 1;
-			for (j=0;j<checkboxes.length;j++) if (checkboxes[j].checked==true) {
-				nAnswers++;
-				i = lastCheckboxIndex;
-				break;
-			}    
+			for (j=0;j<checkboxes.length;j++) {
+        if (checkboxes[j].checked==true) {
+				  nAnswers++;
+				  break;
+			  }    
+		  }  
+	    i = lastCheckboxIndex;
 		}  
-	}  
-	if (nAnswers<10) return confirm('Submit this quiz for scoring now? ' + (10-nAnswers) + ' answers may be left blank.');
+  }
+	if (nAnswers<nQuestions) return confirm('Submit this quiz for scoring now? ' + (nQuestions-nAnswers) + ' answer' + ((nQuestions-nAnswers)==1?'':'s') + ' may be left blank.');
 	else return true;
 }
 
