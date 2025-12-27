@@ -73,11 +73,11 @@ public class Question implements Serializable, Cloneable {
 			String explanation;
 			boolean scrambleChoices;
 			boolean strictSpelling;
+	@Index  boolean checkedByAI = false;
 	private Integer nCorrectAnswers = null;
 	private Integer nTotalAttempts = null;
-			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
-	@Ignore		int[] parameters = {0,0,0,0};
-	@Index		boolean isActive = false;
+			int[] parameters = {0,0,0,0};
+	@Index	boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
 	public static final int TRUE_FALSE = 2;
