@@ -42,7 +42,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
-import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
 
 @Entity
@@ -160,13 +159,20 @@ public class Question implements Serializable, Cloneable {
 			String[] answers = correctAnswer.split(",");
 			return answers[0];
 		case 5: // NUMERIC
-			return parseString(correctAnswer);
+			if (requiredPrecision == 0) return parseString(correctAnswer); // exact answer
+			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
+			try {
+				double numericValue = Double.parseDouble(parseString(correctAnswer));
+				return String.format("%." + sf + "G", numericValue);
+			} catch (NumberFormatException e) {
+				return parseString(correctAnswer); // return as-is if can't parse as double
+			}
 		default: return correctAnswer;
 		}
 	}
 	
 	public boolean requiresParser() {
-		return text.contains("#") || this.parameterString != null && !this.parameterString.isEmpty();
+		return text.contains("#") || (this.parameterString != null && !this.parameterString.isEmpty());
 	}
 	
 	public void setParameters() {
@@ -741,57 +747,50 @@ public class Question implements Serializable, Cloneable {
 
 	String printForSage() {
 		StringBuffer buf = new StringBuffer();
-		char choice = 'a';
 		List<Character> choice_keys = new ArrayList<Character>();
-		Random rand = new Random();
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append(text + "\n");
-			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("Select only the best answer:\n");
-			while (choice_keys.size()>0) {
-				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
-				buf.append(choices.get(choice-'a') + "\n");
+			buf.append(text + "<br/>");
+			buf.append("Select only the best answer:<br/>");
+			for (int i=0; i<nChoices; i++) {
+				buf.append(Character.valueOf((char)('a'+i)) + ") " + choices.get(i) + "<br/>");
 			}
 			break;
 		case 2: // True/False
-			buf.append(text + "\n");
-			buf.append("Select true or false:\n");
-			buf.append("True\n");
-			buf.append("False\n");
+			buf.append(text + "<br/>");
+			buf.append("True or false?<br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "\n");
 			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("Select all of the correct answers:\n");
-			while (choice_keys.size()>0) {
-				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
-				buf.append(choices.get(choice-'a') + "\n");
+			buf.append("Select all of the correct answers:<br/>");
+				for (int i=0; i<nChoices; i++) {
+				buf.append(Character.valueOf((char)('a'+i)) + ") " + choices.get(i) + "<br/>");
 			}
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append("Fill in the blank with the correct word or phrase:\n" 
-					+ text + "_______________" + tag + "\n");
+					+ text + "_______________" + tag + "<br/>");
 			break;
 		case 5: // Numeric Answer
-			buf.append(parseString(text) + "\n");
+			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("Enter the exact value: "); break;
-			case 1: buf.append("Enter the value with the appropriate number of significant figures:\n"); break;
+			case 1: buf.append("Enter the value with the appropriate number of significant figures: "); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("Include at least " + sf + " significant figures in your answer: \n"); break;
-			case 3: buf.append("Enter the value with the appropriate number of significant figures \n"); break;
+				buf.append("Include at least " + sf + " significant figures in your answer: "); break;
+			case 3: buf.append("Enter the value with the appropriate number of significant figures"); break;
 			default:
 			}
-			buf.append("____________" + parseString(tag) + "\n");
+			buf.append("____________" + parseString(tag) + "<br/>");
 			break;        
 		case 6: // FIVE_STAR rating
-			buf.append(text + "\n");
-			buf.append("Enter your rating from 1 to 5 stars: ______\n");
+			buf.append(text + "<br/>");
+			buf.append("Enter your rating from 1 to 5 stars: ______<br/>");
 			break;
 		case 7: // Short ESSAY question
-			buf.append(text + "\n");
-			buf.append("Enter your answer in 800 characters or less: ___________\n");
+			buf.append(text + "<br/>");
+			buf.append("Enter your answer in 800 characters or less: _____________________<br/>");
 			break;
 		}
 		return buf.toString();	
@@ -1232,16 +1231,19 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // MULTIPLE_CHOICE
 		case 3: // SELECT_MULTIPLE
-			char[] ch = correctAnswer.toCharArray();
-			String ans = "";
-			for (char c : ch) ans += choices.get(c - 'a') + "\n";
-			ans = ans.substring(0,ans.length()-2); // trims the last newline character
-			return ans;
+			return correctAnswer;
 		case 4: // FILL-IN-WORD
 			String[] answers = correctAnswer.split(",");
 			return answers[0];
 		case 5: // NUMERIC
-			return parseString(correctAnswer);
+			if (requiredPrecision == 0) return parseString(correctAnswer); // exact answer
+			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
+			try {
+				double numericValue = Double.parseDouble(parseString(correctAnswer));
+				return String.format("%." + sf + "G", numericValue);
+			} catch (NumberFormatException e) {
+				return parseString(correctAnswer); // return as-is if can't parse as double
+			}
 		default: return correctAnswer;
 		}
 	}

@@ -38,8 +38,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.google.auth.oauth2.GoogleCredentials;
-
 /* 
  * Access to this servlet is restricted to ChemVantage admin users and the project service account
  * by specifying login: admin in a url handler of the project app.yaml file
@@ -49,7 +47,6 @@ public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
-	//Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
 	Map<Long,Concept> conceptMap = new HashMap<Long,Concept>();
@@ -73,14 +70,6 @@ public class Edit extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			// Defense-in-depth: verify admin authentication
-			if (!isAdminAuthenticated(request)) {
-				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
-					"Admin access required");
-				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
-				return;
-			}
-			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -146,14 +135,6 @@ public class Edit extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			// Defense-in-depth: verify admin authentication
-			if (!isAdminAuthenticated(request)) {
-				response.sendError(HttpServletResponse.SC_FORBIDDEN, 
-					"Admin access required");
-				logSecurityEvent("UNAUTHORIZED_ADMIN_ACCESS_ATTEMPT", request);
-				return;
-			}
-			
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
@@ -1967,64 +1948,4 @@ void assignToConcept(User user, HttpServletRequest request) {
 		}
 	}
 
-	private boolean isAdminAuthenticated(HttpServletRequest request) {
-		try {
-			// Verify the application has Google Cloud credentials
-			GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-			
-			if (credentials == null) {
-				return false;  // No credentials available
-			}
-			
-			// Validate that the application has access to Google Cloud
-			String projectId = System.getenv("GOOGLE_CLOUD_PROJECT");
-			if (projectId == null) {
-				projectId = System.getenv("GCLOUD_PROJECT");
-			}
-			
-			if (projectId == null) {
-				return false;  // Cannot determine project
-			}
-			
-			// Admin access is controlled through IAM policies in Google Cloud Console
-			// If the request reached here with valid credentials, the IAM policy 
-			// has already filtered for admin-only access
-			return true;
-		} catch (Exception e) {
-			System.err.println("Error during admin authentication: " + e.getMessage());
-			e.printStackTrace();
-			return false;
-		}
-	}
-
-	/**
-	 * Log security events for audit trail
-	 */
-	private void logSecurityEvent(String eventType, HttpServletRequest request) {
-		try {
-			System.err.println(String.format(
-				"SECURITY_EVENT: %s | IP: %s | Time: %s",
-				eventType,
-				getClientIp(request),
-				System.currentTimeMillis()
-			));
-		} catch (Exception e) {
-			// Silently fail logging
-		}
-	}
-
-	/**
-	 * Extract real client IP, accounting for proxies
-	 */
-	private String getClientIp(HttpServletRequest request) {
-		String ip = request.getHeader("X-Forwarded-For");
-		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getHeader("X-Real-IP");
-		}
-		if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-			ip = request.getRemoteAddr();
-		}
-		// Return only the first IP if multiple are present
-		return ip.split(",")[0].trim();
-	}
 }
