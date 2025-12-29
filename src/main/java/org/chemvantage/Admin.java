@@ -419,7 +419,14 @@ public class Admin extends HttpServlet {
 	 */
 	private boolean isAdminAuthenticated(HttpServletRequest request) {
 		try {
-			// Verify the application has Google Cloud credentials
+			// For local development (localhost), allow admin access without credentials
+			String serverName = request.getServerName();
+			if ("localhost".equals(serverName) || "127.0.0.1".equals(serverName)) {
+				System.out.println("Local development mode: Admin authentication bypassed for localhost");
+				return true;
+			}
+			
+			// In production, verify the application has Google Cloud credentials
 			GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
 			
 			if (credentials == null) {
