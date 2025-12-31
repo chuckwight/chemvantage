@@ -110,6 +110,7 @@ public class ValidateQuestions extends HttpServlet {
                             q.checkedByAI = true;
                             ofy().save().entity(q).now();
                             response.sendRedirect("/ValidateQuestions?UserRequest=StartValidation");
+							return;
                         } else {
                             out.println("<p style='color: red;'>Question not found.</p>");
                         }
