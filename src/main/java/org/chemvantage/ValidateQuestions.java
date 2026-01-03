@@ -138,12 +138,10 @@ public class ValidateQuestions extends HttpServlet {
 	 */
 	private String startValidationTask(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		StringBuffer buf = new StringBuffer();
-		// Get offset from request parameter or default to 0
-		String offsetStr = request.getParameter("Offset");
-		int offset = (offsetStr != null) ? Integer.parseInt(offsetStr) : 0;
 		
+		int offset = ofy().load().type(Question.class).filter("checkedByAI",true).count();
 		// Load questions starting from offset - don't filter at datastore level
-		List<Question> allQuestions = ofy().load().type(Question.class).offset(offset).limit(BATCH_SIZE * 5).list();
+		List<Question> allQuestions = ofy().load().type(Question.class).offset(offset).limit(BATCH_SIZE).list();
 		List<Question> uncheckedQuestions = new ArrayList<Question>();
 		try {
 			for (Question q : allQuestions) {

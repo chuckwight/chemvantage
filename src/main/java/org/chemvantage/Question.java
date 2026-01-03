@@ -160,7 +160,7 @@ public class Question implements Serializable, Cloneable {
 			return answers[0];
 		case 5: // NUMERIC
 			if (requiredPrecision == 0) return parseString(correctAnswer); // exact answer
-			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
+			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+2;
 			try {
 				double numericValue = Double.parseDouble(parseString(correctAnswer));
 				return String.format("%." + sf + "G", numericValue);
@@ -1237,13 +1237,9 @@ public class Question implements Serializable, Cloneable {
 			return answers[0];
 		case 5: // NUMERIC
 			if (requiredPrecision == 0) return parseString(correctAnswer); // exact answer
-			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-			try {
-				double numericValue = Double.parseDouble(parseString(correctAnswer));
-				return String.format("%." + sf + "G", numericValue);
-			} catch (NumberFormatException e) {
-				return parseString(correctAnswer); // return as-is if can't parse as double
-			}
+			double numericValue = Double.parseDouble(parseString(correctAnswer));
+			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+2;
+			return String.format("%." + sf + "G", numericValue);
 		default: return correctAnswer;
 		}
 	}
