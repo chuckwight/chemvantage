@@ -73,6 +73,10 @@ public class Group {
 		g.label = "undisclosed";
 		g.title = "undisclosed";
 		// use the NPRS MembershipContainer to complete the remaining Group fields
+		if (a.lti_nrps_context_memberships_url==null) {
+			ofy().save().entity(g);
+			return;
+		}
 		JsonObject membershipContainer = LTIMessage.getMembershipContainer(a);
 		try {  // although the "context" object and id are required, label and title are optional
 			g.label = membershipContainer.get("context").getAsJsonObject().get("label").getAsString();
@@ -97,8 +101,8 @@ public class Group {
 				default: g.nLearners++;
 				}		
 			}
+			ofy().save().entity(g);
 		} catch (Exception e) {}
-		ofy().save().entity(g);
 	}
 	
 	static String enrollmentReport() {

@@ -204,17 +204,17 @@ public class LTIv1p3Launch extends HttpServlet {
 			String lti_ags_lineitem_url = null;
 			String lti_ags_lineitems_url = null;
 			try {  
-			JsonElement agsElem = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint");
-			if (agsElem != null) {
-				JsonObject lti_ags_claims = agsElem.getAsJsonObject();
+				JsonElement agsElem = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint");
+				if (agsElem != null) {
+					JsonObject lti_ags_claims = agsElem.getAsJsonObject();
 
-				// get the list of AGS capabilities allowed by the platform
-				JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
-				Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
-				while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
-				lti_ags_lineitems_url = (lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString());
-				lti_ags_lineitem_url = (lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString());
-			}
+					// get the list of AGS capabilities allowed by the platform
+					JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
+					Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
+					while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
+					lti_ags_lineitems_url = (lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString());
+					lti_ags_lineitem_url = (lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString());
+				}
 			} catch (Exception e) {				
 			}
 		
@@ -263,7 +263,13 @@ public class LTIv1p3Launch extends HttpServlet {
 			 */
 
 			Assignment myAssignment = null;
-		
+			String resourceLinkId = null;
+			try {
+				resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
+			} catch (Exception e) {
+				throw new Exception("Resource link ID value missing from id_token claims. ");
+			}
+	
 			// Strategy 1: Find by lineitem URL
 			if (myAssignment == null && lti_ags_lineitem_url != null) {
 				debug.append("Searching by lineitem URL. ");
@@ -276,13 +282,10 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 				// Check custom parameters first
 				try {
-					JsonElement customElem = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom");
-					if (customElem != null && customElem.isJsonObject()) {
-						JsonObject custom = customElem.getAsJsonObject();
-						JsonElement resIdElem = custom.get("resourceId");
-						if (resIdElem == null) resIdElem = custom.get("resourceid"); // Schoology lowercases this
-						if (resIdElem != null) resourceId = resIdElem.getAsString();
-					}
+					JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
+					JsonElement resIdElem = custom.get("resourceId");
+					if (resIdElem == null) resIdElem = custom.get("resourceid"); // Schoology lowercases this
+					resourceId = resIdElem.getAsString();
 				} catch (Exception e) {}
 			
 				// Check lineitem for resourceId (other LMS platforms)
@@ -292,17 +295,12 @@ public class LTIv1p3Launch extends HttpServlet {
 					} catch (Exception e) {}
 				}
 				
-				// Canvas LMS passes the resourceId as a parameter
-				if (resourceId == null && d.lms_type != null && d.lms_type.equals("canvas")) {
-					resourceId = request.getParameter("resourceId");
-				}
-
 				// Load assignment by resourceId if found
 				if (resourceId != null) {
 					debug.append("Searching by resourceId=" + resourceId + ". ");
 					try {
 						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
-						if (myAssignment != null && myAssignment.lti_ags_lineitem_url != null) {
+						if (myAssignment != null && !myAssignment.resourceLinkId.equals(resourceLinkId)) {
 							// This is a descendant copy; create new assignment entity
 							myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();
 							myAssignment.created = new Date();
@@ -315,13 +313,6 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		
 			// Strategy 3: Find by domain + resourceLinkId (for non-DeepLinked assignments)
-			String resourceLinkId = null;
-			try {
-				resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
-			} catch (Exception e) {
-				throw new Exception("Resource link ID value missing from id_token claims. ");
-			}
-	
 			if (myAssignment == null) {
 				debug.append("Searching by resourceLinkId. ");
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
@@ -330,8 +321,16 @@ public class LTIv1p3Launch extends HttpServlet {
 			// Strategy 4: Find by resourceLinkId history (for copied assignments)
 			if (myAssignment == null) {
 				String resourceLinkIdHistory = null;
-				try {
+				try {  // try custom parameter set during deeplinking
 					resourceLinkIdHistory = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject().get("resource_link_id_history").getAsString();
+				} catch (Exception e) {}
+				if (resourceLinkIdHistory == null) {
+					try {  // this should work for Canvas
+						resourceLinkIdHistory = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("history").getAsString();
+					} catch (Exception e) {}
+				}
+				if (resourceLinkIdHistory != null) {
+					debug.append("Searching by resourceLinkId history. ");
 					String[] historyParts = resourceLinkIdHistory.split(",");
 					int i = 0;
 					while (myAssignment == null && i < historyParts.length) {
@@ -344,12 +343,29 @@ public class LTIv1p3Launch extends HttpServlet {
 						myAssignment.created = new Date();
 						debug.append("Found parent, creating copy. ");
 					}
-				} catch (Exception e) {
-					debug.append("No valid history element. ");
 				}
 			}
 		
-			// Strategy 5: Create new assignment
+			// Strategy 5: Check for resourceId in request parameters
+			if (myAssignment == null) {
+				String resourceId = request.getParameter("resourceId");
+				if (resourceId != null) {
+					debug.append("Searching by resourceId parameter. ");
+					try {
+						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
+						if (myAssignment != null && !myAssignment.resourceLinkId.equals(resourceLinkId)) {
+							// This is a descendant copy; create new assignment entity
+							myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();
+							myAssignment.created = new Date();
+							debug.append("Found ancestor, creating descendant. ");
+						}
+					} catch (Exception e) {
+						debug.append("ResourceId parameter lookup failed. ");
+					}	
+				}
+			}
+
+			// Strategy 6: Create a new assignment
 			if (myAssignment == null) {
 				debug.append("Creating new assignment. ");
 				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
@@ -395,9 +411,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			} else {
 				launchResourceRequest(user,myAssignment,request,response);
 			}
-			
 		} catch (Exception e) {
-			ofy().save().entity(d);
+			Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Resource Link Launch Failure", e.getMessage() + "\n" + debug.toString());
 			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage() + " " + debug.toString());
 		}
 	}
