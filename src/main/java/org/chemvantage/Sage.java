@@ -563,7 +563,7 @@ public class Sage extends HttpServlet {
 	if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		refreshConcepts();
 		
-		StringBuffer buf = new StringBuffer(Subject.header("Sage"));		
+		StringBuffer buf = new StringBuffer();		
 		try {
 			if (a.title==null) {  // legacy assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
@@ -605,7 +605,7 @@ public class Sage extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
-		return buf.toString() + Subject.footer;
+		return buf.toString();
 	}
 
 	static String menuPage (User user, SageTransaction st) {

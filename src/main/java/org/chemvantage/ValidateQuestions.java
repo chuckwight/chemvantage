@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,6 +111,7 @@ public class ValidateQuestions extends HttpServlet {
                             q.checkedByAI = true;
                             ofy().save().entity(q).now();
                             response.sendRedirect("/ValidateQuestions?UserRequest=StartValidation");
+							return;
                         } else {
                             out.println("<p style='color: red;'>Question not found.</p>");
                         }
@@ -136,12 +138,10 @@ public class ValidateQuestions extends HttpServlet {
 	 */
 	private String startValidationTask(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		StringBuffer buf = new StringBuffer();
-		// Get offset from request parameter or default to 0
-		String offsetStr = request.getParameter("Offset");
-		int offset = (offsetStr != null) ? Integer.parseInt(offsetStr) : 0;
 		
+		int offset = ofy().load().type(Question.class).filter("checkedByAI",true).count();
 		// Load questions starting from offset - don't filter at datastore level
-		List<Question> allQuestions = ofy().load().type(Question.class).offset(offset).limit(BATCH_SIZE * 5).list();
+		List<Question> allQuestions = ofy().load().type(Question.class).offset(offset).limit(BATCH_SIZE).list();
 		List<Question> uncheckedQuestions = new ArrayList<Question>();
 		try {
 			for (Question q : allQuestions) {
@@ -246,7 +246,7 @@ public class ValidateQuestions extends HttpServlet {
 			api_request.add("prompt", prompt);
 		
 			// Send request to OpenAI API
-			URL u = new URL("https://api.openai.com/v1/responses");
+			URL u = new URI("https://api.openai.com/v1/responses").toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
 			uc.setDoInput(true);

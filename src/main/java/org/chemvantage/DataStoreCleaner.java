@@ -624,7 +624,7 @@ public class DataStoreCleaner extends HttpServlet {
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 				StringBuffer exp = new StringBuffer();
 				for (Assignment a : oldAssignments) {													// Mark for deletion if
-					if (a.created.before(sixMonthsAgo) && a.lti_ags_lineitem_url==null) assignmentKeys.add(key(Assignment.class,a.id));	// No lineitem_url
+					if (a.created.before(oneYearAgo) && a.lti_ags_lineitem_url==null) assignmentKeys.add(key(Assignment.class,a.id));	// No lineitem_url
 					else if ((a.valid==null && a.created.before(sixMonthsAgo)) || a.valid.before(oneYearAgo)) assignmentKeys.add(key(Assignment.class,a.id));	// unused for >1 year
 					else if (ofy().load().key(key(Deployment.class,a.domain)).now()==null) assignmentKeys.add(key(Assignment.class,a.id));	// parent deployment doesn't exist
 					if (assignmentKeys.contains(key(a))) exp.append(a.id + " " + a.domain + " " + a.lti_ags_lineitem_url + "</br/>");
