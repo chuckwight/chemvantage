@@ -784,6 +784,8 @@ public class Homework extends HttpServlet {
 				if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 
 				BufferedReader reader = null;
+
+				// Construct the API request JSON:
 				JsonObject api_request = new JsonObject();
 				api_request.addProperty("model", Subject.getGPTModel());
 				JsonObject prompt = new JsonObject();
@@ -793,7 +795,9 @@ public class Homework extends HttpServlet {
 				variables.addProperty("student_answer", studentAnswer);
 				prompt.add("variables", variables);
 				api_request.add("prompt", prompt);
-
+				String response_format = "{'format':{'type':'json_schema','name':'essay_evaluation','schema':{'type':'object','properties':{'score':{'type':'integer'},'feedback':{'type':'string'}},'required':['score','feedback'],'additionalProperties':false},'strict':true}}";
+				api_request.add("text", JsonParser.parseString(response_format).getAsJsonObject());
+				
 				URL u = new URI("https://api.openai.com/v1/responses").toURL();
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				uc.setRequestMethod("POST");
