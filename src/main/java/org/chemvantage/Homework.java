@@ -831,16 +831,19 @@ public class Homework extends HttpServlet {
 					JsonArray output = api_response.get("output").getAsJsonArray();
 					JsonObject message = null;
 					JsonObject output_text = null;
-					for (JsonElement element0 : output) {
-						message = element0.getAsJsonObject();
+					for (JsonElement o : output) {
+						message = o.getAsJsonObject();
 						if (message.has("content")) {
 							JsonArray content = message.get("content").getAsJsonArray();
-							for (JsonElement element1 : content) {
-								output_text = element1.getAsJsonObject();
+							for (JsonElement c : content) {
+								output_text = c.getAsJsonObject();
 								if (output_text.has("text")) {
-									essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
+									String textContent = output_text.get("text").getAsString();  // this is the essay score JSON string
+									essay_score = JsonParser.parseString(textContent).getAsJsonObject();
 									studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
 									break;
+								} else if (output_text.has("refusal")) {
+									debug.append("API Error: " + output_text.get("refusal").getAsString());
 								}
 							}
 							break;

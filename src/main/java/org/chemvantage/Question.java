@@ -684,6 +684,8 @@ public class Question implements Serializable, Cloneable {
 			    variables.addProperty("correct_answer", this.getCorrectAnswerForSage());
 			  prompt.add("variables", variables);
 			api_request.add("prompt", prompt);
+			String response_format = "{'format':{'type':'json_schema','name':'answer_explanation','schema':{'type':'object','properties':{'explanation':{'type':'string'}},'required':['explanation'],'additionalProperties':false},'strict':true}}";
+			api_request.add("text", JsonParser.parseString(response_format).getAsJsonObject());
 			
 			URL u = new URI("https://api.openai.com/v1/responses").toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -715,30 +717,31 @@ public class Question implements Serializable, Cloneable {
 			
 			// Find the output text buried in the response JSON:
 			if (api_response != null) {
-			JsonArray output = api_response.get("output").getAsJsonArray();
-		JsonObject message = null;
-			JsonObject output_text = null;
-			for (JsonElement element0 : output) {
-				message = element0.getAsJsonObject();
-				if (message.has("content")) {
-					JsonArray content = message.get("content").getAsJsonArray();
-					for (JsonElement element1 : content) {
-						output_text = element1.getAsJsonObject();
-						if (output_text.has("text")) {
-							this.explanation = output_text.get("text").getAsString();
-							if (this.explanation==null) throw new Exception("Failed to read api_response.");
-							break;
+				JsonArray output = api_response.get("output").getAsJsonArray();
+				for (JsonElement o : output) {
+					JsonObject message = o.getAsJsonObject();
+					if (message.get("type").getAsString().equals("message") && message.has("content")) {
+						JsonArray content = message.get("content").getAsJsonArray();
+						for (JsonElement c : content) {
+							JsonObject output_text = c.getAsJsonObject();
+							if (output_text.has("text")) {
+								String textContent = output_text.get("text").getAsString();  // this is the essay score JSON string
+								JsonObject explanation = JsonParser.parseString(textContent).getAsJsonObject();
+								this.explanation = explanation.get("explanation").getAsString();
+								break;
+							} else if (output_text.has("refusal")) {
+								this.explanation = "Sorry, an explanation is not available at this time.";
+								break;
+							}
 						}
+						break;
 					}
-					break;
 				}
 			}
-			debug.append("e");
-			}
-			
+						
 			if (!this.requiresParser()) ofy().save().entity(this);
 			buf.append(this.explanation);
-			//buf.append(api_response.toString());
+			//buf.append("<br/>" + (api_response==null?"api_response was null":api_response.toString()));
 		} catch (Exception e) {
 			buf.append("<br/>Sorry, an explanation is not available at this time. " + (e.getMessage()==null?e.toString():e.toString()) + "<p>" + debug.toString() + "<p>");
 		}
