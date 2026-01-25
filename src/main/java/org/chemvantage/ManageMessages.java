@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +42,7 @@ import com.googlecode.objectify.Key;
  */
 @WebServlet("/messages")
 public class ManageMessages extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -316,11 +318,10 @@ public class ManageMessages extends HttpServlet {
 	 */
 	private void logSecurityEvent(String eventType, HttpServletRequest request) {
 		try {
-			System.err.println(String.format(
-				"SECURITY_EVENT: %s | IP: %s | Time: %s",
-				eventType,
-				getClientIp(request),
-				System.currentTimeMillis()
+			System.err.println("SECURITY_EVENT: %s | IP: %s | Time: %s".formatted(
+			eventType,
+			getClientIp(request),
+			System.currentTimeMillis()
 			));
 		} catch (Exception e) {
 			// Silently fail logging

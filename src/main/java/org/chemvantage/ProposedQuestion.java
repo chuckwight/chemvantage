@@ -1,12 +1,14 @@
 package org.chemvantage;
 
+import java.io.Serial;
 import java.util.List;
 
 import com.googlecode.objectify.annotation.Entity;
 
 @Entity
 public class ProposedQuestion extends Question {
-	
+
+	@Serial
 	private static final long serialVersionUID = 137L;
 
 	ProposedQuestion() {}

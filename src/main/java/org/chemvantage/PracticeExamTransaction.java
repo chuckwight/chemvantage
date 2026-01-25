@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -33,6 +34,7 @@ import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class PracticeExamTransaction implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index	String userId;

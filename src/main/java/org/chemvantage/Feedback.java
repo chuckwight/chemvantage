@@ -20,11 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -45,6 +41,7 @@ import com.googlecode.objectify.cmd.Query;
 @WebServlet("/Feedback")
 public class Feedback extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
@@ -198,23 +195,24 @@ public class Feedback extends HttpServlet {
 
 	static String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
-		buf.append("<style>"
-				+ ".radioStar {\n"
-				+ "  position: absolute;\n"
-				+ "  opacity: 0;\n"
-				+ "  cursor: pointer;\n"
-				+ "  height: 0;\n"
-				+ "  width: 0;\n"
-				+ "}"
-				+ ".radioStar:focus + .star-label {\n"
-				+ "  outline: 2px solid blue;\n"
-				+ "  outline-offset: 2px;\n"
-				+ "}"
-				+ ".radio-star-container {\n"
-				+ "  display: inline-block;\n"
-				+ "  cursor: pointer;\n"
-				+ "}"
-				+ "</style>");
+		buf.append("""
+				<style>\
+				.radioStar {
+				  position: absolute;
+				  opacity: 0;
+				  cursor: pointer;
+				  height: 0;
+				  width: 0;
+				}\
+				.radioStar:focus + .star-label {
+				  outline: 2px solid blue;
+				  outline-offset: 2px;
+				}\
+				.radio-star-container {
+				  display: inline-block;
+				  cursor: pointer;
+				}\
+				</style>""");
 		
 		buf.append("<br/><div id=star-rating display='flex'><fieldset>Please rate ChemVantage: ");
 		for (int istar=1;istar<6;istar++) {

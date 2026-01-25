@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -26,6 +27,7 @@ import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class HWTransaction implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id		Long id;
 	@Index	long questionId;

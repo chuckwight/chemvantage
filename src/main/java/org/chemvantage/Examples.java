@@ -2,6 +2,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.Date;
 import java.util.Random;
 
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/examples")
 public class Examples extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {

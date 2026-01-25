@@ -43,6 +43,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
@@ -76,6 +77,7 @@ import com.googlecode.objectify.Key;
 @WebServlet(urlPatterns = {"/lti/launch","/lti/launch/"})
 public class LTIv1p3Launch extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	@Override

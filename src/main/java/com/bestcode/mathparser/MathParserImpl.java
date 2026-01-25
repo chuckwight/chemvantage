@@ -117,6 +117,7 @@ import java.util.Locale;
 import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 import com.bestcode.util.QuickSort;
@@ -599,20 +600,19 @@ class MathParserImpl implements IMathParser {
 	
 	static void findVariablesUsed(Node aNode, ArrayList<String> varList)
 	{
-		if (aNode instanceof UnknownVarNode) 
+		if (aNode instanceof UnknownVarNode node) 
 		{
-			varList.add(((UnknownVarNode)aNode).m_VarName);
+			varList.add(node.m_VarName);
 		}
-		else if (aNode instanceof NParamNode) 
+		else if (aNode instanceof NParamNode nParamNode) 
 		{
-			NParamNode nParamNode = (NParamNode)aNode;
 			Node[] nodes = nParamNode.nodes;
 
 			for (int i=0; i<nodes.length; i++)
 			{
-          if ((nodes[i] instanceof UnknownVarNode))
+          if ((nodes[i] instanceof UnknownVarNode node))
           {
-              varList.add(((UnknownVarNode)nodes[i]).m_VarName);
+              varList.add(node.m_VarName);
           }
           else
           {
@@ -1436,8 +1436,7 @@ class MathParserImpl implements IMathParser {
   //------------------------------------------------------------------------------
   static Node optimizeNode(Node aNode) {
     aNode.optimize();
-    if (aNode instanceof NParamNode) { //could be a VarNode which cannot be optimized.
-      NParamNode nParamNode = (NParamNode)aNode;
+    if (aNode instanceof NParamNode nParamNode) {
       Node[] nodes = nParamNode.nodes;
 
       for (int i=0; i<nodes.length; i++){
@@ -1900,15 +1899,15 @@ class __rnd extends OneParamFunc {
   public double run (IParameter[] p){
       double x__ = p[0].getValue();
       if (x__>=0)
-        return Math.floor(Math.random() * Math.floor(x__));
+        return Math.floor(ThreadLocalRandom.current().nextDouble() * Math.floor(x__));
       else
-        return Math.ceil(Math.random() * Math.ceil(x__));
+        return Math.ceil(ThreadLocalRandom.current().nextDouble() * Math.ceil(x__));
   }
 }
 
 class __random extends OneParamFunc {
   public double run (IParameter[] p){
-    return Math.random() * p[0].getValue();
+    return ThreadLocalRandom.current().nextDouble() * p[0].getValue();
   }
 }
 

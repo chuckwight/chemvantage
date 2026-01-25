@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ import com.googlecode.objectify.Key;
  */
 @WebServlet("/contacts")
 public class ManageContacts extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
        
     public ManageContacts() {
@@ -186,13 +188,15 @@ public class ManageContacts extends HttpServlet {
 	}
 	
 	String pasteNewContact() {
-		return "<h4>Paste New Faculty Contacts</h4>"
-				+ "<form method=post action=/contacts>"
-				+ "<textarea rows=10 cols=80 name=Paste placeholder='First Name [tab] Last Name [tab] Email\nFirst Name [tab] Last Name [tab] Email' ></textarea> "
-				+ "<br/>"
-				+ "<input type=hidden name=Role value=faculty />"
-				+ "<input type=submit name=UserRequest value='Paste New Contact' />"
-				+ "</form><br/><br/>"; 
+		return """
+				<h4>Paste New Faculty Contacts</h4>\
+				<form method=post action=/contacts>\
+				<textarea rows=10 cols=80 name=Paste placeholder='First Name [tab] Last Name [tab] Email
+				First Name [tab] Last Name [tab] Email' ></textarea> \
+				<br/>\
+				<input type=hidden name=Role value=faculty />\
+				<input type=submit name=UserRequest value='Paste New Contact' />\
+				</form><br/><br/>"""; 
 	}
 	
 	String exportCSVFile() {
@@ -372,11 +376,10 @@ public class ManageContacts extends HttpServlet {
 	 */
 	private void logSecurityEvent(String eventType, HttpServletRequest request) {
 		try {
-			System.err.println(String.format(
-				"SECURITY_EVENT: %s | IP: %s | Time: %s",
-				eventType,
-				getClientIp(request),
-				System.currentTimeMillis()
+			System.err.println("SECURITY_EVENT: %s | IP: %s | Time: %s".formatted(
+			eventType,
+			getClientIp(request),
+			System.currentTimeMillis()
 			));
 		} catch (Exception e) {
 			// Silently fail logging

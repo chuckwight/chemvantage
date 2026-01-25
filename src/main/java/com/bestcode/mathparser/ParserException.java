@@ -22,6 +22,8 @@
 ***********************************************************************/
 package com.bestcode.mathparser;
 
+import java.io.Serial;
+
 
 /**
  * ParserException is thrown by some methods of IMathParser interface if an 
@@ -29,6 +31,7 @@ package com.bestcode.mathparser;
  * parse(), evaluate(), getValue()
  */
 public class ParserException extends Exception {
+	@Serial
 	private static final long serialVersionUID = 7971694971047377967L;
 
 	String m_err;

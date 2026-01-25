@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {

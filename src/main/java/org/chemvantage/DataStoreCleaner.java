@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import com.googlecode.objectify.Key;
  */
 @WebServlet("/DataStoreCleaner")
 public class DataStoreCleaner extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
@@ -755,11 +757,10 @@ public class DataStoreCleaner extends HttpServlet {
 	 */
 	private void logSecurityEvent(String eventType, HttpServletRequest request) {
 		try {
-			System.err.println(String.format(
-				"SECURITY_EVENT: %s | IP: %s | Time: %s",
-				eventType,
-				getClientIp(request),
-				System.currentTimeMillis()
+			System.err.println("SECURITY_EVENT: %s | IP: %s | Time: %s".formatted(
+			eventType,
+			getClientIp(request),
+			System.currentTimeMillis()
 			));
 		} catch (Exception e) {
 			// Silently fail logging

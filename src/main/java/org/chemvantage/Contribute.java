@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +41,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/Contribute")
 public class Contribute extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {

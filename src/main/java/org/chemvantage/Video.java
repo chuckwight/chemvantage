@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import com.googlecode.objectify.condition.IfNotNull;
 
 @Entity
 public class Video implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
     long	topicId;

@@ -19,10 +19,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -46,6 +43,7 @@ import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Question implements Serializable, Cloneable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index	long topicId;
@@ -163,7 +161,7 @@ public class Question implements Serializable, Cloneable {
 			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+2;
 			try {
 				double numericValue = Double.parseDouble(parseString(correctAnswer));
-				return String.format("%." + sf + "G", numericValue);
+				return ("%." + sf + "G").formatted(numericValue);
 			} catch (NumberFormatException e) {
 				return parseString(correctAnswer); // return as-is if can't parse as double
 			}
@@ -269,9 +267,9 @@ public class Question implements Serializable, Cloneable {
 							else df.applyPattern("0.####E0"); // use scientific notation
 							buf.append(df.format(value)); 
 							break;
-					case 2: buf.append(String.format(fmt,value));
+					case 2: buf.append(fmt.formatted(value));
 							break;
-					case 3: buf.append(String.format(fmt,value));
+					case 3: buf.append(fmt.formatted(value));
 							break;
 					default:		
 				}
@@ -1242,7 +1240,7 @@ public class Question implements Serializable, Cloneable {
 			if (requiredPrecision == 0) return parseString(correctAnswer); // exact answer
 			double numericValue = Double.parseDouble(parseString(correctAnswer));
 			int sf = significantFigures>0?significantFigures:(int)Math.ceil(-Math.log10(requiredPrecision/100.))+2;
-			return String.format("%." + sf + "G", numericValue);
+			return ("%." + sf + "G").formatted(numericValue);
 		default: return correctAnswer;
 		}
 	}

@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
@@ -39,6 +40,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns={"/lti/deeplinks","/lti/deeplinks/"})
 public class LTIDeepLinks extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -746,14 +748,14 @@ public class LTIDeepLinks extends HttpServlet {
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
 			
 			// Join the header and payload together with a period separator:
-			String jwt = String.format("%s.%s",new String(hdr),new String(pld));
+			String jwt = "%s.%s".formatted(new String(hdr),new String(pld));
 			
 			// Add a signature item to complete the JWT:
 			Signature signature = Signature.getInstance("SHA256withRSA");
 			signature.initSign(KeyStore.getRSAPrivateKey(d.rsa_key_id),new SecureRandom());
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
-			jwt = String.format("%s.%s", jwt, sig);
+			jwt = "%s.%s".formatted(jwt,sig);
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("Submitting your selection back to your LMS...");

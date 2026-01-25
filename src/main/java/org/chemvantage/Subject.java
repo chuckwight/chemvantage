@@ -154,7 +154,7 @@ public class Subject {
         	byte[] bytes = md.digest((userId + s.salt).getBytes("UTF-8"));
         	StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
+                sb.append("%02x".formatted(b));
             }
             return sb.toString();
 		} catch (Exception e) {
@@ -297,13 +297,16 @@ public class Subject {
 	
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='" + getServerUrl() + "/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
-	public static String footer = "\n</main>\n"
-			+ "<footer id=footer style='max-width: 600px;'><hr/>"
-			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
-			+ "<a href=/terms_and_conditions.html>Terms and Conditions</a> | "
-			+ "<a href=/privacy.html>Privacy</a> | "
-			+ "<a href=/copyright.html>Copyright</a></footer>"
-			+ "<script>if (window===window.top)document.body.classList.add('has-padding');</script>"
-			+ "\n</body>\n</html>";
+	public static String footer = """
+			
+			</main>
+			<footer id=footer style='max-width: 600px;'><hr/>\
+			<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | \
+			<a href=/terms_and_conditions.html>Terms and Conditions</a> | \
+			<a href=/privacy.html>Privacy</a> | \
+			<a href=/copyright.html>Copyright</a></footer>\
+			<script>if (window===window.top)document.body.classList.add('has-padding');</script>
+			</body>
+			</html>""";
 
 }

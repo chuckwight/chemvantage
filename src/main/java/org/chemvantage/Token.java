@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	// This servlet is the OpenID Connection starting point for platforms to reach ChemVantage

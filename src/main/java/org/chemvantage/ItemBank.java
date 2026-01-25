@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -35,6 +36,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns = {"/itembank","/items"})
 public class ItemBank extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	private Text text = null;
 	

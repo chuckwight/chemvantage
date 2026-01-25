@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +43,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/Poll")
 public class Poll extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

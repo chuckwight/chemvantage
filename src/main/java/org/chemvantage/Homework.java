@@ -20,11 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -56,6 +52,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/Homework")
 public class Homework extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;	
 	static int retryDelayMinutes = 1;  // minimum time between answer submissions for any single question
 
@@ -672,11 +669,12 @@ public class Homework extends HttpServlet {
 				buf.append("</div>");  // end of assigned questions table
 			} else if (!user.isAnonymous()) buf.append("<a href=/Homework?sig=" + user.getTokenSignature() + "&ShowOptional=true >Show Optional Questions</a>");
 			
-			buf.append("<script>function showWorkBox(qid) {\n"
-					+ "	if (qid==0) return;\n"
-					+ "    document.getElementById('showWork'+qid).style.display='';\n"
-					+ "    document.getElementById('answer'+qid).placeholder='Enter your answer here';\n"
-					+ "}</script>");
+			buf.append("""
+					<script>function showWorkBox(qid) {
+						if (qid==0) return;
+					    document.getElementById('showWork'+qid).style.display='';
+					    document.getElementById('answer'+qid).placeholder='Enter your answer here';
+					}</script>""");
 			} catch (Exception e) {
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
 			return Logout.now(user);
@@ -685,45 +683,45 @@ public class Homework extends HttpServlet {
 	}
 
 	String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer("<style>"
-				+ ".response-container {\n"
-				+ "    max-width: 900px; \n"
-				//+ "    margin: 0 auto; \n"
-				+ "    box-sizing: border-box;\n"
-				+ "    padding: 15px;\n"
-				+ "}\n"
-				+ ".status-text {\n"
-				+ "    text-align: center;\n"
-				+ "    font-size: 3rem;\n"
-				+ "    font-weight: bold;\n"
-				+ "    color: white;\n"
-				+ "    background-color: blue;\n"
-				+ "    width: 100%;\n"
-				+ "}\n"
-				+ ".explanation-text {\n"
-				+ "    font-size: 1rem;\n"
-				+ "    color: black;\n"
-				+ "    background-color: white;\n"
-				+ "    text-align: left;\n"
-				+ "}\n"
-				+ ".badge-container {\n"
-				+ "    display: flex;\n"
-				+ "    flex-direction: column;\n"
-				+ "    align-items: center;\n"
-				+ "    text-align: center;\n"
-				+ "}\n"
-				+ ".solution-container {\n"
-				+ "    background-color: white;\n"
-				+ "    border: 3px solid blue;\n"
-				+ "    padding: 15px;\n"
-				+ "    text-align: left;\n"
-				+ "    width: 100%"
-				+ "}\n"
-				+ ".feedback-container {\n"
-				+ "    text-align: left;\n"
-				+ "    width: 60%;\n"
-				+ "}\n"
-				+ "</style>");
+		StringBuffer buf = new StringBuffer("""
+				<style>\
+				.response-container {
+				    max-width: 900px;\s
+				    box-sizing: border-box;
+				    padding: 15px;
+				}
+				.status-text {
+				    text-align: center;
+				    font-size: 3rem;
+				    font-weight: bold;
+				    color: white;
+				    background-color: blue;
+				    width: 100%;
+				}
+				.explanation-text {
+				    font-size: 1rem;
+				    color: black;
+				    background-color: white;
+				    text-align: left;
+				}
+				.badge-container {
+				    display: flex;
+				    flex-direction: column;
+				    align-items: center;
+				    text-align: center;
+				}
+				.solution-container {
+				    background-color: white;
+				    border: 3px solid blue;
+				    padding: 15px;
+				    text-align: left;
+				    width: 100%\
+				}
+				.feedback-container {
+				    text-align: left;
+				    width: 60%;
+				}
+				</style>""");
 		StringBuffer debug = new StringBuffer("Homework.printScore...");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();

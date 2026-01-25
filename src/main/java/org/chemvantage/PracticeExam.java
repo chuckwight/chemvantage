@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +45,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/PracticeExam")
 public class PracticeExam extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
@@ -350,8 +352,10 @@ public class PracticeExam extends HttpServlet {
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
-			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=/PracticeExam "
-					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
+			buf.append("""
+					
+					<FORM NAME=PracticeExamForm METHOD=POST ACTION=/PracticeExam \
+					onSubmit="return confirm('Submit this exam for grading now. Are you sure?')">""");
 
 			buf.append("<div id='timer0' style='color:#EE0000'></div><div id=ctrl0 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit class='btn btn-primary' value='Grade This Practice Exam'><p>");

@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -54,6 +55,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 @WebServlet("/Admin")
 public class Admin extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
@@ -459,11 +461,10 @@ public class Admin extends HttpServlet {
 	 */
 	private void logSecurityEvent(String eventType, HttpServletRequest request) {
 		try {
-			System.err.println(String.format(
-				"SECURITY_EVENT: %s | IP: %s | Time: %s",
-				eventType,
-				getClientIp(request),
-				System.currentTimeMillis()
+			System.err.println("SECURITY_EVENT: %s | IP: %s | Time: %s".formatted(
+			eventType,
+			getClientIp(request),
+			System.currentTimeMillis()
 			));
 		} catch (Exception e) {
 			// Silently fail logging

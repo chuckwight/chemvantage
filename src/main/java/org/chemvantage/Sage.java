@@ -3,11 +3,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -35,6 +31,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/Sage")
 public class Sage extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 	private static List<Concept> conceptList = null;
 	private static Map<Long,Concept> conceptMap = null;
@@ -218,17 +215,18 @@ public class Sage extends HttpServlet {
 				+ "</form><p>"
 				+ "</div>\n");
 		
-		buf.append("<script>"
-				+ "function showAskForm() {"
-				+ " document.getElementById('askButton').style='display:none;';"
-				+ " document.getElementById('askForm').style='display:inline;';"
-				+ "}"
-				+ "function waitForScore() {\n"
-				+ " let b = document.getElementById('ask');\n"
-				+ " b.disabled = true;\n"
-				+ " b.value = 'Please wait a moment for Sage to answer.';\n"
-				+ "}\n"
-				+ "</script>"); 
+		buf.append("""
+				<script>\
+				function showAskForm() {\
+				 document.getElementById('askButton').style='display:none;';\
+				 document.getElementById('askForm').style='display:inline;';\
+				}\
+				function waitForScore() {
+				 let b = document.getElementById('ask');
+				 b.disabled = true;
+				 b.value = 'Please wait a moment for Sage to answer.';
+				}
+				</script>"""); 
 				
 		return buf.toString();
 	}
@@ -731,13 +729,14 @@ public class Sage extends HttpServlet {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		try {
 			if (concept == null) throw new Exception("No concept was specified for this requeat.");
-			buf.append("<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
-					+ "<script>"
-					+ "function wait() {"
-					+ "  let b = document.getElementById('continueButton');"
-					+ "  b.innerHTML = 'Preparing your assignment...';"
-					+ "}\n"
-					+ "</script>");
+			buf.append("""
+					<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\
+					<script>\
+					function wait() {\
+					  let b = document.getElementById('continueButton');\
+					  b.innerHTML = 'Preparing your assignment...';\
+					}
+					</script>""");
 			buf.append("<h1>" + concept.title + "</h1>"
 					+ "<div style='max-width:800px'>"
 					+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right;margin:20px;'>"
@@ -762,12 +761,15 @@ public class Sage extends HttpServlet {
 		String[] responses = request.getParameterValues(Long.toString(questionId));
 		String studentAnswer = orderResponses(responses);
 		
-		buf.append("\n<script>"
-				+ "function wait(buttonId,message) {\n"
-				+ "  let b = document.getElementById(buttonId);\n"
-				+ "  b.innerHTML = message;\n"
-				+ "}\n"
-				+ "</script>\n");
+		buf.append("""
+				
+				<script>\
+				function wait(buttonId,message) {
+				  let b = document.getElementById(buttonId);
+				  b.innerHTML = message;
+				}
+				</script>
+				""");
 		
 		if (studentAnswer == null || studentAnswer.isEmpty()) {
 			buf.append("<h1>No answer was submitted</h1>\n"
@@ -793,12 +795,14 @@ public class Sage extends HttpServlet {
 		case 4:
 		case 5:
 			rawScore = q.isCorrect(studentAnswer)?2:q.agreesToRequiredPrecision(studentAnswer)?1:0;
-			showMeLink.append("<script>"
-					+ "function showAnswer() {\n"
-					+ "  document.getElementById('link').style.display='none';\n"
-					+ "  document.getElementById('shortAnswer').style.display='inline';\n"
-					+ "}\n"
-					+ "</script>\n");
+			showMeLink.append("""
+					<script>\
+					function showAnswer() {
+					  document.getElementById('link').style.display='none';
+					  document.getElementById('shortAnswer').style.display='inline';
+					}
+					</script>
+					""");
 			showMeLink.append("<a id=link class='btn btn-primary' role='button' href=# onclick=showAnswer();>Show Me</a>\n");
 			showMeLink.append("<div id=shortAnswer style='display:none';>\n"
 					+ q.printAllToStudents(studentAnswer)

@@ -22,12 +22,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -54,7 +49,7 @@ import com.google.gson.JsonParser;
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
 
-	/* This servlet class is used to apply for and grant access to LTI connections between client
+	/*This servlet class is used to apply for and grant access to LTI connections between client
 	 * LMS platforms and the ChemVantage tool. The user will complete a short form with name, role,
 	 * email, organization, home page, and LMS type. and use case (testing or production).
 	 * Requests for LTIv1.1 credentials were discontinued in 2021.
@@ -76,6 +71,7 @@ public class LTIRegistration extends HttpServlet {
 	 * 
 	 * */
 	
+	@Serial
 	private static final long serialVersionUID = 137L;
 	static String price = "2";
 	

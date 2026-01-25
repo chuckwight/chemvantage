@@ -18,16 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-/*
- * This entity represents a key concept, which is roughly equivalent to a section of a textbook chapter.
- * Typically, we can expect 4-8 Concepts per Topic.
- * Topics have an optional field consisting of a List of conceptId values
- * Questions have an optional field of one conceptId value, so they can be filtered in a query.
- */
-import java.io.Serializable;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -42,6 +33,7 @@ import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Concept implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index 	String orderBy;

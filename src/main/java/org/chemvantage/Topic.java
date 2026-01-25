@@ -26,6 +26,7 @@ package org.chemvantage;
  * 2 = LibreTexts
  * 3 = both
  */
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Topic implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index 	String orderBy;

@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/VideoQuiz")
 public class VideoQuiz extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	int nQuestions = 2;  // this is the default number of questions per quizlet at the video breaks
 	
@@ -204,12 +206,13 @@ public class VideoQuiz extends HttpServlet {
 
 			debug.append("start:" + start + " end:" + end + " breaks:" + breaks + " ");
 
-			buf.append("<h1>Video</h1>\n"
-					+ "<div id=video_div style='width:560px;height:315px'></div>\n"
-					+ "<br>\n"
-					+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div><br/>"
-					+ "<div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>\n"
-					+ "<p>");
+			buf.append("""
+					<h1>Video</h1>
+					<div id=video_div style='width:560px;height:315px'></div>
+					<br>
+					<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div><br/>\
+					<div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>
+					<p>""");
 
 			buf.append("<script type=text/javascript>\n"
 					+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"

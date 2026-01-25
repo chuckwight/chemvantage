@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +46,8 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/PlacementExam")
 public class PlacementExam extends HttpServlet {
-	
+
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
@@ -379,8 +381,10 @@ public class PlacementExam extends HttpServlet {
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.<br/>");
 			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded + "<br/>");
 			
-			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=/PlacementExam "
-					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
+			buf.append("""
+					
+					<FORM NAME=PlacementExamForm METHOD=POST ACTION=/PlacementExam \
+					onSubmit="return confirm('Submit this placement exam for grading now. Are you sure?')">""");
 
 			buf.append("<div id='timer0' style='color: #EE0000'></div><div id=ctrl0 style='color:#EE0000;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit class='btn btn-primary' value='Grade This Placement Exam'><p>");
@@ -1488,7 +1492,7 @@ public class PlacementExam extends HttpServlet {
 				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
 				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
 				discriminationIndex = discriminationIndex/100.0;
-				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + String.format("%,.1f", successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + String.format("%,.3f", discriminationIndex) + "</TD>");
+				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + "%,.1f".formatted(successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + "%,.3f".formatted(discriminationIndex) + "</TD>");
 			} catch (Exception e) {
 				buf.append("<TD>Insufficient Data</TD>");
 			}
@@ -1517,7 +1521,7 @@ public class PlacementExam extends HttpServlet {
 				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
 				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
 				discriminationIndex = discriminationIndex/100.0;
-				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + String.format("%,.1f", successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + String.format("%,.3f", discriminationIndex) + "</TD>");
+				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + "%,.1f".formatted(successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + "%,.3f".formatted(discriminationIndex) + "</TD>");
 			} catch (Exception e) {
 				buf.append("<TD>Insufficient Data</TD>");
 			}

@@ -114,8 +114,7 @@ final class FastStr implements CharSequence {
 			return false;
 		}
 		// We compare against Strings in variables and functions hashmaps in the parser:
-		if (obj instanceof String) {
-			String other = (String) obj;
+		if (obj instanceof String other) {
 			if (other.length() != this.count) {
 				return false;
 			}
@@ -125,8 +124,7 @@ final class FastStr implements CharSequence {
 				}
 			}
 		}
-		else if (obj instanceof FastStr) {
-			FastStr other = (FastStr) obj;
+		else if (obj instanceof FastStr other) {
 			if (other.count != this.count) {
 				return false;
 			}

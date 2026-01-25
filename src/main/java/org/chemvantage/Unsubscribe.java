@@ -3,6 +3,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.Serial;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,6 +15,7 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/unsubscribe")
 public class Unsubscribe extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
     
 	public Unsubscribe() {

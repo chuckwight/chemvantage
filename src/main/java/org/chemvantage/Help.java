@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +40,7 @@ import com.google.gson.JsonParser;
 
 @WebServlet(urlPatterns = {"/Help","/help"})
 public class Help extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
     /**
