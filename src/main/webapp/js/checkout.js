@@ -107,10 +107,12 @@
         })
         .then((response) => response.json())
         .then((order_details) => {
-          let intent_object = "captures";
+          // Extract payment amount from the new response structure
+          let amount = order_details.payment ? order_details.payment.amount : (price * (nmonths - Math.floor(nmonths/3)));
+          let currency = order_details.payment ? order_details.payment.currency : "USD";
+          
           selectPaymentMethod.innerHTML = "Thank you for your purchase: "
-            + order_details.purchase_units[0].payments["captures"][0].amount.value + " "
-            + order_details.purchase_units[0].payments["captures"][0].amount.currency_code + "<br/>"
+            + amount + " " + currency + "<br/>"
             + "Your " + nmonths + "-month ChemVantage subscription is now active and expires on " + order_details.expires + ".<br/>"
             + "OrderId: " + order_id + "<br/>"
             + "Please print a copy of this page for your records.";
@@ -120,7 +122,7 @@
           payment_div.style = "display: none";
         })
         .catch((error) => {
-      	  console.log(err);
+      	  console.log(error);
       	  selectPaymentMethod.innerHTML = "Sorry, an error occurred. Your payment was not completed.";
       	  payment_div.style = "display: none";
         });       

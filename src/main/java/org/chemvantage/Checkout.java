@@ -20,20 +20,19 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
 import java.text.DateFormat;
-import java.util.Base64;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.UUID;
+import java.util.List;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
+import com.paypal.core.PayPalEnvironment;
+import com.paypal.core.PayPalHttpClient;
+import com.paypal.http.HttpResponse;
+import com.paypal.orders.*;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -48,7 +47,28 @@ public class Checkout extends HttpServlet {
 	@Serial
 	private static final long serialVersionUID = 137L;
 	private static int price = 2;
-	private JsonObject auth_json = new JsonObject();
+	private static PayPalHttpClient payPalClient = null;
+	
+	/**
+	 * Get or create the PayPal HTTP client
+	 */
+	private static PayPalHttpClient getPayPalClient() {
+		if (payPalClient == null) {
+			String clientId = Subject.getPayPalClientId();
+			String clientSecret = Subject.getPayPalClientSecret();
+			PayPalEnvironment environment;
+			
+			// Use sandbox for dev environment, live for production
+			if (Subject.getProjectId().equals("dev-vantage-hrd")) {
+				environment = new PayPalEnvironment.Sandbox(clientId, clientSecret);
+			} else {
+				environment = new PayPalEnvironment.Live(clientId, clientSecret);
+			}
+			
+			payPalClient = new PayPalHttpClient(environment);
+		}
+		return payPalClient;
+	}
 	
 	public String getServletInfo() {
 		return "This servlet is used by students to purchase ChemVantage subscriptions.";
@@ -195,95 +215,40 @@ public class Checkout extends HttpServlet {
 		return pu.exp;
 	}
 	
-	String generateAccessToken() throws Exception {
-		/**
-		 * Generate an OAuth 2.0 access token for authenticating with PayPal REST APIs.
-		 * @see https://developer.paypal.com/api/rest/authentication/
-		 */
-		Date now = new Date();
-		
-		try {  // First, see if there is a cached auth token:
-			
-			if (auth_json.isEmpty() || new Date(auth_json.get("exp").getAsLong()).after(now)) throw new Exception();
-			return auth_json.get("access_token").getAsString();
-			
-		} catch (Exception e) {  // retrieve a new auth token from PayPal
-			
-			String auth = Base64.getEncoder().encodeToString((Subject.getPayPalClientId()+":"+Subject.getPayPalClientSecret()).getBytes());
-
-			String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
-			String body = "grant_type=client_credentials";
-
-			URL u = new URI(baseUrl + "/v1/oauth2/token").toURL();
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setDoInput(true);
-			uc.setRequestMethod("POST");
-			uc.setRequestProperty("Authorization", "Basic " + auth);
-			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-			uc.setRequestProperty("Accept", "application/json;charset=UTF-8");
-			uc.setRequestProperty("charset", "utf-8");
-			uc.setUseCaches(false);
-			uc.setReadTimeout(15000);  // waits up to 15 s for server to respond
-			// send the message
-			DataOutputStream wr = new DataOutputStream(uc.getOutputStream());
-			wr.writeBytes(body);
-			wr.close();
-
-			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-			auth_json = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-
-			// Cache the auth_json for future use
-			int expires_in = auth_json.get("expires_in").getAsInt();  // seconds from now
-			Long exp = new Date(new Date().getTime() + expires_in*1000L - 5000L).getTime();  // exp millis - 5 s grace
-			auth_json.addProperty("exp", exp);
-		
-			return auth_json.get("access_token").getAsString();
-		}
-	}
-	
 	String createOrder(User user, HttpServletRequest request) throws Exception {	
 		int nMonths = Integer.parseInt(request.getParameter("nmonths"));
 		int value = price * (nMonths - nMonths/3);
-		
 		String platform_deployment_id = request.getParameter("d");
-		String request_id = UUID.randomUUID().toString();
 		
-		JsonObject order_data = new JsonObject();
-		order_data.addProperty("intent", "CAPTURE");
-		  JsonArray purchaseUnits = new JsonArray();
-		    JsonObject subscription = new JsonObject();
-		    subscription.addProperty("description", nMonths + " - month ChemVantage subscription");
-		      JsonObject amount = new JsonObject();
-		      amount.addProperty("currency_code", "USD");
-		      amount.addProperty("value", (price * (nMonths - nMonths/3)) + ".00");  // calculated discount schedule
-		    subscription.add("amount", amount);
-		 purchaseUnits.add(subscription);
-		order_data.add("purchase_units", purchaseUnits);
-		  JsonObject paymentSource = JsonParser.parseString("{'paypal':{'experience_context':{'shipping_preference':'NO_SHIPPING'}}}").getAsJsonObject();
-		order_data.add("payment_source", paymentSource);
-		String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
+		// Build the order request using PayPal SDK
+		OrderRequest orderRequest = new OrderRequest();
+		orderRequest.checkoutPaymentIntent("CAPTURE");
 		
-		URL u = new URI(baseUrl + "/v2/checkout/orders").toURL();
-		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-		uc.setRequestMethod("POST");
-		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
-		uc.setRequestProperty("PayPal-Request-Id", request_id);
-		uc.setRequestProperty("Content-Type","application/json");
-		uc.setDoOutput(true);
+		// Create purchase unit with amount
+		List<PurchaseUnitRequest> purchaseUnits = new ArrayList<>();
+		PurchaseUnitRequest purchaseUnit = new PurchaseUnitRequest()
+			.description(nMonths + "-month ChemVantage subscription")
+			.amountWithBreakdown(new AmountWithBreakdown()
+				.currencyCode("USD")
+				.value(value + ".00"));
+		purchaseUnits.add(purchaseUnit);
+		orderRequest.purchaseUnits(purchaseUnits);
 		
-		OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-		writer.write(order_data.toString());
-		writer.flush();
-		writer.close();
-		uc.getOutputStream().close();
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-		String order_id = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
-		reader.close();
+		// Configure payment source (no shipping for digital goods)
+		ApplicationContext applicationContext = new ApplicationContext()
+			.shippingPreference("NO_SHIPPING");
+		orderRequest.applicationContext(applicationContext);
 		
-		ofy().save().entity(new PayPalOrder(order_id,new Date(),order_data.toString(),nMonths,value,user,platform_deployment_id,request_id));
+		// Create order via PayPal SDK
+		OrdersCreateRequest ordersCreateRequest = new OrdersCreateRequest();
+		ordersCreateRequest.requestBody(orderRequest);
+		
+		HttpResponse<Order> response = getPayPalClient().execute(ordersCreateRequest);
+		Order order = response.result();
+		String order_id = order.id();
+		
+		// Save order to datastore
+		ofy().save().entity(new PayPalOrder(order_id, new Date(), nMonths, value, user, platform_deployment_id));
 		
 		return order_id;
 	}
@@ -292,24 +257,40 @@ public class Checkout extends HttpServlet {
 		String order_id = request.getParameter("order_id");
 		PayPalOrder order = ofy().load().type(PayPalOrder.class).id(order_id).safe();
 		Deployment deployment = ofy().load().type(Deployment.class).id(order.platform_deployment_id).now();
-		String baseUrl = "https://api-m." + (Subject.getProjectId().equals("dev-vantage-hrd")?"sandbox.":"") + "paypal.com";
 		
-		URL u = new URI(baseUrl + "/v2/checkout/orders/" + order_id + "/capture").toURL();
-		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-		uc.setRequestMethod("POST");
-		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
-		uc.setRequestProperty("PayPal-Request-Id", order.request_id);
-		uc.setRequestProperty("Content-Type","application/json");
+		// Capture the order using PayPal SDK
+		OrdersCaptureRequest ordersCaptureRequest = new OrdersCaptureRequest(order_id);
+		HttpResponse<Order> response = getPayPalClient().execute(ordersCaptureRequest);
+		Order capturedOrder = response.result();
 		
-		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-		JsonObject resp = JsonParser.parseReader(reader).getAsJsonObject();
-		reader.close();
+		// Build response JSON
+		JsonObject resp = new JsonObject();
+		resp.addProperty("id", capturedOrder.id());
+		resp.addProperty("status", capturedOrder.status());
 		
-		order.status = resp.get("status").getAsString();  // update order status
-		if (order.status.equals("COMPLETED")) {  // create new PremiumUser
-			PremiumUser pu = new PremiumUser(user.getHashedId(), order.nMonths, order.value, deployment.getOrganization(),order.id);
+		// Update order status
+		order.status = capturedOrder.status();
+		
+		if ("COMPLETED".equals(capturedOrder.status())) {
+			// Create new PremiumUser
+			PremiumUser pu = new PremiumUser(user.getHashedId(), order.nMonths, order.value, 
+				deployment.getOrganization(), order.id);
 			resp.addProperty("expires", pu.exp.toString());
+			
+			// Add payment details to response
+			if (capturedOrder.purchaseUnits() != null && !capturedOrder.purchaseUnits().isEmpty()) {
+				PurchaseUnit unit = capturedOrder.purchaseUnits().get(0);
+				if (unit.payments() != null && unit.payments().captures() != null && 
+					!unit.payments().captures().isEmpty()) {
+					Capture capture = unit.payments().captures().get(0);
+					JsonObject paymentDetails = new JsonObject();
+					paymentDetails.addProperty("amount", capture.amount().value());
+					paymentDetails.addProperty("currency", capture.amount().currencyCode());
+					resp.add("payment", paymentDetails);
+				}
+			}
 		}
+		
 		ofy().save().entity(order);
 		
 		return resp;
@@ -321,8 +302,6 @@ public class Checkout extends HttpServlet {
 class PayPalOrder {
 	@Id 	String id;    // this is a PayPal-generated value for the path of API calls
 	@Index 	Date created;
-			String request_id;  // this is a ChemVantage-generated value for the request headers
-			String order_data;
 			int nMonths;
 			int value;
 			String hashedId;
@@ -330,14 +309,12 @@ class PayPalOrder {
 			String status = "CREATED";
 			
 	PayPalOrder() {}
-	PayPalOrder(String id, Date created, String order_data, int nMonths, int value, User user, String platform_deployment_id, String request_id) {
+	PayPalOrder(String id, Date created, int nMonths, int value, User user, String platform_deployment_id) {
 		this.id = id;
 		this.created = created;
-		this.order_data = order_data;
 		this.nMonths = nMonths;
 		this.value = value;
 		this.hashedId = user.hashedId;
 		this.platform_deployment_id = platform_deployment_id;
-		this.request_id = request_id;
 	}
 }
