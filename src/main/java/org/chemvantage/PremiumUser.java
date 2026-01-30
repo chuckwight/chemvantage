@@ -19,6 +19,15 @@ class PremiumUser {
 			String order_id;
 	
 	public PremiumUser() {}
+
+	public PremiumUser(String id, String org) {
+		hashedId = id;
+		start = new Date();
+		exp = new Date(start.getTime()+12L*60*60*1000); // 12-hour free trial
+		order_id = "FREE_TRIAL";
+		this.org = org;
+		ofy().save().entity(this).now();
+	}
 	
 	public PremiumUser(String id, int months, int paid, String org, String order_id) {
 		hashedId = id;

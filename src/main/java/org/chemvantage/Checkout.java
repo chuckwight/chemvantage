@@ -20,7 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.*;
-import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -48,6 +48,8 @@ public class Checkout extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	private static int price = 2;
 	private static PayPalHttpClient payPalClient = null;
+	private static final Long ONE_WEEK = 7L*24*60*60*1000;  // Length of free trial period
+	private static final Long TWELVE_HOURS = 12L*60*60*1000; // Extension period for free trial
 	
 	/**
 	 * Get or create the PayPal HTTP client
@@ -96,10 +98,7 @@ public class Checkout extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		response.setContentType("application/json");
-		PrintWriter out = response.getWriter();
 		User user = null;
-		JsonObject res = new JsonObject();
 		
 		try {
 			user = User.getUser(request.getParameter("sig"));
@@ -107,32 +106,45 @@ public class Checkout extends HttpServlet {
 			
 			if (user.isPremium()) {  // do not allow the user to use this page
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-				if (a != null) response.sendRedirect("/" + a.assignmentType + "?sig=" + user.getTokenSignature());
-				else out.println("Your subscription is active.");
+				if (a != null) {
+					response.sendRedirect("/" + a.assignmentType + "?sig=" + user.getTokenSignature());
+				} else {
+					response.setContentType("text/html");
+					PrintWriter out = response.getWriter();
+					out.println("Your subscription is active.");
+				}
 				return;
 			}
 			
 			String userRequest = request.getParameter("UserRequest");
 			switch (userRequest) {
 			case "RedeemVoucher":
+				response.setContentType("application/json");
+				PrintWriter out = response.getWriter();
 				Date exp = redeemVoucher(user,request);
+				JsonObject res = new JsonObject();
 				res.addProperty("exp", exp.toString());
 				out.println(res.toString());
 				break;
 			case "CreateOrder":
+				response.setContentType("application/json");
+				out = response.getWriter();
 				String order_id = createOrder(user,request);
+				res = new JsonObject();
 				res.addProperty("id", order_id);
 				out.println(res.toString());
 				break;
 			case "CompleteOrder":
+				response.setContentType("application/json");
+				out = response.getWriter();
 				out.println(completeOrder(user,request).toString());
 				break;
 			default:
 				response.sendError(400);  // Bad request
 			}
 		} catch (Exception e) {
+			JsonObject res = new JsonObject();
 			res.addProperty("error", e.getMessage());
-			//out.println(res.toString());
 			response.sendError(401,res.toString());
 			Logout.now(request,e);
 		}
@@ -142,7 +154,7 @@ public class Checkout extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		
 		Date now = new Date();
-		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
+		SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd hh:mm a z");
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		
 		buf.append(Subject.header("ChemVantage Subscription", "checkout") + Subject.banner);
@@ -153,9 +165,19 @@ public class Checkout extends HttpServlet {
 		buf.append("<input type=hidden id=platform_deployment_id value=" + d.getPlatformDeploymentId() + " />");
 		buf.append("<input type=hidden id=price value=" + price + " />");
 
-		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
-		String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
+		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();
+		if (u==null) u = new PremiumUser(user.hashedId, d.organization);  // create a free trial PremiumUser if none exists
+		boolean withinFreeTrialPeriod = u.order_id.equals("FREE_TRIAL") && u.start.after(new Date(now.getTime()-ONE_WEEK));
 
+		if (withinFreeTrialPeriod) { // extend free trial if within one week of starting
+			u.exp = new Date(now.getTime()+TWELVE_HOURS);
+			ofy().save().entity(u);
+		}
+
+		String title = null; 
+		if (u.start.after(new Date(now.getTime()-ONE_WEEK))) title = "Individual ChemVantage Subscription";
+		else title = "Your " + ("FREE_TRIAL".equals(u.order_id)?"free trial":"ChemVantage") + " subscription expired on " + df.format(u.exp);
+		
 		buf.append("<h1>" + title + "</h1>\n"
 				+ "A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. "
 				+ "First, please indicate your agreement with the two statements below by checking the boxes.<br/><br/>"
@@ -177,7 +199,14 @@ public class Checkout extends HttpServlet {
 				+ "<option value=12>12 months - $" + 8*price + " USD</option>"
 				+ "</select>&nbsp;"
 				+ "<button class='btn btn-primary' onclick=startCheckout();>Checkout</button>"
-				+ "</div>");		
+				+ "</div>");
+		
+		if (withinFreeTrialPeriod) {
+			buf.append("If you are unable to pay now, you may ");
+			buf.append("<button class='btn btn-primary' onclick=window.location.href='" + Subject.getServerUrl() + "/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'>" + (u.start.before(now)?"continue your":"start a") + " 1-week free trial subscription</button>"
+					+ " (expires on " + df.format(new Date(u.start.getTime()+ONE_WEEK)) + ").<br/>");
+		}
+		
 		buf.append("</div>");  // end of 'select_payment_method' div
 		
 		// Create a div for displaying the PayPal payment buttons (initially hidden)
