@@ -20,7 +20,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.*;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -117,12 +116,31 @@ public class Checkout extends HttpServlet {
 			}
 			
 			String userRequest = request.getParameter("UserRequest");
+			PrintWriter out = null;
+			JsonObject res = null;
+
 			switch (userRequest) {
+			case "ExtendFreeTrial":
+				response.setContentType("application/json");
+				out = response.getWriter();
+				PremiumUser pu = ofy().load().type(PremiumUser.class).id(user.hashedId).now();
+				Date now = new Date();
+				if (pu == null) {
+					Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter("d")).safe();
+					pu = new PremiumUser(user.getHashedId(), deployment.getOrganization(), TWELVE_HOURS); // constructor automatically saves new entity
+				} else if (new Date(pu.start.getTime()+ONE_WEEK).after(now)) {
+					pu.exp = new Date(now.getTime()+TWELVE_HOURS);
+					ofy().save().entity(pu).now();
+				} else throw new Exception("Your free trial period cannot be extended at this time.");
+				res = new JsonObject();
+				res.addProperty("exp", pu.exp.toString());
+				out.println(res.toString());
+				break;
 			case "RedeemVoucher":
 				response.setContentType("application/json");
-				PrintWriter out = response.getWriter();
+				out = response.getWriter();
 				Date exp = redeemVoucher(user,request);
-				JsonObject res = new JsonObject();
+				res = new JsonObject();
 				res.addProperty("exp", exp.toString());
 				out.println(res.toString());
 				break;
@@ -154,7 +172,6 @@ public class Checkout extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		
 		Date now = new Date();
-		SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd hh:mm a z");
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		
 		buf.append(Subject.header("ChemVantage Subscription", "checkout") + Subject.banner);
@@ -166,17 +183,13 @@ public class Checkout extends HttpServlet {
 		buf.append("<input type=hidden id=price value=" + price + " />");
 
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();
-		if (u==null) u = new PremiumUser(user.hashedId, d.organization);  // create a free trial PremiumUser if none exists
-		boolean withinFreeTrialPeriod = u.order_id.equals("FREE_TRIAL") && u.start.after(new Date(now.getTime()-ONE_WEEK));
-
-		if (withinFreeTrialPeriod) { // extend free trial if within one week of starting
-			u.exp = new Date(now.getTime()+TWELVE_HOURS);
-			ofy().save().entity(u);
-		}
+		if (u==null) u = new PremiumUser(user.hashedId, d.organization, 0L);  // create a free trial PremiumUser if none exists
+		Date freeTrialExpires = new Date(u.start.getTime()+ONE_WEEK);
+		boolean withinFreeTrialPeriod = u.order_id.equals("FREE_TRIAL") && now.before(freeTrialExpires);
 
 		String title = null; 
-		if (u.start.after(new Date(now.getTime()-ONE_WEEK))) title = "Individual ChemVantage Subscription";
-		else title = "Your " + ("FREE_TRIAL".equals(u.order_id)?"free trial":"ChemVantage") + " subscription expired on " + df.format(u.exp);
+		if (withinFreeTrialPeriod) title = "Individual ChemVantage Subscription";
+		else title = "Your subscription expired on<br/>" + u.exp.toString() + ".";
 		
 		buf.append("<h1>" + title + "</h1>\n"
 				+ "A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. "
@@ -186,11 +199,22 @@ public class Checkout extends HttpServlet {
 		
 		buf.append("<div id=select_payment_method style='display:none'>\n");
 
-		buf.append( "If you have a subscription voucher, please enter the code here: "
+		// Place three buttons for payment options here
+		buf.append("<p><b>Please select one of the options below:</b></p>"
+				+ "<p><button class='btn btn-primary' onclick='showVoucherRedemption();'>&nbsp;Redeem a subscription voucher&nbsp;</button>&nbsp;&nbsp;"
+				+ "<button class='btn btn-primary' onclick='showSubscriptionPurchase();'>&nbsp;Purchase a subscription&nbsp;</button></p>");
+		if (withinFreeTrialPeriod && u.exp.equals(u.start)) { // only show this option for new users is still within the initial free trial period
+				buf.append("<div id=postpone_payment><button class='btn btn-secondary' onclick=extendFreeTrial('" + user.getTokenSignature() + "');>&nbsp;Request one-time temporary access&nbsp;</button></div>");
+		}
+		// Create div elements for voucher redemption and subscription purchase (initially hidden)
+		buf.append("<div id=voucher_redemption style='display: none'>"
+				+ "Please enter the code code here: "
 				+ "<input id=voucher_code type=text size=10 />&nbsp;"
-				+ "<button class='btn btn-primary' onclick=redeemVoucher('" + user.getTokenSignature() + "','" + d.getPlatformDeploymentId() + "')>&nbsp;Redeem</button><br/>");
+				+ "<button class='btn btn-primary' onclick=redeemVoucher('" + user.getTokenSignature() + "','" + d.getPlatformDeploymentId() + "');>Redeem</button><br/>"
+				+ "</div>");  // end of voucher redemption div
 		
-		buf.append("<hr>Otherwise, please select the desired number of months you wish to purchase:<br/>"
+		buf.append("<div id=subscription_purchase style='display: none'>"
+				+ "Please select the desired number of months you wish to purchase:<br/>"
 				+ "<div style='align: center'>"
 				+ "<select id=nmonths>"
 				+ "<option value=1>1 month - $" + 1*price + " USD</option>"
@@ -200,13 +224,7 @@ public class Checkout extends HttpServlet {
 				+ "</select>&nbsp;"
 				+ "<button class='btn btn-primary' onclick=startCheckout();>Checkout</button>"
 				+ "</div>");
-		
-		if (withinFreeTrialPeriod) {
-			buf.append("If you are unable to pay now, you may ");
-			buf.append("<button class='btn btn-primary' onclick=window.location.href='" + Subject.getServerUrl() + "/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'>" + (u.start.before(now)?"continue your":"start a") + " 1-week free trial subscription</button>"
-					+ " (expires on " + df.format(new Date(u.start.getTime()+ONE_WEEK)) + ").<br/>");
-		}
-		
+		buf.append("</div>");  // end of 'subscription_purchase' div
 		buf.append("</div>");  // end of 'select_payment_method' div
 		
 		// Create a div for displaying the PayPal payment buttons (initially hidden)

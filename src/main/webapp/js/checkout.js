@@ -24,7 +24,49 @@
     }
    	else selectPaymentMethod.style = 'display:none';
   }
-    
+  
+  function showVoucherRedemption() {
+    document.getElementById('voucher_redemption').style = 'display:inline';
+    document.getElementById('subscription_purchase').style = 'display:none';
+    var postpone = document.getElementById('postpone_payment');
+    if (postpone) postpone.style = 'display:none';
+  }
+  
+  function showSubscriptionPurchase() {
+    document.getElementById('voucher_redemption').style = 'display:none';
+    document.getElementById('subscription_purchase').style = 'display:inline';
+    var postpone = document.getElementById('postpone_payment');
+    if (postpone) postpone.style = 'display:none';  
+  }
+
+  function extendFreeTrial(sig) {
+    fetch("/checkout", {  
+      method: "POST",
+      headers:{
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        "UserRequest": "ExtendFreeTrial",
+        "sig": sig,
+      })
+    })
+    .then (response => {
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw new Error('API call failed. Response status code was ' + response.status);
+      }
+    })
+    .then (data => {
+      selectPaymentMethod.innerHTML = "<h2>Your request has been approved</h2>Your temporary subscription expires in 12 hours at " + data.exp + ".";
+      document.getElementById('proceed').style = "display: inline";
+    })
+    .catch(error => {
+      selectPaymentMethod.innerHTML = "<h2>Sorry, an error occurred.</h2>"   + error.message;
+      console.error(error);
+    });
+  }
+
   function redeemVoucher(sig,platform_deployment_id) {
   	let voucher_code = document.getElementById("voucher_code").value;
   	let proceed = document.getElementById("proceed");
@@ -57,7 +99,7 @@
   	  document.getElementById('proceed').style = "display: inline";
   	})
   	.catch(error => {
-  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>";
+  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>"   + error.message;
   	  console.error(error);
   	});
   }
