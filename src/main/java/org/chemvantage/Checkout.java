@@ -47,8 +47,8 @@ public class Checkout extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	private static int price = 2;
 	private static PayPalHttpClient payPalClient = null;
-	private static final Long ONE_WEEK = 7L*24*60*60*1000;  // Length of free trial period
-	private static final Long TWELVE_HOURS = 12L*60*60*1000; // Extension period for free trial
+	private static final Long ONE_WEEK = 7L*24*60*60*1000;  // Length of free trial eligibilityperiod
+	private static final Long ONE_DAY = 24L*60*60*1000; // Extension period for free trial
 	
 	/**
 	 * Get or create the PayPal HTTP client
@@ -97,73 +97,56 @@ public class Checkout extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		PrintWriter out = response.getWriter();
+		response.setContentType("application/json");
+		JsonObject res = new JsonObject();
 		User user = null;
 		
 		try {
 			user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception("You must be logged in through your class LMS to see this page.");
+			if (user==null) throw new Exception("Launch the assignment from your LMS to access this page.");
 			
 			if (user.isPremium()) {  // do not allow the user to use this page
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-				if (a != null) {
-					response.sendRedirect("/" + a.assignmentType + "?sig=" + user.getTokenSignature());
-				} else {
-					response.setContentType("text/html");
-					PrintWriter out = response.getWriter();
-					out.println("Your subscription is active.");
-				}
+				if (a != null) response.sendRedirect("/" + a.assignmentType + "?sig=" + user.getTokenSignature());
 				return;
 			}
 			
 			String userRequest = request.getParameter("UserRequest");
-			PrintWriter out = null;
-			JsonObject res = null;
-
+			
 			switch (userRequest) {
 			case "ExtendFreeTrial":
-				response.setContentType("application/json");
-				out = response.getWriter();
 				PremiumUser pu = ofy().load().type(PremiumUser.class).id(user.hashedId).now();
 				Date now = new Date();
 				if (pu == null) {
 					Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter("d")).safe();
-					pu = new PremiumUser(user.getHashedId(), deployment.getOrganization(), TWELVE_HOURS); // constructor automatically saves new entity
+					pu = new PremiumUser(user.getHashedId(), deployment.getOrganization(), ONE_DAY); // constructor automatically saves new entity
 				} else if (new Date(pu.start.getTime()+ONE_WEEK).after(now)) {
-					pu.exp = new Date(now.getTime()+TWELVE_HOURS);
+					pu.exp = new Date(now.getTime()+ONE_DAY);
 					ofy().save().entity(pu).now();
 				} else throw new Exception("Your free trial period cannot be extended at this time.");
-				res = new JsonObject();
 				res.addProperty("exp", pu.exp.toString());
 				out.println(res.toString());
 				break;
 			case "RedeemVoucher":
-				response.setContentType("application/json");
-				out = response.getWriter();
 				Date exp = redeemVoucher(user,request);
-				res = new JsonObject();
 				res.addProperty("exp", exp.toString());
 				out.println(res.toString());
 				break;
 			case "CreateOrder":
-				response.setContentType("application/json");
-				out = response.getWriter();
 				String order_id = createOrder(user,request);
-				res = new JsonObject();
 				res.addProperty("id", order_id);
 				out.println(res.toString());
 				break;
 			case "CompleteOrder":
-				response.setContentType("application/json");
-				out = response.getWriter();
 				out.println(completeOrder(user,request).toString());
 				break;
 			default:
 				response.sendError(400);  // Bad request
 			}
 		} catch (Exception e) {
-			JsonObject res = new JsonObject();
 			res.addProperty("error", e.getMessage());
-			response.sendError(401,res.toString());
+			out.println(res.toString());
 			Logout.now(request,e);
 		}
 	}
@@ -204,7 +187,7 @@ public class Checkout extends HttpServlet {
 				+ "<p><button class='btn btn-primary' onclick='showVoucherRedemption();'>&nbsp;Redeem a subscription voucher&nbsp;</button>&nbsp;&nbsp;"
 				+ "<button class='btn btn-primary' onclick='showSubscriptionPurchase();'>&nbsp;Purchase a subscription&nbsp;</button></p>");
 		if (withinFreeTrialPeriod && u.exp.equals(u.start)) { // only show this option for new users is still within the initial free trial period
-				buf.append("<div id=postpone_payment><button class='btn btn-secondary' onclick=extendFreeTrial('" + user.getTokenSignature() + "');>&nbsp;Request one-time temporary access&nbsp;</button></div>");
+				buf.append("<div id=postpone_payment><button class='btn btn-secondary' onclick=extendFreeTrial('" + user.getTokenSignature() + "');>&nbsp;Start now, pay later.&nbsp;</button></div>");
 		}
 		// Create div elements for voucher redemption and subscription purchase (initially hidden)
 		buf.append("<div id=voucher_redemption style='display: none'>"

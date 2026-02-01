@@ -58,8 +58,12 @@
       }
     })
     .then (data => {
-      selectPaymentMethod.innerHTML = "<h2>Your request has been approved</h2>Your temporary subscription expires in 12 hours at " + data.exp + ".";
-      document.getElementById('proceed').style = "display: inline";
+      if (data.error) {
+        throw new Error(data.error);
+      } else {
+        selectPaymentMethod.innerHTML = "<h2>Good choice!</h2>You may use ChemVantage free for the next 24 hours and purchase a subscription after that.";
+        document.getElementById('proceed').style = "display: inline";
+      }
     })
     .catch(error => {
       selectPaymentMethod.innerHTML = "<h2>Sorry, an error occurred.</h2>"   + error.message;
@@ -95,11 +99,14 @@
   	  }
   	})
   	.then (data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
   	  selectPaymentMethod.innerHTML = "<h2>Thank you</h2>Your voucher was redeemed successfully.<br/>Your subscription expires on " + data.exp;
-  	  document.getElementById('proceed').style = "display: inline";
+  	  proceed.style = "display: inline";
   	})
   	.catch(error => {
-  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>"   + error.message;
+  	  selectPaymentMethod.innerHTML = "<h2>Error</h2>"   + error.message;
   	  console.error(error);
   	});
   }
@@ -153,7 +160,7 @@
           let amount = order_details.payment ? order_details.payment.amount : (price * (nmonths - Math.floor(nmonths/3)));
           let currency = order_details.payment ? order_details.payment.currency : "USD";
           
-          selectPaymentMethod.innerHTML = "Thank you for your purchase: "
+          selectPaymentMethod.innerHTML = "<h2>Thank you for your purchase:</h2> "
             + amount + " " + currency + "<br/>"
             + "Your " + nmonths + "-month ChemVantage subscription is now active and expires on " + order_details.expires + ".<br/>"
             + "OrderId: " + order_id + "<br/>"
