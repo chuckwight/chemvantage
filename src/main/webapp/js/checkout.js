@@ -195,6 +195,7 @@
       
       onCancel: function(data) {
       	console.log(data);
+        logoutUser(sig);
       	selectPaymentMethod.innerHTML = "<h2>Order canceled.</h2>"
       	  + "To continue, please launch the assignment again in your LMS.";
       	payment_div.style = "display: none";
@@ -202,6 +203,7 @@
       
       onError: function(error) {
       	console.log(error);
+        logoutUser(sig);
       },
     })  
   	.render('#paypal-button-container');
