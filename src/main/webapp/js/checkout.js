@@ -71,13 +71,28 @@
     });
   }
 
+  function logoutUser(sig) {
+    fetch("/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        "UserRequest": "Logout",
+        "sig": sig
+      })
+    }).catch(error => console.error('Logout failed:', error));
+  }
+
   function redeemVoucher(sig,platform_deployment_id) {
   	let voucher_code = document.getElementById("voucher_code").value;
   	let proceed = document.getElementById("proceed");
-  	
   	if (!voucher_code || voucher_code.length!=6) {
-  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>";
-  	  return null;
+      logoutUser(sig);
+  	  selectPaymentMethod.innerHTML = "<h2>Error</h2>"
+        + "The code was missing or invalid.<br/>"
+        + "<b>You are now logged out of ChemVantage</b>. To proceed, please click the assignment link in your LMS.";
+      return null;
   	}
     fetch("/checkout", {
  	  method: "POST",
@@ -106,8 +121,9 @@
   	  proceed.style = "display: inline";
   	})
   	.catch(error => {
-  	  selectPaymentMethod.innerHTML = "<h2>Error</h2>"   + error.message;
-  	  console.error(error);
+  	  logoutUser(sig);
+      selectPaymentMethod.innerHTML = "<h2>Error</h2>"   + error.message
+      + "<br/><b>You are now logged out of ChemVantage</b>. To proceed, please click the assignment link in your LMS.";
   	});
   }
   

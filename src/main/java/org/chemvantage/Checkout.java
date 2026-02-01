@@ -141,6 +141,11 @@ public class Checkout extends HttpServlet {
 			case "CompleteOrder":
 				out.println(completeOrder(user,request).toString());
 				break;
+			case "Logout":
+				Logout.now(user);
+				res.addProperty("success", true);
+				out.println(res.toString());
+				break;
 			default:
 				response.sendError(400);  // Bad request
 			}
@@ -229,10 +234,10 @@ public class Checkout extends HttpServlet {
 		PremiumUser pu = null;
 		
 		String voucherCode = request.getParameter("voucher_code");
-		if (voucherCode==null || voucherCode.isEmpty()) throw new Exception("Sorry, the voucher code was missing or invalid.");
+		if (voucherCode==null || voucherCode.isEmpty()) throw new Exception("The code was missing or invalid.");
 		voucherCode = voucherCode.toUpperCase();
 		Voucher v = ofy().load().type(Voucher.class).id(voucherCode).now();
-		if (v==null) throw new Exception("Sorry, the voucher code was missing or invalid.");
+		if (v==null) throw new Exception("The code was missing  or invalid.");
 		if (!v.activate()) { // check for duplicate submission by same user
 			pu = ofy().load().type(PremiumUser.class).id(user.hashedId).safe();
 			if (pu.order_id.equals(v.code)) return pu.exp;
