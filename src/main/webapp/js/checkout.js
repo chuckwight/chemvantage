@@ -204,6 +204,9 @@
       onError: function(error) {
       	console.log(error);
         logoutUser(sig);
+        selectPaymentMethod.innerHTML = "<h2>Error</h2>"
+      	  + "To continue, please launch the assignment again in your LMS.";
+      	payment_div.style = "display: none";
       },
     })  
   	.render('#paypal-button-container');
