@@ -14,7 +14,11 @@ automatic_scaling:
 
 handlers:
 
-# Map all .html files to static copies
+# React SPA routes (let Spring Boot handle, not App Engine static handlers)
+# App cannot use static_files for content in JARs - only for filesystem files
+# Spring Boot will serve from classpath:/META-INF/resources/
+
+# Map all .html files to static copies for root-level HTML files
 - url: (/.*\.html)
   static_files: classes/META-INF/resources\1
   upload: classes/META-INF/resources/.*\.html
