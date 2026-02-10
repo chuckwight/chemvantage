@@ -423,13 +423,17 @@ public class LTIv1p3Launch extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
+		// Redirect Homework assignments to React SPA for both students and instructors
+		if ("Homework".equals(myAssignment.assignmentType)) {
+			String jwt = SpaJwt.issue(user);
+			response.sendRedirect(Subject.getServerUrl() + "/spa_homework.html?jwt=" + jwt);
+			return;
+		}
+		
 		if (user.isInstructor()) {
 			switch(myAssignment.assignmentType) {
 			case "Quiz":
 				out.println(Subject.header("Instructor Page") + Quiz.instructorPage(user, myAssignment) + Subject.footer);
-				break;
-			case "Homework":
-				out.println(Subject.header("Instructor Page") + Homework.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "PracticeExam":
 				out.println(Subject.header("Instructor Page") + PracticeExam.instructorPage(user, myAssignment) + Subject.footer);

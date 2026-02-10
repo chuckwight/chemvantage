@@ -63,154 +63,255 @@ public class Homework extends HttpServlet {
 	public void init (ServletConfig config) throws ServletException {
 		super.init(config);
 	}
+	
+	private String resolveSig(HttpServletRequest request, JsonObject body) {
+		String token = SpaRequest.getBearerToken(request);
+		String sig = SpaJwt.getSig(token);
+		if (sig != null && !sig.isBlank()) return sig;
+		sig = SpaRequest.getJsonString(body, "sig");
+		if (sig != null && !sig.isBlank()) return sig;
+		return request.getParameter("sig");
+	}
+	
+	private JsonObject buildJsonResponse(User user, Assignment assignment, String html, boolean ok, String errorMessage) {
+		JsonObject payload = new JsonObject();
+		payload.addProperty("ok", ok);
+		payload.addProperty("html", html == null ? "" : html);
+		payload.addProperty("assignmentType", assignment == null ? "Homework" : assignment.assignmentType);
+		if (user != null) payload.addProperty("jwt", SpaJwt.issue(user));
+		if (errorMessage != null) payload.addProperty("error", errorMessage);
+		return payload;
+	}
+	
+	private void writeJsonResponse(HttpServletResponse response, JsonObject payload) throws IOException {
+		response.setContentType("application/json");
+		response.setCharacterEncoding("UTF-8");
+		PrintWriter out = response.getWriter();
+		out.println(payload.toString());
+	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
-		response.setContentType("text/html");
+		boolean isJson = SpaRequest.isJsonRequest(request);
+		JsonObject body = isJson ? SpaRequest.readJsonBody(request) : null;
+		HttpServletRequest req = SpaRequest.wrap(request, body);
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser(request.getParameter("sig"));
+			String sig = resolveSig(request, body);
+			User user = User.getUser(sig);
 			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
-			String userRequest = request.getParameter("UserRequest");
+			String userRequest = req.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			String html = "";
+			String title = "";
+			boolean wrapHeader = true;
+			boolean includeFooter = true;
 			
 			switch (userRequest) {
 			case "GetExplanation":
-				long questionId = Long.parseLong(request.getParameter("QuestionId"));
-				long parameter = Long.parseLong(request.getParameter("Parameter"));
+				long questionId = Long.parseLong(req.getParameter("QuestionId"));
+				long parameter = Long.parseLong(req.getParameter("Parameter"));
 				Question q = ofy().load().type(Question.class).id(questionId).now();
 				if (q.requiresParser()) q.setParameters(parameter);
-				out.println(q.getExplanation());
+				html = q.getExplanation();
+				wrapHeader = false;
 				break;
 			case "ShowScores":
-				String forUserId = request.getParameter("ForUserId");
-				out.println(Subject.header("ChemVantage Scores") + showScores(user,a,forUserId) + Subject.footer);
+				String forUserId = req.getParameter("ForUserId");
+				html = showScores(user,a,forUserId);
+				title = "ChemVantage Scores";
 				break;
 			case "ShowSummary":
-				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user, a) + Subject.footer);
+				html = showSummary(user, a);
+				title = "Your Class ChemVantage Scores";
 				break;
 			case "Review":
-				forUserId = request.getParameter("ForUserId");
-				String forUserName = request.getParameter("ForUserName");
-				out.println(Subject.header("Homework Review") + reviewSubmissions(user,a,forUserId,forUserName));
+				forUserId = req.getParameter("ForUserId");
+				String forUserName = req.getParameter("ForUserName");
+				html = reviewSubmissions(user,a,forUserId,forUserName);
+				title = "Homework Review";
+				includeFooter = false;
 				break;
 			case "AssignHomeworkQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
-				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
+				if (user.isInstructor()) html = selectQuestionsForm(user,a,req);
+				else html = "<h2>Forbidden</h2>You must be signed in as the instructor to perform this function.";
+				title = "Customize ChemVantage Homework Assignment";
 				break;
 			case "SynchronizeScore":
-				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
+				html = synchronizeScore(user,a,req.getParameter("ForUserId"));
+				wrapHeader = false;
 				break;
 			case "CreateCustomQuestion":
-				out.println(Subject.header("Create Question") + newQuestionForm(user,request) + Subject.footer);
+				html = newQuestionForm(user,req);
+				title = "Create Question";
 				break;
 			case "Logout":
-				out.println(Subject.header() + Logout.now(user) + Subject.footer);
+				html = Logout.now(user);
 				break;
 			case "Preview":
-				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
+				html = previewQuestion(user,req);
 				break;
 			case "Instructor":
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				html = instructorPage(user,a);
+				title = "ChemVantage Instructor Page";
 				break;
 			default:
 				long hintQuestionId = 0L;
 				try {
-					hintQuestionId = Long.parseLong(request.getParameter("Q"));
+					hintQuestionId = Long.parseLong(req.getParameter("Q"));
 				} catch (Exception e) {}
-				boolean showOptional = Boolean.parseBoolean(request.getParameter("ShowOptional"));
-				out.println(Subject.header("Homework") + printHomework(user,a,hintQuestionId,showOptional) + Subject.footer);
+				boolean showOptional = Boolean.parseBoolean(req.getParameter("ShowOptional"));
+				html = printHomework(user,a,hintQuestionId,showOptional);
+				title = "Homework";
+			}
+			
+			if (isJson) {
+				writeJsonResponse(response, buildJsonResponse(user, a, html, true, null));
+			} else {
+				response.setContentType("text/html");
+				if (wrapHeader) {
+					String footer = includeFooter ? Subject.footer : "";
+					if (title == null || title.isEmpty()) out.println(Subject.header() + html + footer);
+					else out.println(Subject.header(title) + html + footer);
+				} else {
+					out.println(html);
+				}
 			}
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			if (isJson) {
+				writeJsonResponse(response, buildJsonResponse(null, null, Logout.now(req,e), false, e.getMessage()));
+			} else {
+				response.setContentType("text/html");
+				out.println(Subject.header() + Logout.now(req,e) + Subject.footer);
+			}
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
-		response.setContentType("text/html");
+		boolean isJson = SpaRequest.isJsonRequest(request);
+		JsonObject body = isJson ? SpaRequest.readJsonBody(request) : null;
+		HttpServletRequest req = SpaRequest.wrap(request, body);
 		PrintWriter out = response.getWriter();
 
 		try {
-			User user = User.getUser(request.getParameter("sig"));
+			String sig = resolveSig(request, body);
+			User user = User.getUser(sig);
 			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			if (a == null) throw new Exception("No assignment found for this user.");
 
-			String userRequest = request.getParameter("UserRequest");
+			String userRequest = req.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			String html = "";
+			String title = "";
+			boolean wrapHeader = true;
+			boolean includeFooter = true;
 
 			switch (userRequest) {
 			case "UpdateAssignment":
-				a.updateConceptQuestions(user,request);
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				a.updateConceptQuestions(user,req);
+				html = instructorPage(user,a);
+				title = "ChemVantage Instructor Page";
 				break;
 			case "Save New Title":
-				a.title = request.getParameter("AssignmentTitle");
+				a.title = req.getParameter("AssignmentTitle");
 				ofy().save().entity(a).now();
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				html = instructorPage(user,a);
+				title = "ChemVantage Instructor Page";
 				break;
 			case "Set Allowed Attempts":
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				try {
-					a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+					a.attemptsAllowed = Integer.parseInt(req.getParameter("AttemptsAllowed"));
 					if (a.attemptsAllowed<1) a.attemptsAllowed = null;
 				} catch (Exception e) {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				html = instructorPage(user,a);
+				title = "ChemVantage Instructor Page";
 				break;
 			case "Save Question":
-				saveQuestion(user,request);
-				out.println(Subject.header("ChemVantage Instructor Page") + selectQuestionsForm(user,a,request) + Subject.footer);
+				saveQuestion(user,req);
+				html = selectQuestionsForm(user,a,req);
+				title = "ChemVantage Instructor Page";
 				break;
 			case "Delete Question":
-				deleteQuestion(user,request);
-				out.println(Subject.header("ChemVantage Instructor Page") + selectQuestionsForm(user,a,request) + Subject.footer);
+				deleteQuestion(user,req);
+				html = selectQuestionsForm(user,a,req);
+				title = "ChemVantage Instructor Page";
 				break;
 			case "Quit":
-				out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				html = selectQuestionsForm(user,a,req);
+				title = "Customize ChemVantage Homework Assignment";
 				break;
 			case "Preview":
-				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
+				html = previewQuestion(user,req);
 				break;
 			case "Synchronize Scores":
-				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else out.println("Synchronization request failed.");
+				if (synchronizeScores(user,a,req)) {
+					html = instructorPage(user,a);
+					title = "ChemVantage Instructor Page";
+				} else {
+					html = "Synchronization request failed.";
+					wrapHeader = false;
+				}
 				break;
 			case "IncludeCustomQuestions":
 				if (user.isInstructor()) {
-					includeCustomQuestions(user,a,request);
-					out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+					includeCustomQuestions(user,a,req);
+					html = selectQuestionsForm(user,a,req);
+					title = "Customize ChemVantage Homework Assignment";
 				}
 				break;
 			case "AddKeyConcept":
 				if (user.isInstructor()) {
 					try {
-						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+						long conceptId = Long.parseLong(req.getParameter("ConceptId"));
 						if (!a.conceptIds.contains(conceptId)) {
 							a.conceptIds.add(conceptId);
 							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list());	
 							ofy().save().entity(a).now();
 						}
 					} catch (Exception e) {}
-					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
+					html = instructorPage(user,a);
+					title = "Instructor Page";
 				}
 				break;
-			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
+			default:
+				html = printScore(user,a,req);
+				title = "ChemVantage Homework Results";
+			}
+			
+			if (isJson) {
+				writeJsonResponse(response, buildJsonResponse(user, a, html, true, null));
+			} else {
+				response.setContentType("text/html");
+				if (wrapHeader) {
+					String footer = includeFooter ? Subject.footer : "";
+					if (title == null || title.isEmpty()) out.println(Subject.header() + html + footer);
+					else out.println(Subject.header(title) + html + footer);
+				} else {
+					out.println(html);
+				}
 			}
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			if (isJson) {
+				writeJsonResponse(response, buildJsonResponse(null, null, Logout.now(req,e), false, e.getMessage()));
+			} else {
+				response.setContentType("text/html");
+				out.println(Subject.header() + Logout.now(req,e) + Subject.footer);
+			}
 		}
 	}
 

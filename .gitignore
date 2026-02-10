@@ -7,3 +7,6 @@
 /.project/
 /bin/
 /.classpath
+/frontend/react_app/node_modules/
+/frontend/react_app/build/
+/src/main/webapp/react/app/
