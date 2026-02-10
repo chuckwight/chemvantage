@@ -424,10 +424,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		// Redirect Homework assignments to React SPA for both students and instructors
-		if ("Homework".equals(myAssignment.assignmentType)) {
-			String jwt = SpaJwt.issue(user);
-			response.sendRedirect(Subject.getServerUrl() + "/spa_homework.html?jwt=" + jwt);
-			return;
+		if ("Homework".equals(myAssignment.assignmentType)) {;
+			String react_page = "<!DOCTYPE html><html><head><title>ChemVantage</title></head><body><script>window.location='/react/app/index.html?jwt=" + SpaJwt.issue(user) + "&assignmentType=" + myAssignment.assignmentType + "';</script></body></html>";
+			out.println(react_page);
 		}
 		
 		if (user.isInstructor()) {

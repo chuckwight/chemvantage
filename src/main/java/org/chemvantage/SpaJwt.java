@@ -4,7 +4,6 @@ import java.util.Date;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 public final class SpaJwt {
@@ -33,8 +32,10 @@ public final class SpaJwt {
 					.withIssuer(Subject.getServerUrl())
 					.build()
 					.verify(token);
+            String nonce = jwt.getClaim("nonce").asString();
+            if (!Nonce.isUnique(nonce)) throw new Exception();
 			return jwt.getClaim("sig").asString();
-		} catch (JWTVerificationException e) {
+		} catch (Exception e) {
 			return null;
 		}
 	}

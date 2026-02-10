@@ -94,6 +94,7 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		boolean isJson = SpaRequest.isJsonRequest(request);
+		if (isJson) response.setContentType("application/json;charset=UTF-8");
 		JsonObject body = isJson ? SpaRequest.readJsonBody(request) : null;
 		HttpServletRequest req = SpaRequest.wrap(request, body);
 		PrintWriter out = response.getWriter();
@@ -197,6 +198,7 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		boolean isJson = SpaRequest.isJsonRequest(request);
+		if (isJson) response.setContentType("application/json;charset=UTF-8");
 		JsonObject body = isJson ? SpaRequest.readJsonBody(request) : null;
 		HttpServletRequest req = SpaRequest.wrap(request, body);
 		PrintWriter out = response.getWriter();

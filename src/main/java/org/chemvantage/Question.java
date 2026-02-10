@@ -358,7 +358,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<label for=" + this.id + "><span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span></label><br/>");
 						
 			for (int i=1;i<6;i++) {
-				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star " + i + " for rating' "        // properties
+				buf.append("<img src='/images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star " + i + " for rating' "        // properties
 						+ "onmouseover=showStars" + this.id + "(" + i + ") onmouseout=showStars" + this.id + "(0) onclick=showStars" + this.id + "(" + i + ",true) />" ); // mouse actions
 			}
 			
