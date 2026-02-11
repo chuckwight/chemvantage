@@ -22,6 +22,9 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.util.Date;
 import java.util.Random;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -30,7 +33,7 @@ import com.googlecode.objectify.annotation.Index;
 public class User {
 	@Id 	Long 	sig;
 	@Index 	String  hashedId;   		   // used to check for duplicate stored values
-	@Index	Date 	exp;				   // max 90 minutes from now
+	@Index	Date 	exp;				   // default 90 min; max 500 minutes
 			String  encryptedId;		   // stored temporarily in encrypted form
 			String	platformId;			   // URL of the LMS
 	@Index	long	assignmentId = 0L;     // used only for LTI users
@@ -75,17 +78,19 @@ public class User {
 		this.encryptedId = encryptId(user_id,0L);  // temporary until sig is assigned in setToken()
 	}
 
-	static User getUser(String sig) {  // default token expiration of 90 minutes
-    	return getUser(sig,90);
+	static User getUser(String token) {  // default token expiration of 90 minutes
+    	return getUser(token,90);
 	}
 		
-	static User getUser(String sig,int minutesRequired) {   // allows custom expiration for long assignments
-		if (sig==null) return null;
+	static User getUser(String token,int minutesRequired) {   // allows custom expiration for long assignments
+		if (token==null) return null;
     	if (minutesRequired > 500) minutesRequired = 500;
 		Date now = new Date();
     	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
 		
     	try {  // try to find the LTI User entity in the datastore
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
+			String sig = JWT.require(algorithm).build().verify(token).getSubject();
     		User user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
     		if (user.exp.before(now)) return null; // entity has expired
     		else { // extend the exp time
@@ -96,7 +101,7 @@ public class User {
     	} catch (Exception e) {}
     	
     	try {  // try to validate an anonymous user
-    		Date exp = new Date(encode(Long.parseLong(sig,16)));
+    		Date exp = new Date(encode(Long.parseLong(token,16)));
     		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
     		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(exp.getTime());
     	} catch (Exception e) {}
@@ -228,7 +233,14 @@ public class User {
 		if (this.isAnonymous()) return Long.toHexString(sig);
 		else {
 			if (sig==null) setToken();
-			return String.valueOf(sig);     // String version of @Id value of User in the datastore
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
+			Date now = new Date();
+			Date exp = this.exp; // normally 90 minutes from now
+			return JWT.create()
+					.withSubject(String.valueOf(sig))
+					.withIssuedAt(now)
+					.withExpiresAt(exp)
+					.sign(algorithm);
 		}
 	}
 	
@@ -239,7 +251,7 @@ public class User {
 	
 	void setToken() {
 		if (this.isAnonymous()) return;  // never save anonymous users to the database
-		else { // check to see ig this user/assignment combination already exists
+		else { // check to see if this user/assignment combination already exists
 			try {  // check to see if there is a current user in the database
 				User u = ofy().load().type(User.class).filter("hashedId",this.hashedId).filter("assignmentId",this.assignmentId).first().safe();
 				this.sig = u.sig;  // this is a current user; just use it
