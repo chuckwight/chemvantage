@@ -20,6 +20,9 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 public class Logout {
@@ -52,19 +55,24 @@ public class Logout {
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
-		StringBuffer buf = new StringBuffer("<h1>Logout</h1><h2>You are logged out of ChemVantage.</h2>");
+		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
-		buf.append("<br/><br/>Most likely, your access token expired after a period of inactivity. You can simply relaunch the "
-				+ "assignment from your class learning management system. If you think it's a more serious problem, please take "
-				+ "a moment to <a href=/Feedback>leave us feedback</a>. Copy the error message above and tell us what you were "
-				+ "trying to do at the time (e.g., download a quiz or submit the answer to a homework problem). We will fix it ASAP.<br/><br/>"
-				+ "Thank you<br/><br/>");
-
 		String sig = request.getParameter("sig");
-		if (sig != null) try {
-			ofy().delete().key(key(User.class, Long.parseLong(sig))).now();
-		} catch (Exception e) {}
-
+		if (sig != null) {
+			try {
+				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
+				sig = JWT.require(algorithm).build().verify(sig).getSubject();
+			} catch (Exception e) {}
+			ofy().delete().key(key(User.class, Long.parseLong(sig))).now();	
+		}
+		buf.append("<h2>You are now logged out of ChemVantage</h2>"
+				+ "If this happened unexpectedly, it is likely that the access token "
+				+ "exchanged between your learning management system (LMS) and ChemVantage "
+				+ "has expired (after a period of typically 90 minutes)."
+				+ "<p>You can activate a new session and token by returning to your learning "
+				+ "management system (LMS) and clicking the assignment link there.<p>"
+				+ "If you are having technical difficulty using ChemVantage, <a href=/Feedback>"
+				+ "please tell us</a> so we can fix the problem.");
 		return buf.toString();
 	}
 
