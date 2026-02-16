@@ -36,9 +36,28 @@ public class SmartText extends HttpServlet {
             User user = User.getUser(request.getParameter("sig"));
             if (user==null) throw new Exception("User token expired.");
 
-            long aId = user.getAssignmentId();      
-            Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-
+            Assignment a = null;
+            try {
+                a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+            } catch (Exception e) {
+            	Text text = ofy().load().type(Text.class).first().now();
+				a = new Assignment("SmartText",null);
+				a.textId = text.id;
+				a.chapterNumber = 1;
+				for (Chapter ch : text.chapters) {
+					if (ch.chapterNumber == a.chapterNumber) {
+						a.title = ch.title;
+						for (Long conceptId : ch.conceptIds) {
+							a.conceptIds.add(conceptId);
+							List<Key<Question>> conceptQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list();
+							if (!conceptQuestionKeys.isEmpty()) a.questionKeys.addAll(conceptQuestionKeys);
+						}
+						break;
+					}
+				}
+				a.valid = new Date();
+			}
+            
             String userRequest = request.getParameter("UserRequest");
             if (userRequest==null) userRequest = "";
 

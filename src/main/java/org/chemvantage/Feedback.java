@@ -33,6 +33,14 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseServiceClient;
+import com.google.recaptchaenterprise.v1.Assessment;
+import com.google.recaptchaenterprise.v1.CreateAssessmentRequest;
+import com.google.recaptchaenterprise.v1.Event;
+import com.google.recaptchaenterprise.v1.ProjectName;
+import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
+import java.io.IOException;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.cmd.Query;
@@ -138,24 +146,9 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
-		/*
 		buf.append("Please rate your overall experience with ChemVantage:<br/>");
 
-		buf.append("<span id='vote' style='color:red;'>(click a star):</span><br/>");
-		for (int istar=1;istar<6;istar++) {
-			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px;' "        // properties
-					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick=\"set=false;showStars(this.id);setFeedbackStars(this.id)\"; />" ); // mouse actions
-		}
-		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput=\"set=false;showStars(this.value);setFeedbackStars(this.value);\">");
-		
-		*/
-		
 		buf.append(fiveStars(user.getTokenSignature()));
-		
-		//buf.append("<br clear='all'>");
-		//buf.append("<FONT SIZE=-1>(" + Subject.getNStarReports() + " user ratings; avg = " + Subject.getAvgStars() + " stars)</FONT><p>\n");
-
-		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
 		
 		String[] member = getMember(user);  // role, name, email
 		String email = member!=null && member[2]!=null?member[2]:null;
@@ -173,19 +166,23 @@ public class Feedback extends HttpServlet {
 		else buf.append("<span id=cbox style='visibility:hidden'>Our response will be sent to you at " + email + "<br/></span>"
 				+ "<input type=hidden name=Email value=" + email + " />");
 		
-		// If the user is anonymous, insert the Google reCaptcha tool (version 2) on the page
-		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><br/>");				
 		
-		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
-				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
-				+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
-				+ "setStars(0);"
-				+ "for (i=1;i<6;i++) document.getElementById(i).src=star1.src;"
-				+ "document.getElementById('vote').innerHTML='(click a star):';"
-				+ "document.getElementById('cbox').style.visibility='hidden';"
-				+ "\">"
-				+ "</FORM>");
-		
+ 		
+		// If the user is anonymous, insert the Google reCaptcha tool on the page
+		if (user.isAnonymous()) {
+			buf.append("<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
+				+ "<script>"
+				+ "  function onSubmit(token) { "
+				+ "    document.getElementById('g-recaptcha-response').value = token; "
+				+ "    document.getElementById('FeedbackForm').submit(); "
+				+ "  }"
+    			+ "</script>"
+				+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />"
+				+ "<button class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitFeedback'>"
+				+ "Submit Comment"
+				+ "</button></FORM>");				
+		} else buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Comment'></FORM>");
+
 		if (user.isChemVantageAdmin()) {
 			String reports = viewUserFeedback(user);
 			if (!reports.isEmpty()) buf.append("<hr><h3>User Feedback</h3>" + reports);
@@ -258,12 +255,23 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
+		float riskScore = -1.0f;
 		try { 
-			if (!request.getServerName().equals("localhost") && user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
+			if (!request.getServerName().equals("localhost") && user.isAnonymous()) {
+				String token = request.getParameter("g-recaptcha-response");
+				if (token == null || token.isEmpty()) {
+					throw new Exception("reCAPTCHA token missing");
+				}
+				riskScore = createAssessment(token, "submitFeedback");
+				if (riskScore < 0.3) {
+					throw new Exception("Risk score too high: " + riskScore);
+				}
+			}
 		} catch (Exception e) {
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during reCAPTCHA validation: ", e.toString());
 			return "<h1>Submission Failed</h1>"
-					+ "The ReCAPTCHA was not validated, sorry. "
-					+ "Please click the BACK button on your browser and try again.";
+					+ "The ReCAPTCHA validation failed: " + e.getMessage() + "<br/>"
+					+ "Please click the BACK button on your browser to try again.";
 		}
 		
 		int stars = 0;
@@ -288,6 +296,7 @@ public class Feedback extends HttpServlet {
 		
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
+			if (riskScore >= 0) r.riskScore = riskScore;  // Store reCAPTCHA score if available
 			ofy().save().entity(r);
 			sendEmailToAdmin(r,user,email);
 		}
@@ -305,6 +314,60 @@ public class Feedback extends HttpServlet {
 		
 		if (user != null && user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
+	}
+
+	public static float createAssessment(String token, String recaptchaAction) throws IOException {
+		String projectId = Subject.getProjectId();
+		String recaptchaKey = Subject.getReCaptchaKey();
+    	
+		// Create the reCAPTCHA client.
+    	try (RecaptchaEnterpriseServiceClient client = RecaptchaEnterpriseServiceClient.create()) {
+
+      		// Set the properties of the event to be tracked.
+      		Event event = Event.newBuilder().setSiteKey(recaptchaKey).setToken(token).build();
+
+      		// Build the assessment request.
+      		CreateAssessmentRequest createAssessmentRequest =
+         	 CreateAssessmentRequest.newBuilder()
+         	    .setParent(ProjectName.of(projectId).toString())
+         	    .setAssessment(Assessment.newBuilder().setEvent(event).build())
+         		.build();
+
+      		Assessment response = client.createAssessment(createAssessmentRequest);
+
+      		// Check if the token is valid.
+      		if (!response.getTokenProperties().getValid()) {
+        		System.out.println("The CreateAssessment call failed because the token was: "
+        	        + response.getTokenProperties().getInvalidReason().name());
+       			return 0.0f;
+      		}
+
+      		// Check if the expected action was executed.
+      		if (!response.getTokenProperties().getAction().equals(recaptchaAction)) {
+        		System.out.println("The action attribute in reCAPTCHA tag is: "
+            	    + response.getTokenProperties().getAction());
+        		System.out.println("The action attribute in the reCAPTCHA tag "
+            	    + "does not match the action ("
+            	    + recaptchaAction
+            	    + ") you are expecting to score");
+        		return 0.0f;
+      		}
+
+      		// Get the risk score and the reason(s).
+      		// For more information on interpreting the assessment, see:
+      		// https://cloud.google.com/recaptcha/docs/interpret-assessment
+      		for (ClassificationReason reason : response.getRiskAnalysis().getReasonsList()) {
+        		System.out.println(reason);
+      		}
+
+      		float recaptchaScore = response.getRiskAnalysis().getScore();
+      		System.out.println("The reCAPTCHA score is: " + recaptchaScore);
+
+      		// Get the assessment name (id). Use this to annotate the assessment.
+      		String assessmentName = response.getName();
+      		System.out.println("Assessment name: " + assessmentName.substring(assessmentName.lastIndexOf("/") + 1));
+      		return recaptchaScore;
+    	} 
 	}
 
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {

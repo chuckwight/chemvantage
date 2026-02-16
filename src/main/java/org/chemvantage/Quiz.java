@@ -115,15 +115,14 @@ public class Quiz extends HttpServlet {
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			if (a == null) throw new Exception("No assignment found for this user.");
-
+			
 			switch (userRequest) {
 			case "UpdateAssignment":
-				a.updateConceptQuestions(user,request);
+				if (a!=null) a.updateConceptQuestions(user,request);
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
-				if (a != null) {
+				if (a!=null) {
 					a.title = request.getParameter("AssignmentTitle");
 					ofy().save().entity(a).now();
 					out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
@@ -161,7 +160,7 @@ public class Quiz extends HttpServlet {
 				if (user.isInstructor()) {
 					try {
 						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
-						if (!a.conceptIds.contains(conceptId)) {
+						if (a!=null &&!a.conceptIds.contains(conceptId)) {
 							a.conceptIds.add(conceptId);
 							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list());	
 							ofy().save().entity(a).now();

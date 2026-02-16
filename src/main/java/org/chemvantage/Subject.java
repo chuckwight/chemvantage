@@ -37,6 +37,7 @@ public class Subject {
 	private String HMAC256Secret;
 	private String reCaptchaSecret;
 	private String reCaptchaSiteKey;
+	private String reCaptchaKey;
 	private String openai_key;
 	private String salt;
 	private String announcement;
@@ -96,6 +97,11 @@ public class Subject {
 	static String getReCaptchaSiteKey() {
 		if (s==null) refresh();
 		return s.reCaptchaSiteKey;
+	}
+	
+	static String getReCaptchaKey() {
+		if (s==null) refresh();
+		return s.reCaptchaKey;
 	}
 	
 	static String getSalt() { 

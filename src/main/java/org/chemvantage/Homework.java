@@ -144,18 +144,17 @@ public class Homework extends HttpServlet {
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			if (a == null) throw new Exception("No assignment found for this user.");
-
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 
 			switch (userRequest) {
 			case "UpdateAssignment":
-				a.updateConceptQuestions(user,request);
+				if (a!=null) a.updateConceptQuestions(user,request);
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
-				a.title = request.getParameter("AssignmentTitle");
+				if (a!=null) a.title = request.getParameter("AssignmentTitle");
 				ofy().save().entity(a).now();
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
@@ -198,7 +197,7 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor()) {
 					try {
 						long conceptId = Long.parseLong(request.getParameter("ConceptId"));
-						if (!a.conceptIds.contains(conceptId)) {
+						if (a!=null &&!a.conceptIds.contains(conceptId)) {
 							a.conceptIds.add(conceptId);
 							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list());	
 							ofy().save().entity(a).now();
@@ -564,7 +563,7 @@ public class Homework extends HttpServlet {
 						
 			// START the presentation of the Homework assignment
 			buf.append("<h1>Homework Exercises</h1><h2>" + hwa.title + "</h2>");
-
+			debug.append("User exp: " + new Date(User.encode(user.sig)) + "<br/>");
 			buf.append("Homework Rules<UL>");
 			if (hwa.attemptsAllowed==null)
 				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
@@ -723,6 +722,7 @@ public class Homework extends HttpServlet {
 				}
 				</style>""");
 		StringBuffer debug = new StringBuffer("Homework.printScore...");
+		debug.append("User exp: " + new Date(User.encode(user.sig)) + "<br/>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
@@ -771,7 +771,7 @@ public class Homework extends HttpServlet {
 				buf.append(attemptTooSoon);
 				return buf.toString();
 			}
-			
+			debug.append("1");
 			// Everything is OK, score the studentAnswer
 			switch (q.getQuestionType()) {
 			case 6:  // Handle five-star rating response
@@ -853,25 +853,30 @@ public class Homework extends HttpServlet {
 			default:
 				studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
 			}
-
-			HWTransaction ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,q.pointValue,showWork);
-			ht.studentAnswer = studentAnswer;
-			ht.correctAnswer = q.getCorrectAnswer();				
-			ofy().save().entity(ht).now();
-
-			// create/update/store a Score object and report the score to the LMS
-			Key<Question> k = key(Question.class,questionId);
-			if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
-				q.addAttemptSave(studentScore>0);
-				s = Score.getInstance(user.getId(),hwa);
-				ofy().save().entity(s).now();
-				String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
-				Utilities.createTask("/ReportScore",payload);
+			debug.append("2");
+			
+			if (!user.isAnonymous()) {
+				HWTransaction ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,q.pointValue,showWork);
+				ht.studentAnswer = studentAnswer;
+				ht.correctAnswer = q.getCorrectAnswer();				
+				ofy().save().entity(ht).now();
+			
+				// create/update/store a Score object and report the score to the LMS
+				Key<Question> k = key(Question.class,questionId);
+				if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
+					q.addAttemptSave(studentScore>0);
+					s = Score.getInstance(user.getId(),hwa);
+					ofy().save().entity(s).now();
+					String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
+					Utilities.createTask("/ReportScore",payload);
+				}
 			}
-
+			
+			debug.append("3");
+			
 			// Send a response to the student:
 			buf.append("<div class='response-container'>"
-					+ "<h1>" + hwa.title + "</h1>"
+					+ "<h1>" + (hwa==null?"Homework":hwa.title) + "</h1>"
 					+ df.format(now) + "<br/><br/>"
 					+ "<div class='score-container'>");
 			if (studentScore==q.pointValue) {  // studentAnswer is correct
@@ -938,7 +943,8 @@ public class Homework extends HttpServlet {
 			return Logout.now(request,e);
 		}
 		buf.append("</div>"); // end of score-container
-		
+		debug.append("4");
+			
 		/*
 		 * Display the correct solution to the problem, if appropriate
 		 */
@@ -1001,10 +1007,11 @@ public class Homework extends HttpServlet {
 		} else {
 			buf.append("<p><br/>Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<br/></p>");
 		}
-		
+		debug.append("5");
+			
 		boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
-		buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
+		buf.append("<a class='btn btn-primary' href=/Homework?AssignmentId=" + (hwa==null?0:hwa.id) + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
 				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
 				+ "</a><br/>");
 
@@ -1035,6 +1042,7 @@ public class Homework extends HttpServlet {
 		}
 		
 		if (studentScore==q.pointValue) buf.append("</div>"); // end of badge+feedback container
+		debug.append("6");
 		return buf.toString();
 	}
 	

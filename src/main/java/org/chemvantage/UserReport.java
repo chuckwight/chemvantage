@@ -39,6 +39,7 @@ public class UserReport implements Serializable {
 			int[] params;
 			String studentAnswer;
 			String comments = "";
+			float riskScore = -1.0f;
 	
 	UserReport() {}
 	
@@ -104,6 +105,10 @@ public class UserReport implements Serializable {
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 					+ "</FORM><p>");
+					
+			if (riskScore >= 0) {
+				buf.append("Risk Score: " + riskScore);
+			}
 
 		} catch (Exception e) {
 			buf.append("<br>" + e.toString());

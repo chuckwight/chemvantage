@@ -100,17 +100,7 @@ public class User {
     		return user;
     	} catch (Exception e) {}
 
-		try { // older style sig for LTI users
-			User user = ofy().load().type(User.class).id(Long.parseLong(token)).safe();
-    		if (user.exp.before(now)) return null; // entity has expired
-    		else { // extend the exp time
-    			user.exp = expires;
-    			ofy().save().entity(user);
-    		}
-			return user;
-    	} catch (Exception e) {}
-    	
-    	try {  // try to validate an anonymous user
+		try {  // try to validate an anonymous user
     		Date exp = new Date(encode(Long.parseLong(token,16)));
     		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
     		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(exp.getTime());

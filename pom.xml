@@ -56,59 +56,66 @@
     </dependency>
 	
 	<!-- Code for JWT and JSON -->
-	<dependency>
+	  <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
       <version>4.5.0</version>
-	</dependency>
-	<dependency>
+	  </dependency>
+	  <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
       <version>0.23.0</version>
-	</dependency>
-	<dependency>
-	  <groupId>com.google.code.gson</groupId>
-	  <artifactId>gson</artifactId>
-	</dependency>
+	  </dependency>
+	  <dependency>
+	    <groupId>com.google.code.gson</groupId>
+	    <artifactId>gson</artifactId>
+	  </dependency>
 	
 	<!-- Google Cloud Tasks -->
-	<dependency>
+	  <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-tasks</artifactId>
-  </dependency>
+    </dependency>
     
   <!-- Google Cloud Service Account -->
-  <dependency>
+    <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-oauth2-http</artifactId>
-  </dependency>
+    </dependency>
     
   <!-- SendGrid API third=party email sender trough GCP -->
-  <dependency>
+    <dependency>
       <groupId>com.sendgrid</groupId>
       <artifactId>sendgrid-java</artifactId>
-  </dependency>
+    </dependency>
 
 	<!-- OpenPDF html-to-pdf converter -->
-	<dependency>
+	  <dependency>
       <groupId>com.github.librepdf</groupId>
       <artifactId>openpdf-html</artifactId>
       <version>3.0.0</version>
-  </dependency>
+    </dependency>
     
   <!-- App Engine SDK dependency for admin authentication-->
-  <dependency>
+    <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-1.0-sdk</artifactId>
       <version>1.9.76</version>
-  </dependency>
+    </dependency>
   
   <!-- PayPal Java SDK for payment processing -->
-  <dependency>
+    <dependency>
       <groupId>com.paypal.sdk</groupId>
       <artifactId>checkout-sdk</artifactId>
       <version>2.0.0</version>
-  </dependency>
+    </dependency>
+
+  <!-- Google Cloud reCAPTCHA Enterprise -->
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-recaptchaenterprise</artifactId>
+    </dependency>
+  
   </dependencies>
     
   <build>
