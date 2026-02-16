@@ -552,7 +552,7 @@ public class Homework extends HttpServlet {
 				hwa.chapterNumber = ch.chapterNumber;
 				hwa.conceptIds = ch.conceptIds;
 				for (Long cId : hwa.conceptIds) hwa.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-				Random rand = new Random();  // use a random number generator to select 10 keys
+				Random rand = new Random(user.sig);  // use a random number generator to select 10 keys
 				while (hwa.questionKeys.size() > 10) hwa.questionKeys.remove(rand.nextInt(hwa.questionKeys.size()));
 			} else if (hwa.title==null) {  // legacy Homework assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();

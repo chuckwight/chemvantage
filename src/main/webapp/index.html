@@ -134,7 +134,12 @@
             </div>
             <div class="p-4 bg-white border rounded-3 h-100" style="margin-top:20px;">
               <h3 class="h5">Students rate ChemVantage:</h3>
-              <img src="/images/marketing/5stars.png" alt="5 stars" />&nbsp;4.3 out of 5 stars (12350 ratings)<br/>
+              <img src="/images/marketing/5stars.png" alt="5 stars" />&nbsp;4.3 out of 5 stars (12463 ratings)<br/>
+            </div>
+            <div class="p-4 bg-white border rounded-3 h-100 d-flex" style="margin-top:20px;justify-content:space-evenly;">
+              <button class="btn btn-primary" onclick="launch('/Homework');">Sample Homework</button>
+              <button class="btn btn-primary" onclick="launch('/Quiz');">Sample Quiz</button>
+              <button class="btn btn-primary" onclick="launch('/VideoQuiz');">Sample Video</button>
             </div>
           </div>
           <div class="col-lg-6">
@@ -166,13 +171,16 @@
                   <li>All instructor accounts are completely free.</li>
                   <li>Aligned with OpenStax Chemistry/2e OER textbooks</li>
                   <li>Easy configuration to match all major GenChem texts</li>
+                  <li>More than 13,000 question items with 182,000,000,000 variations.</li>
+                  <li>AI-scored essay questions ensure deeper understanding</li>
                 </ul>
               </div>
               <div class="col-md-6">
                 <ul class="mb-3">
-                  <li>Large, vetted item banks with more than 13,000 question items</li>
-                  <li> ChemVantage is an Open Educational Resource! All content is freely licensed under the terms of a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" aria-label="Opens new tab">Creative Commons Attribution 4.0 International Public License</a>.
-                  <li>You may use ChemVantage question items in your teaching without charge, even if you don't use ChemVantage assignments for students. (But we hope you will, anyway.)</li>
+                  <li>Custom question creation for tailored assignments</li>
+                  <li>Video quizzes for engaging multimedia assessments</li>
+                  <li>ChemVantage is an Open Educational Resource. All content is freely licensed under the terms of a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" aria-label="Opens new tab">Creative Commons Attribution 4.0 International Public License</a>.
+                    You may use ChemVantage question items in your teaching without charge, even if you don't use ChemVantage assignments for students. (But we hope you will, anyway.)</li>
                 </ul>
               </div>
             </div>
@@ -511,6 +519,16 @@
       var el = document.getElementById('year');
       if (el) el.textContent = y;
     })();
+    
+    function launch(myLink) {
+      fetch('/examples')
+        .then(response => response.json())
+        .then(data => {
+          myLink += '?sig=' + data.sig;
+          window.open(myLink, '_blank');
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
   </script>
 </body>
 </html>
