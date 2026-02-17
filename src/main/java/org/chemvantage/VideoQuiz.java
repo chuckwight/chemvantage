@@ -63,16 +63,16 @@ public class VideoQuiz extends HttpServlet {
 			if (user==null) throw new Exception();
 			
 			long videoId = 0L;
-			try {
-				videoId = Long.parseLong(request.getParameter("VideoId"));
-			} catch (Exception e) {}
-			
 			Assignment a = null;
 			long assignmentId = user.getAssignmentId();
-			if (assignmentId==0L) {  // anonymous user; select a random video with embedded quizlet
-				List<Video> videos = ofy().load().type(Video.class).filter("breaks >",0).list();
-				Random rand = new Random();
-				videoId = videos.get(rand.nextInt(videos.size())).id;
+			if (assignmentId==0L) {  // anonymous user; select a random video only when none was provided
+				try {
+					videoId = Long.parseLong(request.getParameter("VideoId"));
+				} catch (Exception e) {
+					List<Video> videos = ofy().load().type(Video.class).filter("breaks >",0).list();
+					Random rand = new Random();
+					videoId = videos.get(rand.nextInt(videos.size())).id;
+				}
 			} else {
 				a = ofy().load().type(Assignment.class).id(assignmentId).now();
 				videoId = a.videoId;
@@ -89,7 +89,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ShowVideo":
-				out.println(Subject.header("Video") + showVideo(user,videoId,segment) + Subject.footer);
+				out.println(Subject.header("Video") + showVideo(user,a,videoId,segment) + Subject.footer);
 				break;
 			case "ShowQuizlet":
 				out.println(showQuizlet(user,videoId,segment,response));
@@ -173,21 +173,14 @@ public class VideoQuiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	public String showVideo(User user, long videoId, int segment) throws Exception {
+	public String showVideo(User user, Assignment a, long videoId, int segment) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer();
 		
 		try {
 			int start = 0;
 			int end = -1;
-			long assignmentId = user.getAssignmentId();
-			Assignment a = null;
-			if (assignmentId > 0L) {  // might be 0L for anonymous user
-				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				videoId = a.videoId;
-			}
-			debug.append("Segment:" + segment  + " videoId:" + videoId + " ");
-
+			
 			Video v = ofy().load().type(Video.class).id(videoId).now();
 			String videoSerialNumber = v.serialNumber;
 
@@ -362,7 +355,7 @@ public class VideoQuiz extends HttpServlet {
 				ofy().save().entity(vt).now();
 			}
 
-			if (segment == v.breaks.length) response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=FinishQuizlet&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
+			if (segment == v.breaks.length) response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=FinishQuizlet&VideoId=" + v.id + "&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
 
 			// get a List of available Question keys for this segment of this video
 			int counter = 0; // skip over this many questions to the ones in the current quizlet
@@ -530,7 +523,7 @@ public class VideoQuiz extends HttpServlet {
 				
 				buf.append(Feedback.fiveStars(user.getTokenSignature()));
 			} else {
-				buf.append("<b>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</b>\n");
+				buf.append("<h4>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</h4>\n");
 
 				buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
