@@ -157,13 +157,14 @@ public class Feedback extends HttpServlet {
 
 		if (email==null || email.isEmpty()) buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=50 placeholder=' optional, if you want a response to your comment' name=Email></label><p>");
 		else buf.append("<span id=cbox style='visibility:hidden'>Our response will be sent to you at " + email + "<br/></span>"
-				+ "<input type=hidden name=Email value=" + email + " />");
+				+ "<input type=hidden name=Email value=" + email + " /><br/>");
 		
 		
  		
 		// If the user is anonymous, insert the Google reCaptcha tool on the page
 		if (user.isAnonymous()) {
-			buf.append("<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
+			buf.append("Note: This page is protected by reCAPTCHA to prevent abuse. The reCAPTCHA service is provided by Google and is subject to Google's <a href=https://policies.google.com/privacy>Privacy Policy</a> and <a href=https://policies.google.com/terms>Terms of Service</a>.<br/><br/>"
+				+ "<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
 				+ "<script>"
 				+ "  function onSubmit(token) { "
 				+ "    document.getElementById('g-recaptcha-response').value = token; "
@@ -171,7 +172,7 @@ public class Feedback extends HttpServlet {
 				+ "  }"
     			+ "</script>"
 				+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />"
-				+ "<button class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitFeedback'>"
+				+ "<button class='g-recaptcha btn btn-primary' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitFeedback'>"
 				+ "Submit Comment"
 				+ "</button></FORM>");				
 		} else buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Comment'></FORM>");

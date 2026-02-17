@@ -245,19 +245,20 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<label><input type=checkbox required name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
 
 		if (dynamic) {
-			buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Registration'></FORM><br/><br/>");
+			buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Registration'></FORM><br/>");
 		} else { // use reCAPTCHA v2 for manual registration
-			buf.append("<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
+			buf.append("Note: This page is protected by reCAPTCHA to prevent abuse. The reCAPTCHA service is provided by Google and is subject to Google's <a href=https://policies.google.com/privacy>Privacy Policy</a> and <a href=https://policies.google.com/terms>Terms of Service</a>.<br/><br/>"
+				+ "<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
 				+ "<script>"
 				+ "  function onSubmit(token) { "
 				+ "    document.getElementById('g-recaptcha-response').value = token; "
-				+ "    document.getElementById('FeedbackForm').submit(); "
+				+ "    document.getElementById('regform').submit(); "
 				+ "  }"
     			+ "</script>"
 				+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />"
 				+ "<button class='btn btn-primary g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitRegistration'>"
 				+ "Submit Registration"
-				+ "</button></FORM><br/><br/>");				
+				+ "</button></FORM><br/>");				
 		}
 
 		return buf.toString();
@@ -302,21 +303,24 @@ public class LTIRegistration extends HttpServlet {
 			}
 		}
 		
-		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
-
-		String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-		
 		if (Subject.getProjectId().equals("dev-vantage-hrd") ) {
 			String reg_code = request.getParameter("reg_code");
 			Date now = new Date();
-			Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
-    		Date oneYearFromNow = new Date(now.getTime() + 31536000000L);
-    		if (exp.before(now) || exp.after(oneYearFromNow)) throw new Exception("Registration code was invalid or expired.");
+			try {
+				Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
+				Date oneYearFromNow = new Date(now.getTime() + 31536000000L);
+				if (exp.before(now) || exp.after(oneYearFromNow)) throw new Exception();
+			} catch (Exception e) {
+				throw new Exception("Registration code was missing, invalid, or expired. Contact admin@chemvantage.org for assistance.");
+			}
 		}
 		
+		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
+
 		// Construct a new registration token
 		Date now = new Date();
 		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
+		String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 		Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 		String token = JWT.create()
 				.withIssuer(iss)
