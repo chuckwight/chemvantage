@@ -152,7 +152,7 @@ public class Checkout extends HttpServlet {
 		} catch (Exception e) {
 			res.addProperty("error", e.getMessage());
 			out.println(res.toString());
-			Logout.now(request,e);
+			Logout.now(user);
 		}
 	}
 

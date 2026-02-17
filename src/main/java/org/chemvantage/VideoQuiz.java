@@ -112,7 +112,7 @@ public class VideoQuiz extends HttpServlet {
 				else response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
-			response.getWriter().println(Logout.now(request,e));
+			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -139,7 +139,7 @@ public class VideoQuiz extends HttpServlet {
 				out.println(scoreQuizlet(user,request,response));
 			}
 		} catch (Exception e) {
-			response.getWriter().println(Logout.now(request,e));
+			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 

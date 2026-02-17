@@ -99,7 +99,7 @@ public class Poll extends HttpServlet {
 				}
 			}
 			} catch (Exception e) {
-				response.getWriter().println(Logout.now(request,e));
+				response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 			}
 		}
 
@@ -195,7 +195,7 @@ public class Poll extends HttpServlet {
 				break;
 			}
 		} catch (Exception e) {
-			response.getWriter().println(Logout.now(request,e));
+			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 

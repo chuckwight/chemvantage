@@ -58,30 +58,36 @@ public class Logout {
 		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
 		String sig = request.getParameter("sig");
-		if (sig != null) {
-			try {
-				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-				sig = JWT.require(algorithm).build().verify(sig).getSubject();
-			} catch (Exception e) {}
+		try {
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
+			sig = JWT.require(algorithm).build().verify(sig).getSubject();
 			ofy().delete().key(key(User.class, Long.parseLong(sig))).now();	
-		}
-		buf.append("<h2>You are now logged out of ChemVantage</h2>"
+			buf.append("<h2>You are now logged out of ChemVantage</h2>"
 				+ "If this happened unexpectedly, it is likely that the access token "
 				+ "exchanged between your learning management system (LMS) and ChemVantage "
 				+ "has expired (after a period of typically 90 minutes)."
-				+ "<p>You can activate a new session and token by returning to your learning "
-				+ "management system (LMS) and clicking the assignment link there.<p>"
-				+ "If you are having technical difficulty using ChemVantage, <a href=/Feedback>"
-				+ "please tell us</a> so we can fix the problem.");
+				+ "<p>You can launch the assignment again by clicking the assignment "
+				+ "link in your learning management system (LMS).<p>"
+				+ "If you are having technical difficulty using ChemVantage, "
+				+ "<a href=/Feedback>please tell us</a> so we can fix the problem.");
+		} catch (Exception e) {
+			buf.append("<h2>Failed</h2>"
+					+ "The login token was missing, invalid, or expired.<br/><br/>");
+			buf.append("If you are having technical difficulty using ChemVantage, "
+					+ "<a href=/Feedback>please tell us</a> so we can fix the problem.");
+		}
+		
 		return buf.toString();
 	}
 
 	static String now(User user) {
-		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
+		StringBuffer buf = new StringBuffer(Subject.header());
+		buf.append("<h1>Logout</h1>");
 		try {
 			ofy().delete().entity(user).now();
 		} catch (Exception e) {}
 		buf.append("<h2>You are now logged out of ChemVantage.</h2>");
+		buf.append(Subject.footer);
 		return buf.toString();
 	}
 
