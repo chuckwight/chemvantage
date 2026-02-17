@@ -41,10 +41,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseServiceClient;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.recaptchaenterprise.v1.Assessment;
+import com.google.recaptchaenterprise.v1.CreateAssessmentRequest;
+import com.google.recaptchaenterprise.v1.Event;
+import com.google.recaptchaenterprise.v1.ProjectName;
+import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
@@ -238,14 +244,22 @@ public class LTIRegistration extends HttpServlet {
 		}
 		buf.append("<label><input type=checkbox required name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
 
-		if (!dynamic) {  // show recaptcha tool
-			buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "' aria-label='Google Recaptcha'></div><br/><br/>"
-					+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>\n");
-			}
-		
-		buf.append("<input type=submit value='Submit Registration'/>"
-				+ "</form><br/><br/>");
-		
+		if (dynamic) {
+			buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Registration'></FORM><br/><br/>");
+		} else { // use reCAPTCHA v2 for manual registration
+			buf.append("<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
+				+ "<script>"
+				+ "  function onSubmit(token) { "
+				+ "    document.getElementById('g-recaptcha-response').value = token; "
+				+ "    document.getElementById('FeedbackForm').submit(); "
+				+ "  }"
+    			+ "</script>"
+				+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />"
+				+ "<button class='btn btn-primary g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitRegistration'>"
+				+ "Submit Registration"
+				+ "</button></FORM><br/><br/>");				
+		}
+
 		return buf.toString();
 	}
 	
@@ -276,7 +290,15 @@ public class LTIRegistration extends HttpServlet {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
-			if (!request.getServerName().equals("localhost") && !reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
+			float riskScore = -1.0f;
+			String token = request.getParameter("g-recaptcha-response");
+			if (token == null || token.isEmpty()) {
+				throw new Exception("reCAPTCHA token missing");
+			}
+			riskScore = createAssessment(token, "submitRegistration");
+			if (riskScore < 0.3) {
+				throw new Exception("Sorry, the reCAPTCHA risk score was too low: " + riskScore);
+			}
 		}
 		
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
@@ -309,30 +331,60 @@ public class LTIRegistration extends HttpServlet {
 		return token;
 	}
 		
-	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
-		String queryString = "secret=" + Subject.getReCaptchaSecret() + "&response=" 
-				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-		URL u = new URI("https://www.google.com/recaptcha/api/siteverify").toURL();
-    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    	uc.setDoOutput(true);
-    	uc.setRequestMethod("POST");
-    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+	public static float createAssessment(String token, String recaptchaAction) throws IOException {
+		String projectId = Subject.getProjectId();
+		String recaptchaKey = Subject.getReCaptchaKey();
     	
-    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-		writer.write(queryString);
-    	writer.flush();
-    	writer.close();
-		
-		// read & interpret the JSON response from Google
-    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
-    	reader.close();
-		
-		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
-		return captchaResponse.get("success").getAsBoolean();
-	}
+		// Create the reCAPTCHA client.
+    	try (RecaptchaEnterpriseServiceClient client = RecaptchaEnterpriseServiceClient.create()) {
 
+      		// Set the properties of the event to be tracked.
+      		Event event = Event.newBuilder().setSiteKey(recaptchaKey).setToken(token).build();
+
+      		// Build the assessment request.
+      		CreateAssessmentRequest createAssessmentRequest =
+         	 CreateAssessmentRequest.newBuilder()
+         	    .setParent(ProjectName.of(projectId).toString())
+         	    .setAssessment(Assessment.newBuilder().setEvent(event).build())
+         		.build();
+
+      		Assessment response = client.createAssessment(createAssessmentRequest);
+
+      		// Check if the token is valid.
+      		if (!response.getTokenProperties().getValid()) {
+        		System.out.println("The CreateAssessment call failed because the token was: "
+        	        + response.getTokenProperties().getInvalidReason().name());
+       			return 0.0f;
+      		}
+
+      		// Check if the expected action was executed.
+      		if (!response.getTokenProperties().getAction().equals(recaptchaAction)) {
+        		System.out.println("The action attribute in reCAPTCHA tag is: "
+            	    + response.getTokenProperties().getAction());
+        		System.out.println("The action attribute in the reCAPTCHA tag "
+            	    + "does not match the action ("
+            	    + recaptchaAction
+            	    + ") you are expecting to score");
+        		return 0.0f;
+      		}
+
+      		// Get the risk score and the reason(s).
+      		// For more information on interpreting the assessment, see:
+      		// https://cloud.google.com/recaptcha/docs/interpret-assessment
+      		for (ClassificationReason reason : response.getRiskAnalysis().getReasonsList()) {
+        		System.out.println(reason);
+      		}
+
+      		float recaptchaScore = response.getRiskAnalysis().getScore();
+      		System.out.println("The reCAPTCHA score is: " + recaptchaScore);
+
+      		// Get the assessment name (id). Use this to annotate the assessment.
+      		String assessmentName = response.getName();
+      		System.out.println("Assessment name: " + assessmentName.substring(assessmentName.lastIndexOf("/") + 1));
+      		return recaptchaScore;
+    	} 
+	}
+	
 	void sendRegistrationEmail(String token, HttpServletRequest request) throws Exception {
 		DecodedJWT jwt = JWT.decode(token);
 		String name = jwt.getSubject();

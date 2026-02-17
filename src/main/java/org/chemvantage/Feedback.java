@@ -21,9 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
 import java.util.Date;
 import java.util.Map;
 
@@ -39,10 +36,6 @@ import com.google.recaptchaenterprise.v1.CreateAssessmentRequest;
 import com.google.recaptchaenterprise.v1.Event;
 import com.google.recaptchaenterprise.v1.ProjectName;
 import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
-import java.io.IOException;
-
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.cmd.Query;
 
 
@@ -255,25 +248,6 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
-		float riskScore = -1.0f;
-		try { 
-			if (!request.getServerName().equals("localhost") && user.isAnonymous()) {
-				String token = request.getParameter("g-recaptcha-response");
-				if (token == null || token.isEmpty()) {
-					throw new Exception("reCAPTCHA token missing");
-				}
-				riskScore = createAssessment(token, "submitFeedback");
-				if (riskScore < 0.3) {
-					throw new Exception("Risk score too high: " + riskScore);
-				}
-			}
-		} catch (Exception e) {
-			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during reCAPTCHA validation: ", e.toString());
-			return "<h1>Submission Failed</h1>"
-					+ "The ReCAPTCHA validation failed: " + e.getMessage() + "<br/>"
-					+ "Please click the BACK button on your browser to try again.";
-		}
-		
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("Stars"));
@@ -285,7 +259,6 @@ public class Feedback extends HttpServlet {
 			return feedbackForm(user);
 		}
 		
-		String userId = user==null?null:user.getId();
 		String email = request.getParameter("Email");
 		try {
 			String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
@@ -294,8 +267,27 @@ public class Feedback extends HttpServlet {
 			email = null;
 		}
 		
+		float riskScore = -1.0f;
+		try { 
+			if (!request.getServerName().equals("localhost") && user.isAnonymous()) {
+				String token = request.getParameter("g-recaptcha-response");
+				if (token == null || token.isEmpty()) {
+					throw new Exception("reCAPTCHA token missing");
+				}
+				riskScore = createAssessment(token, "submitFeedback");
+				if (riskScore < 0.3) {
+					throw new Exception("Sorry, the reCAPTCHA risk score was too low: " + riskScore);
+				}
+			}
+		} catch (Exception e) {
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during reCAPTCHA validation: ", e.toString());
+			return "<h1>Submission Failed</h1>"
+					+ "The ReCAPTCHA validation failed: " + e.getMessage() + "<br/>"
+					+ "Please click the BACK button on your browser to try again.";
+		}
+		
 		if (comments.length() > 0) {
-			UserReport r = new UserReport(userId,stars,comments);
+			UserReport r = new UserReport(user.getId(),stars,comments);
 			if (riskScore >= 0) r.riskScore = riskScore;  // Store reCAPTCHA score if available
 			ofy().save().entity(r);
 			sendEmailToAdmin(r,user,email);
@@ -369,7 +361,7 @@ public class Feedback extends HttpServlet {
       		return recaptchaScore;
     	} 
 	}
-
+/*
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
 		OutputStreamWriter writer = null;
 		BufferedReader reader = null;
@@ -400,7 +392,7 @@ public class Feedback extends HttpServlet {
 		}
 		return captchaResponse != null && captchaResponse.get("success").getAsBoolean();
 	}
-
+*/
 	String viewUserFeedback(User user) {
 		StringBuffer buf = new StringBuffer();
 		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");		

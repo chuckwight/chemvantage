@@ -35,8 +35,6 @@ public class Subject {
 	
 	private String title;
 	private String HMAC256Secret;
-	private String reCaptchaSecret;
-	private String reCaptchaSiteKey;
 	private String reCaptchaKey;
 	private String openai_key;
 	private String salt;
@@ -61,8 +59,7 @@ public class Subject {
 			s.title = "General Chemistry";
 			s.HMAC256Secret = "ChangeMeInTheDatastoreManuallyForYourProtection";
 			s.salt = "ChangeMeInTheDatastoreManuallyForYourProtection";
-			s.reCaptchaSecret = "changeMe";
-			s.reCaptchaSiteKey = "changeMe";
+			s.reCaptchaKey = "changeMe";
 			s.openai_key = "changeMe";
 			s.gptModel = "changeMe";
 			s.sendGridAPIKey = "changeMe";
@@ -88,7 +85,7 @@ public class Subject {
 		if (s==null) refresh();
 		return s.HMAC256Secret; 
 	}
-	
+/*	
 	static String getReCaptchaSecret() {
 		if (s==null) refresh();
 		return s.reCaptchaSecret;
@@ -98,7 +95,7 @@ public class Subject {
 		if (s==null) refresh();
 		return s.reCaptchaSiteKey;
 	}
-	
+*/	
 	static String getReCaptchaKey() {
 		if (s==null) refresh();
 		return s.reCaptchaKey;
