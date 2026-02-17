@@ -271,6 +271,7 @@ public class LTIRegistration extends HttpServlet {
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
+		boolean dynamic = openid_configuration != null;
 		
 		if (sub.isEmpty() || email.isEmpty()) throw new Exception("All form fields are required. ");
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
@@ -286,7 +287,7 @@ public class LTIRegistration extends HttpServlet {
 			throw new Exception("Invalid domain name (" + url + "). " + e.toString());
 		}
 
-		if (openid_configuration==null) {
+		if (!dynamic) {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
