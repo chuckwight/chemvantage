@@ -55,7 +55,13 @@ public class Logout {
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
-		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
+		StringBuffer buf = new StringBuffer(Subject.header("Logout"));
+		buf.append("<section class='bg-gradient-primary text-white' style='max-width:800px'>"
+			+ "<div class='container py-5 col-lg-7'>"
+			+ "  <h1 class='display-5 fw-semibold mb-3'>Logout</h1>"
+			+ "</div>"
+			+ "</section><br/>");
+		
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
 		String sig = request.getParameter("sig");
 		try {
@@ -81,7 +87,7 @@ public class Logout {
 	}
 
 	static String now(User user) {
-		StringBuffer buf = new StringBuffer(Subject.header());
+		StringBuffer buf = new StringBuffer(Subject.header() + Subject.banner);
 		buf.append("<h1>Logout</h1>");
 		try {
 			ofy().delete().entity(user).now();
