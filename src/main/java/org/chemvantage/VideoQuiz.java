@@ -112,7 +112,10 @@ public class VideoQuiz extends HttpServlet {
 				else response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
-			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	response.setContentType("application/json");
+        	response.getWriter().write("{ \"error\": \"TOKEN_INVALID\" }");
+			//response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 

@@ -97,7 +97,10 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header("Quiz") + printQuiz(user,a) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	response.setContentType("application/json");
+        	response.getWriter().write("{ \"error\": \"TOKEN_INVALID\" }");
+			//out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 

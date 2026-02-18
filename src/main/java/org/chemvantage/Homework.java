@@ -69,9 +69,10 @@ public class Homework extends HttpServlet {
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		
+		String sig = request.getParameter("sig");
+
 		try {
-			User user = User.getUser(request.getParameter("sig"));
+			User user = User.getUser(sig);
 			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
 			String userRequest = request.getParameter("UserRequest");
@@ -128,7 +129,10 @@ public class Homework extends HttpServlet {
 				out.println(Subject.header("Homework") + printHomework(user,a,hintQuestionId,showOptional) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	response.setContentType("application/json");
+        	response.getWriter().write("{ \"error\": \"TOKEN_INVALID\" }");
+			//out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
