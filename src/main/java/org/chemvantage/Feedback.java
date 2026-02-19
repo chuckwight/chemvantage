@@ -54,10 +54,14 @@ public class Feedback extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
+		User user = null;
 		try {
-			User user = User.getUser(request.getParameter("sig"));
-			if (user == null) user = new User();  // creates new anonymous User
-			
+			user = User.getUser(request.getParameter("sig"));
+		} catch (Exception e) {
+			user = new User();  // creates new anonymous User
+		}
+		
+		try {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
@@ -139,8 +143,6 @@ public class Feedback extends HttpServlet {
 				+ "        </div>"
 				+ "    </section><p>");
 		
-		buf.append("Please rate your overall experience with ChemVantage:<br/>");
-
 		buf.append(fiveStars(user.getTokenSignature()));
 		
 		String[] member = getMember(user);  // role, name, email
