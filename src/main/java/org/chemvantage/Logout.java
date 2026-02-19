@@ -55,10 +55,10 @@ public class Logout {
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
-		StringBuffer buf = new StringBuffer(Subject.header("Logout"));
+		StringBuffer buf = new StringBuffer();
 		buf.append("<section class='bg-gradient-primary text-white' style='max-width:800px'>"
 			+ "<div class='container py-5 col-lg-7'>"
-			+ "  <h1 class='display-5 fw-semibold mb-3'>Logout</h1>"
+			+ "  <h1 class='display-5 fw-semibold mb-3'>401&nbsp;(Unauthorized)</h1>"
 			+ "</div>"
 			+ "</section><br/>");
 		
@@ -77,8 +77,7 @@ public class Logout {
 				+ "If you are having technical difficulty using ChemVantage, "
 				+ "<a href=/Feedback>please tell us</a> so we can fix the problem.");
 		} catch (Exception e) {
-			buf.append("<h2>Failed</h2>"
-					+ "The login token was missing, invalid, or expired.<br/><br/>");
+			buf.append("<h2>You are now logged out of ChemVantage</h2>");
 			buf.append("If you are having technical difficulty using ChemVantage, "
 					+ "<a href=/Feedback>please tell us</a> so we can fix the problem.");
 		}

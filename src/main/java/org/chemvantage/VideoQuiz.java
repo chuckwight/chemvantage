@@ -109,13 +109,11 @@ public class VideoQuiz extends HttpServlet {
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				else out.println(Subject.header("Video") + showVideo(user,a,videoId,segment) + Subject.footer);
 			}			
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        	response.setContentType("application/json");
-        	response.getWriter().write("{ \"error\": \"TOKEN_INVALID\" }");
-			//response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
+        	out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -142,7 +140,8 @@ public class VideoQuiz extends HttpServlet {
 				out.println(scoreQuizlet(user,request,response));
 			}
 		} catch (Exception e) {
-			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -209,12 +208,15 @@ public class VideoQuiz extends HttpServlet {
 					<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div><br/>\
 					<div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>
 					<p>""");
-
+			buf.append("<script src='/js/five_star_radios.js?v=3'></script>\n");
 			buf.append("<script type=text/javascript>\n"
 					+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"
 					+ "var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);\n"
 					+ "var player;\n"
 					+ "var quiz_div = document.getElementById('quiz_div');\n"
+					+ "var serverUrl = '" + Subject.getServerUrl() + "';\n"
+					+ "var pageOrigin = window.location.origin;\n"
+					+ "var playerOrigin = pageOrigin.includes('localhost') ? pageOrigin : serverUrl;\n"
 					+ "var sig = '" + user.getTokenSignature() + "';\n"
 					+ "var segment = " + segment + ";\n"
 					+ "var breaks = " + breaks + ";\n"
@@ -233,7 +235,7 @@ public class VideoQuiz extends HttpServlet {
 					+ "	  'start': " + start + ",\n"
 					+ "	  'end': " + end + ",\n"
 					+ "	  'modestbranding': 1,\n"
-					+ "	  'origin': '" + Subject.getServerUrl() + "'\n"
+				+ "	  'origin': playerOrigin\n"
 					+ "	},\n"
 					+ "	events: {\n"
 					+ "		'onReady': onPlayerReady,\n"
@@ -252,12 +254,15 @@ public class VideoQuiz extends HttpServlet {
 					+ "function onPlayerStateChange(event) {\n"
 					+ "	switch (event.data) {\n"
 					+ "	  case YT.PlayerState.ENDED:\n"
-					+ "    try {"
-					+ "		if (document.exitFullscreen) document.exitFullscreen();\n"
-					+ "		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
-					+ "	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
-					+ "	    else if (document.msExitFullscreen) document.msExitFullscreen();\n"
-					+ "    } catch (e) {}"
+					+ "    var fsElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;\n"
+					+ "    try {\n"
+					+ "      if (fsElement) {\n"
+					+ "        if (document.exitFullscreen) document.exitFullscreen().catch(function(){ });\n"
+					+ "        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
+					+ "        else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
+					+ "        else if (document.msExitFullscreen) document.msExitFullscreen();\n"
+					+ "      }\n"
+					+ "    } catch (e) {}\n"
 					+ "		video_div.style.display = 'none';\n"
 					+ "		quiz_div.style.display = '';\n"
 					+ "		break;\n"
@@ -358,7 +363,9 @@ public class VideoQuiz extends HttpServlet {
 				ofy().save().entity(vt).now();
 			}
 
-			if (segment == v.breaks.length) response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=FinishQuizlet&VideoId=" + v.id + "&sig=" + user.getTokenSignature()); // we are at the end of video; no more quizlets; shortcut to show results
+			if (segment == v.breaks.length) {
+				return finishQuizlet(user, vt, response);
+			}
 
 			// get a List of available Question keys for this segment of this video
 			int counter = 0; // skip over this many questions to the ones in the current quizlet

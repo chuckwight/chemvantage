@@ -78,12 +78,12 @@ public class User {
 		this.encryptedId = encryptId(user_id,0L);  // temporary until sig is assigned in setToken()
 	}
 
-	static User getUser(String token) {  // default token expiration of 90 minutes
+	static User getUser(String token) throws Exception {  // default token expiration of 90 minutes
     	return getUser(token,90);
 	}
 		
-	static User getUser(String token,int minutesRequired) {   // allows custom expiration for long assignments
-		if (token==null) return null;
+	static User getUser(String token,int minutesRequired) throws Exception {   // allows custom expiration for long assignments
+		if (token==null) throw new Exception("Token is missing");
     	if (minutesRequired > 500) minutesRequired = 500;
 		Date now = new Date();
     	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
@@ -106,7 +106,7 @@ public class User {
     		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(exp.getTime());
     	} catch (Exception e) {}
 
-    	return null;   	
+    	throw new Exception("Token is invalid or expired.");   	
 	}
     
 	static long encode(long encrypt) {

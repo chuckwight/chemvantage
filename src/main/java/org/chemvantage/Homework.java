@@ -130,9 +130,7 @@ public class Homework extends HttpServlet {
 			}
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        	response.setContentType("application/json");
-        	response.getWriter().write("{ \"error\": \"TOKEN_INVALID\" }");
-			//out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+        	out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -213,7 +211,8 @@ public class Homework extends HttpServlet {
 			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
