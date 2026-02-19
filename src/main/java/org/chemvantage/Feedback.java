@@ -39,7 +39,7 @@ import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
 import com.googlecode.objectify.cmd.Query;
 
 
-@WebServlet("/Feedback")
+@WebServlet(urlPatterns = {"/Feedback", "/feedback"})
 public class Feedback extends HttpServlet {
 
 	@Serial
