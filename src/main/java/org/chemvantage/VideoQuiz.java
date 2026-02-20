@@ -384,7 +384,14 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<form id=quizlet method=post action='/VideoQuiz' onSubmit=\"document.getElementById('submitButton').disabled=true;return ajaxSubmitQuiz();\" >");
 				
 		int i = 0;
-		buf.append("<OL>\n");
+		buf.append("<style>"
+				+ ".video-quizlet-list{list-style:none;margin:0;padding-left:0;counter-reset:videoQuizletItem;}"
+				+ ".video-quizlet-list li{counter-increment:videoQuizletItem;display:flex;align-items:flex-start;gap:0.5em;margin-bottom:0.75em;}"
+				+ ".video-quizlet-list li .video-quizlet-number{line-height:1.2;padding-top:0.15em;min-width:1.75em;text-align:right;flex:0 0 auto;}"
+				+ ".video-quizlet-list li .video-quizlet-number::before{content:counter(videoQuizletItem) '.';}"
+				+ ".video-quizlet-list li .video-quizlet-question{flex:1 1 auto;}"
+				+ "</style>");
+		buf.append("<OL class='video-quizlet-list'>\n");
 		while (i<nQuestions && questionKeys.size()>0) {
 			Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 			Question q = ofy().load().key(k).safe();
@@ -396,7 +403,7 @@ public class VideoQuiz extends HttpServlet {
 			if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 			q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
 
-			buf.append("\n<li>" + q.print() + "<br></li>\n");
+			buf.append("\n<li><span class='video-quizlet-number'></span><div class='video-quizlet-question'>" + q.print() + "<br></div></li>\n");
 		}
 		buf.append("</OL>");
 
