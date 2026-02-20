@@ -387,7 +387,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<style>"
 				+ ".video-quizlet-list{list-style:none;margin:0;padding-left:0;counter-reset:videoQuizletItem;}"
 				+ ".video-quizlet-list li{counter-increment:videoQuizletItem;display:flex;align-items:flex-start;gap:0.5em;margin-bottom:0.75em;}"
-				+ ".video-quizlet-list li .video-quizlet-number{line-height:1.2;padding-top:0.15em;min-width:1.75em;text-align:right;flex:0 0 auto;}"
+				+ ".video-quizlet-list li .video-quizlet-number{font-weight:600;line-height:1.2;padding-top:0.15em;min-width:1.75em;text-align:right;flex:0 0 auto;}"
 				+ ".video-quizlet-list li .video-quizlet-number::before{content:counter(videoQuizletItem) '.';}"
 				+ ".video-quizlet-list li .video-quizlet-question{flex:1 1 auto;}"
 				+ "</style>");
