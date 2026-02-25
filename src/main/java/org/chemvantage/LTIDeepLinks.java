@@ -13,6 +13,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -620,8 +621,14 @@ public class LTIDeepLinks extends HttpServlet {
 							for (Long conceptId : ch.conceptIds) {
 								a.conceptIds.add(conceptId);
 								if ("Sage".equals(a.assignmentType)) continue;  // don't add questionKeys 
-								List<Key<Question>> conceptQuestionKeys = ofy().load().type(Question.class).filter("assignmentType",(assignmentType.equals("SmartText")?"Quiz":assignmentType)).filter("conceptId",conceptId).keys().list();
-								if (!conceptQuestionKeys.isEmpty()) a.questionKeys.addAll(conceptQuestionKeys);
+								else if ("Homework".equals(a.assignmentType)) { // for homework, select up to 15 questions dfistributed among the concepts
+									int numConceptsRemaining = ch.conceptIds.size() - a.conceptIds.size() +1;
+									a.questionKeys.addAll(selectHomeworkQuestions(conceptId,numConceptsRemaining,a.questionKeys.size()));
+								}
+								else { // for Quiz and SmartText, add all questions for this conceptId and assignmentType
+									List<Key<Question>> conceptQuestionKeys = ofy().load().type(Question.class).filter("assignmentType",(assignmentType.equals("SmartText")?"Quiz":assignmentType)).filter("conceptId",conceptId).keys().list();
+									if (!conceptQuestionKeys.isEmpty()) a.questionKeys.addAll(conceptQuestionKeys);
+								}
 							}
 							break;
 						}
@@ -631,7 +638,6 @@ public class LTIDeepLinks extends HttpServlet {
 					assignments.add(a);
 				}
 				break;
-
 			case "VideoQuiz":
 				for (Long vId : videoIds) {
 					a = new Assignment();
@@ -770,5 +776,13 @@ public class LTIDeepLinks extends HttpServlet {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage() + "Debug: " + debug.toString());
 		}
 		return buf.toString();
+	}
+
+	List<Key<Question>> selectHomeworkQuestions(Long conceptId, int numConceptsRemaining, int numQuestionsAlreadySelected) {
+		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).keys().list();
+		Collections.shuffle(questionKeys);
+		int numToSelect = (int) Math.round((double)(15-numQuestionsAlreadySelected)/numConceptsRemaining);
+		if (questionKeys.size() > numToSelect) return questionKeys.subList(0, numToSelect);
+		else return questionKeys;
 	}
 }
