@@ -121,7 +121,8 @@ public class Checkout extends HttpServlet {
 				if (pu == null) {
 					Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter("d")).safe();
 					pu = new PremiumUser(user.getHashedId(), deployment.getOrganization(), ONE_DAY); // constructor automatically saves new entity
-				} else if (new Date(pu.start.getTime()+ONE_WEEK).after(now)) {
+				} else if (pu.start==null || new Date(pu.start.getTime()+ONE_WEEK).after(now)) {
+					pu.start = (pu.start==null) ? now : pu.start;  // if start is null, set it to now; otherwise keep the original start date
 					pu.exp = new Date(now.getTime()+ONE_DAY);
 					ofy().save().entity(pu).now();
 				} else throw new Exception("Your free trial period cannot be extended at this time.");
@@ -172,6 +173,11 @@ public class Checkout extends HttpServlet {
 
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();
 		if (u==null) u = new PremiumUser(user.hashedId, d.organization, 0L);  // create a free trial PremiumUser if none exists
+		else if (u.start == null) { // this condition is added to handle the case of existing PremiumUser entities created before the 'start' field was added; these users should be treated as new users who are just starting their free trial
+			u.start = new Date();
+			u.order_id = "FREE_TRIAL";
+			ofy().save().entity(u).now();
+		}
 		Date freeTrialExpires = new Date(u.start.getTime()+ONE_WEEK);
 		boolean withinFreeTrialPeriod = u.order_id.equals("FREE_TRIAL") && now.before(freeTrialExpires);
 
