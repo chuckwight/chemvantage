@@ -111,9 +111,6 @@ public class Homework extends HttpServlet {
 			case "CreateCustomQuestion":
 				out.println(Subject.header("Create Question") + newQuestionForm(user,request) + Subject.footer);
 				break;
-			case "Logout":
-				out.println(Subject.header() + Logout.now(user) + Subject.footer);
-				break;
 			case "Preview":
 				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
 				break;
