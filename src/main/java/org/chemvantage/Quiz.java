@@ -88,7 +88,7 @@ public class Quiz extends HttpServlet {
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
 			case "Logout":
-				out.println(Subject.header() + Logout.now(user) + Subject.footer);
+				out.println(Logout.now(user));
 				break;
 			case "Instructor":
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
