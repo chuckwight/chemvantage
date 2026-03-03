@@ -670,20 +670,37 @@ void assignToConcept(User user, HttpServletRequest request) {
 				+ "          </div>"
 				+ "        </div>"
 				+ "    </section><p>");
+		Long assignmentId = null;
+		List<Key<Question>> questionKeys = null;
 		try {
-			int nPending = ofy().load().type(ProposedQuestion.class).count();
-			buf.append("<a href=Edit?UserRequest=Review>"
-					+ nPending + " items are currently pending editorial review.</a><br/>");
-			buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br/>");
-			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
-			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
-			buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
-			
+			assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			questionKeys = loadQuestions(assignmentId);
+			buf.append("<h2>Questions for Assignment " + assignmentId + "</h2>");
+		} catch (Exception e) {}
+
+		Long conceptId = null;
+		String assignmentType = request.getParameter("AssignmentType");
+		try {
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			questionKeys = loadQuestions(assignmentType,conceptId);
+		} catch (Exception e) {}
+						
+		if (assignmentId == null) {
+			if (assignmentType == null) {
+				int nPending = ofy().load().type(ProposedQuestion.class).count();
+				buf.append("<a href=Edit?UserRequest=Review>"
+						+ nPending + " items are currently pending editorial review.</a><br/>");
+				buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br/>");
+				buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
+				buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
+				buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
+				buf.append("<form><label>Assignment ID: <input type=text name=AssignmentId value=0></label> <input type=submit value=Select></form>");
+			}
+
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
 			buf.append("<div style=display:table><div style=display:table-row>");
 			buf.append("<form method=get action=/Edit>");
 			
-			String assignmentType = request.getParameter("AssignmentType");
 			Text text = null;
 			Chapter chapter = null;
 			Concept concept = null;
@@ -738,10 +755,6 @@ void assignToConcept(User user, HttpServletRequest request) {
 
 				// the third cell contains a selector for a Concept
 				buf.append("<div style='display:table-cell;'><h4>Select a Key Concept</h4>");
-				Long conceptId = null;
-				try {
-					conceptId = Long.parseLong(request.getParameter("ConceptId"));
-				} catch (Exception e) {}
 				List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 				Map<Key<Concept>,Concept> concepts = ofy().load().keys(conceptKeys);
 				if (conceptId!=null) concept = concepts.get(key(Concept.class,conceptId));
@@ -766,18 +779,12 @@ void assignToConcept(User user, HttpServletRequest request) {
 			}
 			buf.append("</form>");
 			buf.append("</div></div><br/>"); // end row,table
-			
-			if (concept!=null) {
-				
-				List<Key<Question>> questionKeys = loadQuestions(assignmentType,concept.id);
-				
-				buf.append("<h3>" + questions.size() + " " + assignmentType + " Questions for Key Concept: " + concept.title + "</h3>");
 
-				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>");
-				buf.append("Add a new question for this key concept:<br>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestionForm>"
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+			if (concept != null) {
+				buf.append("<h3>Questions for Concept: " + concept.title + "</h3>");
+				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>"
 						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionType>"
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=1;submit()\" VALUE='Multiple Choice'> "
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False'> "
@@ -785,49 +792,60 @@ void assignToConcept(User user, HttpServletRequest request) {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word'> "
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
-						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'> "
 						+ "</FORM><br/>");
-
-				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-				int i=0;
-				int pts = 0;
-				for (Key<Question> k : questionKeys) {
-					Question q = questions.get(k);
-					q.setParameters();
-
-					if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
-						pts = q.pointValue;
-						i=0;
-						buf.append("<tr><td bgcolor=cyan>" + q.pointValue + "&nbsp;pt.&nbsp;questions:</td><td colspan=2>&nbsp;<p>&nbsp;</td></tr>");
-					}
-					i++;
-					buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
-							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "' />"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
-							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
-							+ "<TR id=q" + q.id + " VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
-							+ "<br/><FONT SIZE=-2>" + q.getSuccess() + "</FONT>"
-							+ "</TD>");
-					buf.append("</FORM>");
-					buf.append("<FORM METHOD=POST ACTION=/Edit>"
-							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "' />"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
-							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
-							+ "<TD style='padding-right:5px;'><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Hide' />"
-							+ "</TD>"
-							+ "<TD ALIGN=RIGHT  style='padding-right:5px;'> " + i + ". </TD>");
-					buf.append("<TD>" + q.printAll() + "</TD>");
-					buf.append("</TR></FORM>");
-				}
-				buf.append("</TABLE><br/>");			
 			}
-		} catch (Exception e) {
-			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
+		if (questionKeys == null || questions.size() == 0) return buf.toString();
+	
+		buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+		int i=0;
+		int pts = 0;
+		for (Key<Question> k : questionKeys) {
+			Question q = questions.get(k);
+			q.setParameters();
+
+			if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
+				pts = q.pointValue;
+				i=0;
+				buf.append("<tr><td bgcolor=cyan>" + q.pointValue + "&nbsp;pt.&nbsp;questions:</td><td colspan=2>&nbsp;<p>&nbsp;</td></tr>");
+			}
+			i++;
+			buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
+					+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + conceptId + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
+					+ "<TR id=q" + q.id + " VALIGN=TOP>"
+					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit /><br/>"
+					+ "<FONT SIZE=-2>" + q.getSuccess() + "</FONT><br/>"
+					+ (q.checkedByAI?"\u2713 Checked by AI":"<input type=submit name=UserRequest value='AI Review' />") + "<br/>"
+					+ "<span id=aiResponse" + q.id + "></span>"
+					+ "</TD>");
+			buf.append("</FORM>");
+			buf.append("<FORM METHOD=POST ACTION=/Edit>"
+					+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + conceptId + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
+					+ "<TD style='padding-right:5px;'><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Hide' />"
+					+ "</TD>"
+					+ "<TD ALIGN=RIGHT  style='padding-right:5px;'> " + i + ". </TD>");
+			buf.append("<TD>" + q.printAll() + "</TD>");
+			buf.append("</TR></FORM>");
+		}
+		buf.append("</TABLE><br/>");			
+			
 		return buf.toString();
 	}
 	
+	List<Key<Question>> loadQuestions(Long assignmentId) throws Exception {
+		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
+		questions.clear();
+		if (a.questionKeys.size()>0) {
+			questions = ofy().load().keys(a.questionKeys);
+		}
+		return a.questionKeys;
+	}
+
 	List<Key<Question>> loadQuestions(String assignmentType,Long conceptId) throws Exception {
 		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).keys().list();
 		questions.clear();
