@@ -572,13 +572,12 @@ void assignToConcept(User user, HttpServletRequest request) {
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h2>Current Question</h2>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			//buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
-			
-			buf.append("Success Rate: " + q.getSuccess() + "<p>");
+			buf.append("Success Rate: " + q.getSuccess() + "<br/>");
+			buf.append("<input type=checkbox name=CheckedByAI " + (q.checkedByAI?"checked":"") + " /> Checked by AI<br/>");
 			
 			buf.append("<FORM Action=/Edit METHOD=POST>");
 			
@@ -818,7 +817,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 					+ "<TR id=q" + q.id + " VALIGN=TOP>"
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit /><br/>"
 					+ "<FONT SIZE=-2>" + q.getSuccess() + "</FONT><br/>"
-					+ (q.checkedByAI?"\u2713 Checked by AI":"<input type=submit name=UserRequest value='AI Review' />") + "<br/>"
+					+ (q.checkedByAI?"\u2713 Checked by AI":"") + "<br/>"
 					+ "<span id=aiResponse" + q.id + "></span>"
 					+ "</TD>");
 			buf.append("</FORM>");
@@ -1118,7 +1117,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			
 			buf.append("Author: " + q.authorId + "<br>");
-			buf.append("Editor: " + user.getId() + "<p>");
+			buf.append("Editor: " + user.getId() + "<br/>");
 			
 			buf.append("<FORM ACTION=/Edit#q" + questionId + " METHOD=POST>");
 			
@@ -1681,10 +1680,6 @@ void assignToConcept(User user, HttpServletRequest request) {
 	
 	private Question assembleQuestion(HttpServletRequest request,Question q) {
 		String assignmentType = request.getParameter("AssignmentType");
-		long topicId = 0;
-		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-		} catch (Exception e) {}
 		long conceptId = 0;
 		try {
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
@@ -1733,7 +1728,6 @@ void assignToConcept(User user, HttpServletRequest request) {
 		if (parameterString == null) parameterString = "";
 		
 		q.assignmentType = assignmentType;
-		q.topicId = topicId;
 		q.conceptId = conceptId;
 		q.learn_more_url = learn_more_url;
 		q.setQuestionType(type);
