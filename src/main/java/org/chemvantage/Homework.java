@@ -1255,8 +1255,8 @@ public class Homework extends HttpServlet {
 			}
 		}
 		
-		if (c.title.equals("Custom")) buf.append("Currently, there are " + (i-1) + " custom question items included in this assignment.<br/><br/>");
-		else buf.append("Currently, this concept has " + (i-1) + " assigned question items and " + (j-1) + " optional questions.<br/><br/>");
+		if (c.title.equals("Custom")) buf.append(" Currently, there are " + (i-1) + " custom question items included in this assignment.<br/><br/>");
+		else buf.append(" Currently, this concept has " + (i-1) + " assigned question items and " + (j-1) + " optional questions.<br/><br/>");
 			
 		// This dummy form uses javascript to select/deselect all questions
 		buf.append("<FORM style='display:inline;' NAME=DummyForm><label><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "

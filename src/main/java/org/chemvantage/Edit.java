@@ -21,7 +21,14 @@ import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,6 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -46,6 +57,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	private static final String CORRECT_ANSWER_PROMPT_ID = "pmpt_69aca16a881081938f557752ab5ef5a107c7ea937e14ff76";
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
@@ -131,6 +143,14 @@ public class Edit extends HttpServlet {
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response)
 	throws ServletException, IOException {
+		String userRequest = request.getParameter("UserRequest");
+		if (userRequest == null) userRequest = "";
+		
+		if (userRequest.equals("ValidateCorrectAnswerWithAI")) {
+			validateCorrectAnswerWithAI(request,response);
+			return;
+		}
+		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
@@ -138,13 +158,9 @@ public class Edit extends HttpServlet {
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			//user.setToken();
 			
 			out.println(Subject.getHeader(user));
 			
-			String userRequest = request.getParameter("UserRequest");
-			if (userRequest == null) userRequest = "";
-
 			switch (userRequest) {
 			case "CreateTopic":
 				createTopic(user,request);
@@ -548,16 +564,18 @@ void assignToConcept(User user, HttpServletRequest request) {
 	}
 
 	String editCurrentQuestion (User user,HttpServletRequest request) {
+		Long questionId = null;
+		Question q = null;
+		Long assignmentId = null;
 		try {
-			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			return editCurrentQuestion(user,q);
-		} catch (Exception e) {
-			return "Sorry, the question was not found in the database.";
-		}
+			questionId = Long.parseLong(request.getParameter("QuestionId"));
+			q = ofy().load().type(Question.class).id(questionId).safe();
+			assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+		} catch (Exception e) {}
+		return editCurrentQuestion(user,q,assignmentId);
 	}
 
-	String editCurrentQuestion (User user,Question q) {
+	String editCurrentQuestion (User user,Question q, Long assignmentId) {
 		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
 				+ "      <div class='container py-5'>"
 				+ "          <div class='col-lg-7'>"
@@ -567,9 +585,9 @@ void assignToConcept(User user, HttpServletRequest request) {
 				+ "    </section><p>");
 		try {
 			long questionId = q.id;
-			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
 			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
-			if (q.requiresParser()) q.setParameters();
+			long parameterSeed = ThreadLocalRandom.current().nextLong();
+			if (q.requiresParser()) q.setParameters(parameterSeed);
 			buf.append("<h2>Current Question</h2>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
@@ -577,7 +595,33 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			buf.append("Success Rate: " + q.getSuccess() + "<br/>");
-			buf.append("<input type=checkbox name=CheckedByAI " + (q.checkedByAI?"checked":"") + " /> Checked by AI<br/>");
+			if (q.checkedByAI) buf.append("&#x2705; Checked by AI<br/>");
+			else if (q.getQuestionType() <= 5) {
+				buf.append("<div id='AIAnswerContainer'><button class='btn btn-secondary' onClick=\"validateCorrectAnswerWithAI('" + questionId + "','" + parameterSeed + "')\">Check by AI</button></div><br/>");
+			} else {
+				buf.append("<br/>");
+			}
+
+			buf.append("<script>\n"
+					+ "async function validateCorrectAnswerWithAI(questionId,parameterSeed) {\n"
+					+ "  const ai_answer_container = document.getElementById('AIAnswerContainer');\n"
+					+ "  ai_answer_container.textContent = 'Validating...';\n"
+					+ "  var result;"
+					+ "  try {\n"
+					+ "    const response = await fetch('/Edit', {\n"
+					+ "      method: 'POST',\n"
+					+ "      headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},\n"
+					+ "      body: new URLSearchParams({UserRequest: 'ValidateCorrectAnswerWithAI', QuestionId: String(questionId), ParameterSeed: String(parameterSeed)})\n"
+					+ "    });\n"
+					+ "    result = await response.json();\n"
+					+ "    console.log(result);\n"
+					+ "    if (!response.ok || !result.success) throw new Error(result.message || 'Validation failed.');\n"
+					+ "    ai_answer_container.innerHTML = result.aiGeneratedAnswer + ' ' + (result.checkedByAI ? '&#x2705;' : '&#x274C;');\n"
+					+ "  } catch (err) {\n"
+					+ "    ai_answer_container.textContent = 'Validation failed. ' + err.message + JSON.stringify(result);\n"
+					+ "  }\n"
+					+ "}\n"
+					+ "</script>");
 			
 			buf.append("<FORM Action=/Edit METHOD=POST>");
 			
@@ -585,23 +629,24 @@ void assignToConcept(User user, HttpServletRequest request) {
 			
 			if (q.authorId==null) q.authorId="";
 			if (q.editorId==null) q.editorId="";
+			if (q.aiGeneratedAnswer==null) q.aiGeneratedAnswer="";
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
 			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "' />");
-			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=CheckedByAI id=CheckedByAIHidden VALUE='" + q.checkedByAI + "' />");
+			buf.append((assignmentId==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "' />"));
+			buf.append("<INPUT TYPE=HIDDEN NAME=AIGeneratedAnswer id=AIGeneratedAnswerHidden VALUE='" + Question.quot2html(Question.amp2html(q.aiGeneratedAnswer)) + "' />");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + " />");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
 			
 			buf.append("<hr><h2>Edit This Question</h2>");
 			
-			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			//buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br/>");
 			buf.append("Concept:" + conceptSelectBox(q.conceptId) + "<br/>");
-			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
-			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
-			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
-			
+			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br/>");
+			buf.append("<input type=checkbox name=CheckedByAI value=true " + (q.checkedByAI?" checked":"") + " /> Checked by AI<br/>");
+
 			buf.append(q.edit());
 			
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
@@ -680,6 +725,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 		Long conceptId = null;
 		String assignmentType = request.getParameter("AssignmentType");
 		try {
+			if (assignmentId != null) throw new Exception();  // if AssignmentId is present, ignore ConceptId parameter
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
 			questionKeys = loadQuestions(assignmentType,conceptId);
 		} catch (Exception e) {}
@@ -813,12 +859,12 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
 					+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + conceptId + "' />"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+					+ (assignmentId==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "' />")
 					+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
 					+ "<TR id=q" + q.id + " VALIGN=TOP>"
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit /><br/>"
 					+ "<FONT SIZE=-2>" + q.getSuccess() + "</FONT><br/>"
-					+ (q.checkedByAI?"\u2713 Checked by AI":"") + "<br/>"
-					+ "<span id=aiResponse" + q.id + "></span>"
+					+ (q.checkedByAI?"&#x2705; by AI":"") + "<br/>"
 					+ "</TD>");
 			buf.append("</FORM>");
 			buf.append("<FORM METHOD=POST ACTION=/Edit>"
@@ -1084,6 +1130,12 @@ void assignToConcept(User user, HttpServletRequest request) {
 				questionId = Long.parseLong(request.getParameter("QuestionId"));
 				current = true;
 			} catch (Exception e2) {}
+			
+			Long assignmentId = null;
+			try {
+				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			} catch (Exception e) {}
+			
 			long proposedQuestionId = 0;
 			try {
 				proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
@@ -1106,27 +1158,28 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("Assignment Type: " + q.assignmentType);
 			if (q.assignmentType.equals("Exam")) { // validate point value
 				if (q.pointValue < 2) q.pointValue = 2;
-				buf.append(" (" + q.pointValue + " points)<br>");
+				buf.append(" (" + q.pointValue + " points)<br/>");
 			} else {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
 			Concept c = conceptId==null?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
-			
-			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
-			
-			buf.append("Author: " + q.authorId + "<br>");
+			buf.append("Author: " + q.authorId + "<br/>");
 			buf.append("Editor: " + user.getId() + "<br/>");
-			
+			buf.append((q.checkedByAI?"&#x2705; Checked by AI<br/>":"") + "<br/>");
+
 			buf.append("<FORM ACTION=/Edit#q" + questionId + " METHOD=POST>");
 			
 			buf.append(q.printAll());
 			
 			if (q.authorId==null) q.authorId="";
+			if (q.aiGeneratedAnswer==null) q.aiGeneratedAnswer="";
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "'>");
-			
+			buf.append("<INPUT TYPE=HIDDEN NAME=CheckedByAI VALUE='" + q.checkedByAI + "'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=AIGeneratedAnswer VALUE='" + Question.quot2html(Question.amp2html(q.aiGeneratedAnswer)) + "'>");
+			buf.append((assignmentId==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "' />"));
 			
 			if (current) {
 				buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
@@ -1141,8 +1194,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			
 			buf.append("<hr><h2>Continue Editing</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			buf.append("Concept:" + conceptSelectBox(conceptId));
-			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
+			buf.append("Concept:" + conceptSelectBox(conceptId) + "<br>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
 			if (q.assignmentType.equals("Exam")) {
@@ -1150,6 +1202,8 @@ void assignToConcept(User user, HttpServletRequest request) {
 			} else q.pointValue = 1;
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			
+			buf.append("<input type=checkbox name=CheckedByAI value=true " + (q.checkedByAI?" checked":"") + " /> Checked by AI<br/><br/>");
+
 			buf.append(q.edit());
 			
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
@@ -1680,6 +1734,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 	
 	private Question assembleQuestion(HttpServletRequest request,Question q) {
 		String assignmentType = request.getParameter("AssignmentType");
+		String priorCorrectAnswer = q.correctAnswer;
 		long conceptId = 0;
 		try {
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
@@ -1747,8 +1802,166 @@ void assignToConcept(User user, HttpServletRequest request) {
 		q.editorId = request.getParameter("EditorId");
 		q.scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
 		q.strictSpelling = Boolean.parseBoolean(request.getParameter("StrictSpelling"));
+		String checkedByAI = request.getParameter("CheckedByAI");
+		if (checkedByAI != null) q.checkedByAI = Boolean.parseBoolean(checkedByAI);
+		String aiGeneratedAnswer = request.getParameter("AIGeneratedAnswer");
+		if (aiGeneratedAnswer != null) q.aiGeneratedAnswer = aiGeneratedAnswer;
+		if (priorCorrectAnswer != null && q.correctAnswer != null && !priorCorrectAnswer.equals(q.correctAnswer)) {
+			q.checkedByAI = false;
+			q.aiGeneratedAnswer = "";
+		}
 		q.validateFields();
 		return q;
+	}
+
+	private void validateCorrectAnswerWithAI(HttpServletRequest request,HttpServletResponse response) throws IOException {
+		response.setContentType("application/json");
+		JsonObject api_response = new JsonObject();
+		try {
+			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			long parameterSeed = Long.parseLong(request.getParameter("ParameterSeed"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			if (q.requiresParser()) q.setParameters(parameterSeed);
+			String aiGeneratedAnswer = requestCorrectAnswerFromChatGPT(q);
+			
+			if (extractCorrectAnswerValue(aiGeneratedAnswer)) {
+				q.checkedByAI = true;
+				ofy().save().entity(q);
+			}
+			api_response.addProperty("success", true);
+			api_response.addProperty("questionId", questionId);
+			api_response.addProperty("checkedByAI", q.checkedByAI);
+			api_response.addProperty("aiGeneratedAnswer", aiGeneratedAnswer==null?"":aiGeneratedAnswer);
+			if (!q.checkedByAI) {
+				api_response.addProperty("message", "The AI-generated answer did not match the instructor's correct answer. Please review the AI-generated answer and update the question if needed.");
+				api_response.addProperty("correctAnswer", q.getCorrectAnswer());
+				api_response.addProperty("questionText", q.printForSage());
+			}
+		} catch (Exception e) {
+			response.setStatus(500);
+			api_response.addProperty("success", false);
+			api_response.addProperty("message", e.getMessage()==null?e.toString():e.getMessage());
+		}
+		response.getWriter().println(api_response.toString());
+	}
+
+	private boolean extractCorrectAnswerValue(String aiResponseText) {
+		if (aiResponseText == null) return false;
+		String text = aiResponseText.trim();
+		if (text.isEmpty()) return false;
+
+		if (text.startsWith("```")) {
+			int firstNewline = text.indexOf('\n');
+			if (firstNewline > 0) text = text.substring(firstNewline + 1).trim();
+			if (text.endsWith("```")) text = text.substring(0, text.length() - 3).trim();
+		}
+
+		try {
+			return JsonParser.parseString(text).getAsJsonObject().get("correct_answer").getAsBoolean();
+		} catch (Exception e) {
+			return false;
+		}
+/*
+		try {
+			JsonElement element = JsonParser.parseString(text);
+			if (element.isJsonPrimitive()) return element.getAsString().trim();
+			if (element.isJsonObject()) {
+				JsonObject obj = element.getAsJsonObject();
+				String[] keys = {"correct_answer", "correctAnswer", "answer", "value"};
+				for (String key : keys) {
+					if (obj.has(key) && !obj.get(key).isJsonNull()) {
+						JsonElement value = obj.get(key);
+						if (value.isJsonPrimitive()) return value.getAsString().trim();
+						if (value.isJsonArray() && value.getAsJsonArray().size() > 0 && value.getAsJsonArray().get(0).isJsonPrimitive()) {
+							return value.getAsJsonArray().get(0).getAsString().trim();
+						}
+						return value.toString().trim();
+					}
+				}
+			}
+		} catch (Exception e) {
+		}
+
+		String lower = text.toLowerCase();
+		int idx = lower.indexOf("correct answer");
+		if (idx >= 0) {
+			int colon = text.indexOf(':', idx);
+			if (colon >= 0 && colon + 1 < text.length()) return text.substring(colon + 1).trim();
+		}
+		return text;
+*/
+	}
+
+	private String readResponseBody(HttpURLConnection connection, boolean success) throws IOException {
+		BufferedReader reader;
+		if (success) {
+			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		} else if (connection.getErrorStream() != null) {
+			reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+		} else {
+			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		}
+		try (BufferedReader br = reader) {
+			StringBuilder sb = new StringBuilder();
+			String line;
+			while ((line = br.readLine()) != null) sb.append(line).append('\n');
+			return sb.toString().trim();
+		}
+	}
+
+	private String requestCorrectAnswerFromChatGPT(Question q) throws Exception {
+		String questionItem = q.printForSage();
+		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
+
+		JsonObject api_request = new JsonObject();
+		api_request.addProperty("model", "gpt-5");
+		
+		JsonObject prompt = new JsonObject();
+		prompt.addProperty("id", CORRECT_ANSWER_PROMPT_ID);
+		JsonObject variables = new JsonObject();
+		variables.addProperty("question_item", questionItem);
+		variables.addProperty("student_answer", q.getCorrectAnswer());
+		prompt.add("variables", variables);
+		api_request.add("prompt", prompt);
+		
+		URL u = new URI("https://api.openai.com/v1/responses").toURL();
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+
+		OutputStream os = uc.getOutputStream();
+		byte[] jsonBytes = api_request.toString().getBytes("utf-8");
+		os.write(jsonBytes,0,jsonBytes.length);
+		os.close();
+
+		int responseCode = uc.getResponseCode();
+		boolean success = responseCode / 100 == 2;
+		String responseBody = readResponseBody(uc, success);
+		JsonObject apiResponse;
+		try {
+			apiResponse = JsonParser.parseString(responseBody).getAsJsonObject();
+		} catch (Exception e) {
+			throw new Exception((success?"OpenAI API returned malformed JSON: ":"OpenAI API error (non-JSON response): ") + responseBody);
+		}
+		if (!success) {
+			throw new Exception("OpenAI API error: " + apiResponse.toString());
+		}
+
+		JsonArray output = apiResponse.get("output").getAsJsonArray();
+		for (JsonElement element0 : output) {
+			JsonObject message = element0.getAsJsonObject();
+			if (!message.has("content")) continue;
+			JsonArray content = message.get("content").getAsJsonArray();
+			for (JsonElement element1 : content) {
+				JsonObject outputText = element1.getAsJsonObject();
+				if (outputText.has("text")) return outputText.get("text").getAsString().trim();
+			}
+		}
+		throw new Exception("OpenAI response did not contain answer text.");
 	}
 	
 	private void createQuestion(User user,HttpServletRequest request) { //previously type long
