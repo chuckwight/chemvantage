@@ -313,6 +313,7 @@ String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
 	if (defaultType.isEmpty()) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
 	buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
 			+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Custom")?" SELECTED":"") + ">Custom</OPTION>"
 			+ "<OPTION" + (defaultType.equals("Sage")?" SELECTED":"") + ">Sage</OPTION>"
 			+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
 			+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
@@ -590,7 +591,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			if (q.requiresParser()) q.setParameters(parameterSeed);
 			buf.append("<h2>Current Question</h2>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
+			buf.append(c==null?"":"Concept: " + c.title + "<br/>");
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
@@ -642,7 +643,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("<hr><h2>Edit This Question</h2>");
 			
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br/>");
-			buf.append("Concept:" + conceptSelectBox(q.conceptId) + "<br/>");
+			buf.append(("Custom".equals(q.assignmentType)?"":"Concept:" + conceptSelectBox(q.conceptId) + "<br/>"));
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br/>");
 			buf.append("<input type=checkbox name=CheckedByAI value=true " + (q.checkedByAI?" checked":"") + " /> Checked by AI<br/>");
@@ -1164,7 +1165,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 				buf.append(" (1 point)<br>");
 			}
 			Concept c = conceptId==null?null:ofy().load().type(Concept.class).id(conceptId).now();
-			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
+			buf.append(c==null?"":"Concept: " + c.title + "<br/>");
 			buf.append("Author: " + q.authorId + "<br/>");
 			buf.append("Editor: " + user.getId() + "<br/>");
 			buf.append((q.checkedByAI?"&#x2705; Checked by AI<br/>":"") + "<br/>");
@@ -1194,7 +1195,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			
 			buf.append("<hr><h2>Continue Editing</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			buf.append("Concept:" + conceptSelectBox(conceptId) + "<br>");
+			buf.append("Custom".equals(q.assignmentType)?"":"Concept:" + conceptSelectBox(conceptId) + "<br>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
 			if (q.assignmentType.equals("Exam")) {
@@ -1735,9 +1736,10 @@ void assignToConcept(User user, HttpServletRequest request) {
 	private Question assembleQuestion(HttpServletRequest request,Question q) {
 		String assignmentType = request.getParameter("AssignmentType");
 		String priorCorrectAnswer = q.correctAnswer;
-		long conceptId = 0;
+		Long conceptId = null;
 		try {
-			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			Long requestedConceptId = Long.parseLong(request.getParameter("ConceptId"));
+			if (requestedConceptId != null && requestedConceptId > 0L) conceptId = requestedConceptId;
 		} catch (Exception e) {}
 		String learn_more_url = request.getParameter("LearnMoreURL");
 		int type = q.getQuestionType();
