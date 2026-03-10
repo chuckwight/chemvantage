@@ -2160,7 +2160,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 		String message = "<a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?AssignmentId=" + a.id + ">View Assignment</a> or "
 		+ "<a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?UserRequest=ValidateAssignmentWithAI&AssignmentId=" + a.id + ">Run Validation Interactively</a><br/><br/>";
 		if (faultyQuestionKeys.size()>0) {
-			message += "The following questions in Assignment " + a.id + " were flagged by the AI validator as potentially having incorrect answers:<br/><br/>";
+			message += "The following questions in Assignment " + a.id + " were flagged by the AI validator as potentially having incorrect answers:<br/>";
 			for (Key<Question> k : faultyQuestionKeys) {
 				Long questionId = k.getId();
 				message += "Question ID: " + questionId + " <a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?UserRequest=Edit&AssignmentId=" + a.id + "&QuestionId=" + questionId + ">Edit</a><br/>";
@@ -2171,13 +2171,11 @@ void assignToConcept(User user, HttpServletRequest request) {
 		message += "<br/>";
 
 		if (failedQuestionKeys.size()>0) {
-			message += "The AI validator encountered errors when validating the following questions in Assignment " + a.id + ":<br/><br/>";
+			message += "The AI validator encountered errors when validating the following questions in Assignment " + a.id + ":<br/>";
 			for (Key<Question> k : failedQuestionKeys) {
 				Long questionId = k.getId();
 				message += "Question ID: " + questionId + " <a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?UserRequest=Edit&AssignmentId=" + a.id + "&QuestionId=" + questionId + ">Edit</a><br/>";
 			}
-		} else {
-			message += "The AI validator did not encounter any errors when validating questions in Assignment " + a.id + ".";
 		}
 
 		try {
