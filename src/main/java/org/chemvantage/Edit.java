@@ -296,6 +296,98 @@ public class Edit extends HttpServlet {
 		}
 		out.println(Subject.footer);
 	}
+
+	private Question assembleQuestion(HttpServletRequest request) {
+		try {
+			int questionType = Integer.parseInt(request.getParameter("QuestionType"));
+			return assembleQuestion(request,new Question(questionType)); 
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	private Question assembleQuestion(HttpServletRequest request,Question q) {
+		String assignmentType = request.getParameter("AssignmentType");
+		String priorCorrectAnswer = q.correctAnswer;
+		Long conceptId = null;
+		try {
+			Long requestedConceptId = Long.parseLong(request.getParameter("ConceptId"));
+			if (requestedConceptId != null && requestedConceptId > 0L) conceptId = requestedConceptId;
+		} catch (Exception e) {}
+		String learn_more_url = request.getParameter("LearnMoreURL");
+		int type = q.getQuestionType();
+		try {
+			type = Integer.parseInt(request.getParameter("QuestionType"));
+		}catch (Exception e) {}
+		String questionText = request.getParameter("QuestionText");
+		ArrayList<String> choices = new ArrayList<String>();
+		int nChoices = 0;
+		char choice = 'A';
+		for (int i=0;i<5;i++) {
+			String choiceText = request.getParameter("Choice"+ choice +"Text");
+			if (choiceText==null) choiceText = "";
+			if (choiceText.length() > 0) {
+				choices.add(choiceText);
+				nChoices++;
+			}
+			choice++;
+		}
+		double requiredPrecision = 0.; // percent
+		int significantFigures = 0;
+		int pointValue = 1;
+		try {
+			pointValue = Integer.parseInt(request.getParameter("PointValue"));
+		} catch (Exception e) {
+		}
+		try {
+			requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
+		} catch (Exception e) {
+		}
+		try {
+			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+		} catch (Exception e) {
+		}
+		String correctAnswer = "";
+		try {
+			String[] allAnswers = request.getParameterValues("CorrectAnswer");
+			for (int i = 0; i < allAnswers.length; i++) correctAnswer += allAnswers[i];
+		} catch (Exception e) {
+			correctAnswer = request.getParameter("CorrectAnswer");
+		}
+		String parameterString = request.getParameter("ParameterString");
+		if (parameterString == null) parameterString = "";
+		
+		q.assignmentType = assignmentType;
+		q.conceptId = conceptId;
+		q.learn_more_url = learn_more_url;
+		q.setQuestionType(type);
+		q.text = questionText;
+		q.nChoices = nChoices;
+		q.choices = choices;
+		q.requiredPrecision = requiredPrecision;
+		q.significantFigures = significantFigures;
+		q.correctAnswer = correctAnswer;
+		q.tag = request.getParameter("QuestionTag");
+		q.pointValue = pointValue;
+		q.parameterString = parameterString;
+		q.hint = request.getParameter("Hint");
+		q.solution = request.getParameter("Solution");
+		q.notes = "";
+		q.authorId = request.getParameter("AuthorId");
+		q.editorId = request.getParameter("EditorId");
+		q.scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
+		q.strictSpelling = Boolean.parseBoolean(request.getParameter("StrictSpelling"));
+		String checkedByAI = request.getParameter("CheckedByAI");
+		if (checkedByAI != null) q.checkedByAI = Boolean.parseBoolean(checkedByAI);
+		String aiGeneratedAnswer = request.getParameter("AIGeneratedAnswer");
+		if (aiGeneratedAnswer != null) q.aiGeneratedAnswer = aiGeneratedAnswer;
+		if (priorCorrectAnswer != null && q.correctAnswer != null && !priorCorrectAnswer.equals(q.correctAnswer)) {
+			q.checkedByAI = false;
+			q.aiGeneratedAnswer = "";
+		}
+		q.validateFields();
+		return q;
+	}
 void assignKeyConcepts(User user,HttpServletRequest request) throws Exception {
 		long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 		String[] questionIdStrings = request.getParameterValues("QuestionId");
@@ -449,6 +541,21 @@ void assignToConcept(User user, HttpServletRequest request) {
 		return buf.toString();
 	}
 
+	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
+		if (!user.isChemVantageAdmin()) return;
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null || !(assignmentType.equals("Quiz") || assignmentType.equals("Homework"))) return;
+		long topicId = Long.parseLong(request.getParameter("TopicId"));
+		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
+		for (Question q : questions) {
+			q.id = null;
+			if (q.assignmentType.equals("Quiz")) q.pointValue = 2;
+			else q.pointValue = 10;
+			q.assignmentType = "Exam";		
+		}
+		ofy().save().entities(questions);
+	}
+
 	void createChapter(HttpServletRequest request) throws Exception {
 			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
 			if (text.chapters==null) text.chapters = new ArrayList<Chapter>();
@@ -477,6 +584,14 @@ void assignToConcept(User user, HttpServletRequest request) {
 		Concept c = new Concept(title,orderBy);		
 		
 		ofy().save().entity(c).now();
+	}
+
+	private void createQuestion(User user,HttpServletRequest request) { //previously type long
+		try {
+			Question q = assembleQuestion(request);
+			q.isActive = true;
+			ofy().save().entity(q).now();
+	} catch (Exception e) {}
 	}
 
 	void createText(User user,HttpServletRequest request) {
@@ -508,6 +623,15 @@ void assignToConcept(User user, HttpServletRequest request) {
 		ofy().save().entity(v).now();
 	}
 
+	private void deleteAllQuestions(User user, HttpServletRequest request) throws Exception {
+		if (!user.isChemVantageAdmin()) return;
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) return;
+		long topicId = Long.parseLong(request.getParameter("TopicId"));
+		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
+		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
+	}
+
 	void deleteChapter(HttpServletRequest request) {
 		Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
 		int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
@@ -520,6 +644,18 @@ void assignToConcept(User user, HttpServletRequest request) {
 			Concept c = ofy().load().type(Concept.class).id(Long.parseLong(request.getParameter("ConceptId"))).safe();
 			ofy().delete().entity(c).now();
 		} catch (Exception e) {}
+	}
+
+	private void deleteQuestion(User user,HttpServletRequest request) {
+		long questionId = 0;
+		try {
+			questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Key<Question> k = key(Question.class,questionId);
+			ofy().delete().key(k).now();
+			questions.remove(key(Question.class,questionId));
+		} catch (Exception e) {
+			return;
+		}
 	}
 
 	String deleteQuizlet(HttpServletRequest request) {
@@ -661,6 +797,120 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("</FORM>");
 		} catch (Exception e) {
 			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+
+	String editVideoForm(HttpServletRequest request) {
+		Video v = null;
+		try {
+			v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+		} catch (Exception e) {
+			return "Video was not found, sorry.";
+		}
+		int segment = 0;		
+		try {
+			segment = Integer.parseInt(request.getParameter("Segment"));
+		}catch (Exception e) {
+			segment = v.breaks==null?0:v.breaks.length;  // default to create a new breakpoint and segment
+		}
+		return editVideoForm(v,segment);
+	}
+	
+	String editVideoForm(Video v, int segment) {
+		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
+				+ "      <div class='container py-5'>"
+				+ "          <div class='col-lg-7'>"
+				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
+				+ "          </div>"
+				+ "        </div>"
+				+ "    </section><p>");
+		if (v.breaks == null) {
+			v.breaks = new int[0];
+			v.nQuestions = new int[0];
+			v.questionKeys = new ArrayList<Key<Question>>();
+		}
+		
+		try {
+			buf.append("<h2>Embed quiz questions in a video</h2>");
+
+			buf.append("Video: " + v.title + "<p>");
+			
+			buf.append("Use the form below to create or edit breakpoints in this video where 2-question quizlets will be "
+					+ "presented to the viewer. Each segment must be edited separately, and breakpoints must be created in "
+					+ "increasing order of seconds from the start of the video. You may (optionally) create a quiz at the "
+					+ "end of the video by entering 'end' or by leaving the breakpoint time blank.<ol>"
+					+ "<li>Select a topic appropriate to the subject of the video (for selecting the questions)</li>"
+					+ "<li>Select one of the existing video segments or create a new one</li>"
+					+ "<li>If you selected an existing segment, wait for the page to reload</li>"
+					+ "<li>Enter the breakpoint (in seconds from the start of the video) or 'end'</li>"
+					+ "<li>Select several questions from below to be drawn at random for the quizlet</li>"
+					+ "<li>Click the 'Update Video' button to submit the breakpoint value and question items</li>"
+					+ "</ol>");
+
+			buf.append("<form method=post action=/Edit>");  // This starts the master form for editing a single break point for hte video
+			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
+			buf.append("<input type=hidden name=Segment value=" + segment + ">");
+
+			buf.append("Topic: " + topicSelectBox(v.topicId,true) + "<p>");				
+
+			if (v.topicId == 0L) {
+				buf.append("<input type=hidden name=UserRequest value='Update Quizlet'>");
+			} else {
+				// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
+				// The number of table rows should be v.breaks.length if the last break is at the end of the video
+				// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
+				int nRows = v.breaks.length;
+				boolean addNew = (segment==v.breaks.length && (segment==0 || v.breaks[v.breaks.length-1]>0));
+				if (addNew) nRows++;
+
+				buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
+
+				for (int i=0;i<nRows;i++) {
+					buf.append("<tr style='text-align:center'>"
+							+ "<td>" + (i==segment?"edit&rarr;":"<a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id + "&Segment=" + i + ">select</a>") + "</td>"
+							+ "<td>" + (i==v.breaks.length && i==segment?"new":i) + "</td>"
+							+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
+							+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
+							+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
+							+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> ") + (i==v.breaks.length-1?"<input type=submit name=UserRequest value='Delete Quizlet'> ":"") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
+							+ "</tr>");
+				}
+				buf.append("</table><p>");
+
+				if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
+				else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
+
+				buf.append("You may create/edit questions <a href=Edit?TopicId=" + v.topicId + "&AssignmentType=Video>here</a>.<p>");
+
+				// Make a List of all of the available video questions
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",v.topicId).list();
+
+				// Now make a list of all the current questions for this quizlet, if any:
+				List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
+				int nPriorQuestions = 0;
+				if (v.nQuestions.length>segment) {
+					for (int j=0;j<segment;j++) nPriorQuestions += v.nQuestions[j];  // add up the number of questions in preceding quizlets
+					for (int j=nPriorQuestions;j<nPriorQuestions+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
+				}
+
+				// Make a table of available questions, marking the current questions as already selected
+				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+				int k=0;
+				for (Question q : questions) {
+					k++;
+					q.setParameters();
+					buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">") );
+					buf.append("<b>&nbsp;" + k + ".</b></TD>");
+					buf.append("\n<TD>" + q.printAll() + "</TD>");
+					buf.append("</TR>");
+				}
+				buf.append("</TABLE>");
+			}
+			buf.append("</form>");
+		} catch (Exception e) {
+			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
 	}
@@ -888,6 +1138,73 @@ void assignToConcept(User user, HttpServletRequest request) {
 		buf.append("</TABLE><br/>");			
 			
 		return buf.toString();
+	}
+
+	private boolean extractCorrectAnswerValue(String aiResponseText) {
+		if (aiResponseText == null) return false;
+		String text = aiResponseText.trim();
+		if (text.isEmpty()) return false;
+
+		if (text.startsWith("```")) {
+			int firstNewline = text.indexOf('\n');
+			if (firstNewline > 0) text = text.substring(firstNewline + 1).trim();
+			if (text.endsWith("```")) text = text.substring(0, text.length() - 3).trim();
+		}
+
+		try {
+			return JsonParser.parseString(text).getAsJsonObject().get("correct_answer").getAsBoolean();
+		} catch (Exception e) {
+			return false;
+		}
+/*
+		try {
+			JsonElement element = JsonParser.parseString(text);
+			if (element.isJsonPrimitive()) return element.getAsString().trim();
+			if (element.isJsonObject()) {
+				JsonObject obj = element.getAsJsonObject();
+				String[] keys = {"correct_answer", "correctAnswer", "answer", "value"};
+				for (String key : keys) {
+					if (obj.has(key) && !obj.get(key).isJsonNull()) {
+						JsonElement value = obj.get(key);
+						if (value.isJsonPrimitive()) return value.getAsString().trim();
+						if (value.isJsonArray() && value.getAsJsonArray().size() > 0 && value.getAsJsonArray().get(0).isJsonPrimitive()) {
+							return value.getAsJsonArray().get(0).getAsString().trim();
+						}
+						return value.toString().trim();
+					}
+				}
+			}
+		} catch (Exception e) {
+		}
+
+		String lower = text.toLowerCase();
+		int idx = lower.indexOf("correct answer");
+		if (idx >= 0) {
+			int colon = text.indexOf(':', idx);
+			if (colon >= 0 && colon + 1 < text.length()) return text.substring(colon + 1).trim();
+		}
+		return text;
+*/
+	}
+
+	private void hideDuplicateQuestion(User user,HttpServletRequest request) {  // moves question to Concept called duplicates (hidden from instructors but accessible to assignments
+		try {
+			// find the Concept that holds duplicate questions in escrow
+			Long conceptId = null;
+			List<Concept> concepts = ofy().load().type(Concept.class).filter("orderBy <"," 1").list();
+			for (Concept c : concepts) {
+				if (c.title.equals("Hide")) {
+					conceptId = c.id;
+					break;
+				}
+			}
+			if (conceptId!=null) {
+				Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				Question q = ofy().load().type(Question.class).id(questionId).now();
+				q.conceptId = conceptId;
+				ofy().save().entity(q).now();
+			}
+		} catch (Exception e) {}
 	}
 	
 	List<Key<Question>> loadQuestions(Long assignmentId) throws Exception {
@@ -1236,6 +1553,99 @@ void assignToConcept(User user, HttpServletRequest request) {
 		return buf.toString();
 	}
 
+	private String readResponseBody(HttpURLConnection connection, boolean success) throws IOException {
+		BufferedReader reader;
+		if (success) {
+			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		} else if (connection.getErrorStream() != null) {
+			reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+		} else {
+			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		}
+		try (BufferedReader br = reader) {
+			StringBuilder sb = new StringBuilder();
+			String line;
+			while ((line = br.readLine()) != null) sb.append(line).append('\n');
+			return sb.toString().trim();
+		}
+	}
+
+	private String requestCorrectAnswerFromChatGPT(Question q) throws Exception {
+		String questionItem = q.printForSage();
+		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
+
+		JsonObject api_request = new JsonObject();
+		api_request.addProperty("model", "gpt-5");
+		
+		JsonObject prompt = new JsonObject();
+		prompt.addProperty("id", CORRECT_ANSWER_PROMPT_ID);
+		JsonObject variables = new JsonObject();
+		variables.addProperty("question_item", questionItem);
+		variables.addProperty("student_answer", q.getCorrectAnswer());
+		prompt.add("variables", variables);
+		api_request.add("prompt", prompt);
+		
+		URL u = new URI("https://api.openai.com/v1/responses").toURL();
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+
+		OutputStream os = uc.getOutputStream();
+		byte[] jsonBytes = api_request.toString().getBytes("utf-8");
+		os.write(jsonBytes,0,jsonBytes.length);
+		os.close();
+
+		int responseCode = uc.getResponseCode();
+		boolean success = responseCode / 100 == 2;
+		String responseBody = readResponseBody(uc, success);
+		JsonObject apiResponse;
+		try {
+			apiResponse = JsonParser.parseString(responseBody).getAsJsonObject();
+		} catch (Exception e) {
+			throw new Exception((success?"OpenAI API returned malformed JSON: ":"OpenAI API error (non-JSON response): ") + responseBody);
+		}
+		if (!success) {
+			throw new Exception("OpenAI API error: " + apiResponse.toString());
+		}
+
+		JsonArray output = apiResponse.get("output").getAsJsonArray();
+		for (JsonElement element0 : output) {
+			JsonObject message = element0.getAsJsonObject();
+			if (!message.has("content")) continue;
+			JsonArray content = message.get("content").getAsJsonArray();
+			for (JsonElement element1 : content) {
+				JsonObject outputText = element1.getAsJsonObject();
+				if (outputText.has("text")) return outputText.get("text").getAsString().trim();
+			}
+		}
+		throw new Exception("OpenAI response did not contain answer text.");
+	}
+
+	private String requestCorrectAnswerFromGemini(Question q) throws Exception {
+		String questionItem = q.printForSage();
+		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
+
+		String prompt = "You are validating whether the instructor-provided student answer is correct for the chemistry question item below. "
+				+ "Return only JSON with this exact schema: {\"correct_answer\": true|false}. "
+				+ "Do not include markdown, explanations, or any additional fields.\n\n"
+				+ "question_item:\n" + questionItem + "\n\n"
+				+ "student_answer:\n" + q.getCorrectAnswer();
+
+		try (VertexAI vertexAI = new VertexAI(Subject.getProjectId(), VERTEX_AI_LOCATION)) {
+			GenerativeModel model = new GenerativeModel(VERTEX_AI_MODEL, vertexAI);
+			GenerateContentResponse response = model.generateContent(prompt);
+			String text = ResponseHandler.getText(response);
+			if (text == null || text.trim().isEmpty()) throw new Exception("Vertex AI response did not contain answer text.");
+			return text.trim();
+		} catch (Exception e) {
+			throw new Exception("Vertex AI API error: " + (e.getMessage() == null ? e.toString() : e.getMessage()));
+		}
+	}
+
 	String reviewProposedQuestion (User user, HttpServletRequest request) {
 		// identifies a ProposedQuestion item, either from a specific questionId or next in the list
 		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
@@ -1581,6 +1991,21 @@ void assignToConcept(User user, HttpServletRequest request) {
 		} catch (Exception e) {}
 	}
 
+	private void updateQuestion(User user,HttpServletRequest request) {
+		long questionId = 0;
+		try {
+			questionId = Long.parseLong(request.getParameter("QuestionId"));	
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			q = assembleQuestion(request,q);
+			q.editorId = user.getId();
+			q.isActive = true;
+			ofy().save().entity(q).now();
+			questions.remove(key(q));
+		} catch (Exception e) {
+			return;
+		}
+	}
+
 	String updateQuizlet(HttpServletRequest request) { 		
 		StringBuffer buf = new StringBuffer();
 		Video v = null; 
@@ -1690,6 +2115,39 @@ void assignToConcept(User user, HttpServletRequest request) {
 		ofy().save().entity(v).now();
 	}
 
+	private void validateCorrectAnswerWithAI(HttpServletRequest request,HttpServletResponse response) throws IOException {
+		response.setContentType("application/json");
+		JsonObject api_response = new JsonObject();
+		try {
+			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			long parameterSeed = Long.parseLong(request.getParameter("ParameterSeed"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			if (q.requiresParser()) q.setParameters(parameterSeed);
+			String aiGeneratedAnswer = "chatgpt".equals(AI_VALIDATOR_PROVIDER)
+					? requestCorrectAnswerFromChatGPT(q)
+					: requestCorrectAnswerFromGemini(q);
+			
+			if (extractCorrectAnswerValue(aiGeneratedAnswer)) {
+				q.checkedByAI = true;
+				ofy().save().entity(q);
+			}
+			api_response.addProperty("success", true);
+			api_response.addProperty("questionId", questionId);
+			api_response.addProperty("checkedByAI", q.checkedByAI);
+			api_response.addProperty("aiGeneratedAnswer", aiGeneratedAnswer==null?"":aiGeneratedAnswer);
+			if (!q.checkedByAI) {
+				api_response.addProperty("message", "The AI-generated answer did not match the instructor's correct answer. Please review the AI-generated answer and update the question if needed.");
+				api_response.addProperty("correctAnswer", q.getCorrectAnswer());
+				api_response.addProperty("questionText", q.printForSage());
+			}
+		} catch (Exception e) {
+			response.setStatus(500);
+			api_response.addProperty("success", false);
+			api_response.addProperty("message", e.getMessage()==null?e.toString():e.getMessage());
+		}
+		response.getWriter().println(api_response.toString());
+	}
+
 	String videosForm() {
 		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
 				+ "      <div class='container py-5'>"
@@ -1731,464 +2189,6 @@ void assignToConcept(User user, HttpServletRequest request) {
 		return buf.toString();
 	}
 
-	private Question assembleQuestion(HttpServletRequest request) {
-		try {
-			int questionType = Integer.parseInt(request.getParameter("QuestionType"));
-			return assembleQuestion(request,new Question(questionType)); 
-		} catch (Exception e) {
-			return null;
-		}
-	}
-	
-	private Question assembleQuestion(HttpServletRequest request,Question q) {
-		String assignmentType = request.getParameter("AssignmentType");
-		String priorCorrectAnswer = q.correctAnswer;
-		Long conceptId = null;
-		try {
-			Long requestedConceptId = Long.parseLong(request.getParameter("ConceptId"));
-			if (requestedConceptId != null && requestedConceptId > 0L) conceptId = requestedConceptId;
-		} catch (Exception e) {}
-		String learn_more_url = request.getParameter("LearnMoreURL");
-		int type = q.getQuestionType();
-		try {
-			type = Integer.parseInt(request.getParameter("QuestionType"));
-		}catch (Exception e) {}
-		String questionText = request.getParameter("QuestionText");
-		ArrayList<String> choices = new ArrayList<String>();
-		int nChoices = 0;
-		char choice = 'A';
-		for (int i=0;i<5;i++) {
-			String choiceText = request.getParameter("Choice"+ choice +"Text");
-			if (choiceText==null) choiceText = "";
-			if (choiceText.length() > 0) {
-				choices.add(choiceText);
-				nChoices++;
-			}
-			choice++;
-		}
-		double requiredPrecision = 0.; // percent
-		int significantFigures = 0;
-		int pointValue = 1;
-		try {
-			pointValue = Integer.parseInt(request.getParameter("PointValue"));
-		} catch (Exception e) {
-		}
-		try {
-			requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
-		} catch (Exception e) {
-		}
-		try {
-			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
-		} catch (Exception e) {
-		}
-		String correctAnswer = "";
-		try {
-			String[] allAnswers = request.getParameterValues("CorrectAnswer");
-			for (int i = 0; i < allAnswers.length; i++) correctAnswer += allAnswers[i];
-		} catch (Exception e) {
-			correctAnswer = request.getParameter("CorrectAnswer");
-		}
-		String parameterString = request.getParameter("ParameterString");
-		if (parameterString == null) parameterString = "";
-		
-		q.assignmentType = assignmentType;
-		q.conceptId = conceptId;
-		q.learn_more_url = learn_more_url;
-		q.setQuestionType(type);
-		q.text = questionText;
-		q.nChoices = nChoices;
-		q.choices = choices;
-		q.requiredPrecision = requiredPrecision;
-		q.significantFigures = significantFigures;
-		q.correctAnswer = correctAnswer;
-		q.tag = request.getParameter("QuestionTag");
-		q.pointValue = pointValue;
-		q.parameterString = parameterString;
-		q.hint = request.getParameter("Hint");
-		q.solution = request.getParameter("Solution");
-		q.notes = "";
-		q.authorId = request.getParameter("AuthorId");
-		q.editorId = request.getParameter("EditorId");
-		q.scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
-		q.strictSpelling = Boolean.parseBoolean(request.getParameter("StrictSpelling"));
-		String checkedByAI = request.getParameter("CheckedByAI");
-		if (checkedByAI != null) q.checkedByAI = Boolean.parseBoolean(checkedByAI);
-		String aiGeneratedAnswer = request.getParameter("AIGeneratedAnswer");
-		if (aiGeneratedAnswer != null) q.aiGeneratedAnswer = aiGeneratedAnswer;
-		if (priorCorrectAnswer != null && q.correctAnswer != null && !priorCorrectAnswer.equals(q.correctAnswer)) {
-			q.checkedByAI = false;
-			q.aiGeneratedAnswer = "";
-		}
-		q.validateFields();
-		return q;
-	}
-
-	private void validateCorrectAnswerWithAI(HttpServletRequest request,HttpServletResponse response) throws IOException {
-		response.setContentType("application/json");
-		JsonObject api_response = new JsonObject();
-		try {
-			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			long parameterSeed = Long.parseLong(request.getParameter("ParameterSeed"));
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			if (q.requiresParser()) q.setParameters(parameterSeed);
-			String aiGeneratedAnswer = "chatgpt".equals(AI_VALIDATOR_PROVIDER)
-					? requestCorrectAnswerFromChatGPT(q)
-					: requestCorrectAnswerFromGemini(q);
-			
-			if (extractCorrectAnswerValue(aiGeneratedAnswer)) {
-				q.checkedByAI = true;
-				ofy().save().entity(q);
-			}
-			api_response.addProperty("success", true);
-			api_response.addProperty("questionId", questionId);
-			api_response.addProperty("checkedByAI", q.checkedByAI);
-			api_response.addProperty("aiGeneratedAnswer", aiGeneratedAnswer==null?"":aiGeneratedAnswer);
-			if (!q.checkedByAI) {
-				api_response.addProperty("message", "The AI-generated answer did not match the instructor's correct answer. Please review the AI-generated answer and update the question if needed.");
-				api_response.addProperty("correctAnswer", q.getCorrectAnswer());
-				api_response.addProperty("questionText", q.printForSage());
-			}
-		} catch (Exception e) {
-			response.setStatus(500);
-			api_response.addProperty("success", false);
-			api_response.addProperty("message", e.getMessage()==null?e.toString():e.getMessage());
-		}
-		response.getWriter().println(api_response.toString());
-	}
-
-	private boolean extractCorrectAnswerValue(String aiResponseText) {
-		if (aiResponseText == null) return false;
-		String text = aiResponseText.trim();
-		if (text.isEmpty()) return false;
-
-		if (text.startsWith("```")) {
-			int firstNewline = text.indexOf('\n');
-			if (firstNewline > 0) text = text.substring(firstNewline + 1).trim();
-			if (text.endsWith("```")) text = text.substring(0, text.length() - 3).trim();
-		}
-
-		try {
-			return JsonParser.parseString(text).getAsJsonObject().get("correct_answer").getAsBoolean();
-		} catch (Exception e) {
-			return false;
-		}
-/*
-		try {
-			JsonElement element = JsonParser.parseString(text);
-			if (element.isJsonPrimitive()) return element.getAsString().trim();
-			if (element.isJsonObject()) {
-				JsonObject obj = element.getAsJsonObject();
-				String[] keys = {"correct_answer", "correctAnswer", "answer", "value"};
-				for (String key : keys) {
-					if (obj.has(key) && !obj.get(key).isJsonNull()) {
-						JsonElement value = obj.get(key);
-						if (value.isJsonPrimitive()) return value.getAsString().trim();
-						if (value.isJsonArray() && value.getAsJsonArray().size() > 0 && value.getAsJsonArray().get(0).isJsonPrimitive()) {
-							return value.getAsJsonArray().get(0).getAsString().trim();
-						}
-						return value.toString().trim();
-					}
-				}
-			}
-		} catch (Exception e) {
-		}
-
-		String lower = text.toLowerCase();
-		int idx = lower.indexOf("correct answer");
-		if (idx >= 0) {
-			int colon = text.indexOf(':', idx);
-			if (colon >= 0 && colon + 1 < text.length()) return text.substring(colon + 1).trim();
-		}
-		return text;
-*/
-	}
-
-	private String readResponseBody(HttpURLConnection connection, boolean success) throws IOException {
-		BufferedReader reader;
-		if (success) {
-			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-		} else if (connection.getErrorStream() != null) {
-			reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-		} else {
-			reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-		}
-		try (BufferedReader br = reader) {
-			StringBuilder sb = new StringBuilder();
-			String line;
-			while ((line = br.readLine()) != null) sb.append(line).append('\n');
-			return sb.toString().trim();
-		}
-	}
-
-	private String requestCorrectAnswerFromGemini(Question q) throws Exception {
-		String questionItem = q.printForSage();
-		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
-
-		String prompt = "You are validating whether the instructor-provided student answer is correct for the chemistry question item below. "
-				+ "Return only JSON with this exact schema: {\"correct_answer\": true|false}. "
-				+ "Do not include markdown, explanations, or any additional fields.\n\n"
-				+ "question_item:\n" + questionItem + "\n\n"
-				+ "student_answer:\n" + q.getCorrectAnswer();
-
-		try (VertexAI vertexAI = new VertexAI(Subject.getProjectId(), VERTEX_AI_LOCATION)) {
-			GenerativeModel model = new GenerativeModel(VERTEX_AI_MODEL, vertexAI);
-			GenerateContentResponse response = model.generateContent(prompt);
-			String text = ResponseHandler.getText(response);
-			if (text == null || text.trim().isEmpty()) throw new Exception("Vertex AI response did not contain answer text.");
-			return text.trim();
-		} catch (Exception e) {
-			throw new Exception("Vertex AI API error: " + (e.getMessage() == null ? e.toString() : e.getMessage()));
-		}
-	}
-
-	private String requestCorrectAnswerFromChatGPT(Question q) throws Exception {
-		String questionItem = q.printForSage();
-		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
-
-		JsonObject api_request = new JsonObject();
-		api_request.addProperty("model", "gpt-5");
-		
-		JsonObject prompt = new JsonObject();
-		prompt.addProperty("id", CORRECT_ANSWER_PROMPT_ID);
-		JsonObject variables = new JsonObject();
-		variables.addProperty("question_item", questionItem);
-		variables.addProperty("student_answer", q.getCorrectAnswer());
-		prompt.add("variables", variables);
-		api_request.add("prompt", prompt);
-		
-		URL u = new URI("https://api.openai.com/v1/responses").toURL();
-		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-		uc.setRequestMethod("POST");
-		uc.setDoInput(true);
-		uc.setDoOutput(true);
-		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-		uc.setRequestProperty("Content-Type", "application/json");
-		uc.setRequestProperty("Accept", "application/json");
-
-		OutputStream os = uc.getOutputStream();
-		byte[] jsonBytes = api_request.toString().getBytes("utf-8");
-		os.write(jsonBytes,0,jsonBytes.length);
-		os.close();
-
-		int responseCode = uc.getResponseCode();
-		boolean success = responseCode / 100 == 2;
-		String responseBody = readResponseBody(uc, success);
-		JsonObject apiResponse;
-		try {
-			apiResponse = JsonParser.parseString(responseBody).getAsJsonObject();
-		} catch (Exception e) {
-			throw new Exception((success?"OpenAI API returned malformed JSON: ":"OpenAI API error (non-JSON response): ") + responseBody);
-		}
-		if (!success) {
-			throw new Exception("OpenAI API error: " + apiResponse.toString());
-		}
-
-		JsonArray output = apiResponse.get("output").getAsJsonArray();
-		for (JsonElement element0 : output) {
-			JsonObject message = element0.getAsJsonObject();
-			if (!message.has("content")) continue;
-			JsonArray content = message.get("content").getAsJsonArray();
-			for (JsonElement element1 : content) {
-				JsonObject outputText = element1.getAsJsonObject();
-				if (outputText.has("text")) return outputText.get("text").getAsString().trim();
-			}
-		}
-		throw new Exception("OpenAI response did not contain answer text.");
-	}
-	
-	private void createQuestion(User user,HttpServletRequest request) { //previously type long
-		try {
-			Question q = assembleQuestion(request);
-			q.isActive = true;
-			ofy().save().entity(q).now();
-	} catch (Exception e) {}
-	}
-
-	private void hideDuplicateQuestion(User user,HttpServletRequest request) {  // moves question to Concept called duplicates (hidden from instructors but accessible to assignments
-		try {
-			// find the Concept that holds duplicate questions in escrow
-			Long conceptId = null;
-			List<Concept> concepts = ofy().load().type(Concept.class).filter("orderBy <"," 1").list();
-			for (Concept c : concepts) {
-				if (c.title.equals("Hide")) {
-					conceptId = c.id;
-					break;
-				}
-			}
-			if (conceptId!=null) {
-				Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-				Question q = ofy().load().type(Question.class).id(questionId).now();
-				q.conceptId = conceptId;
-				ofy().save().entity(q).now();
-			}
-		} catch (Exception e) {}
-	}
-	
-	private void updateQuestion(User user,HttpServletRequest request) {
-		long questionId = 0;
-		try {
-			questionId = Long.parseLong(request.getParameter("QuestionId"));	
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			q = assembleQuestion(request,q);
-			q.editorId = user.getId();
-			q.isActive = true;
-			ofy().save().entity(q).now();
-			questions.remove(key(q));
-		} catch (Exception e) {
-			return;
-		}
-	}
-
-	private void deleteQuestion(User user,HttpServletRequest request) {
-		long questionId = 0;
-		try {
-			questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = key(Question.class,questionId);
-			ofy().delete().key(k).now();
-			questions.remove(key(Question.class,questionId));
-		} catch (Exception e) {
-			return;
-		}
-	}
-
-	private void deleteAllQuestions(User user, HttpServletRequest request) throws Exception {
-		if (!user.isChemVantageAdmin()) return;
-		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null) return;
-		long topicId = Long.parseLong(request.getParameter("TopicId"));
-		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
-	}
-	
-	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
-		if (!user.isChemVantageAdmin()) return;
-		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null || !(assignmentType.equals("Quiz") || assignmentType.equals("Homework"))) return;
-		long topicId = Long.parseLong(request.getParameter("TopicId"));
-		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
-		for (Question q : questions) {
-			q.id = null;
-			if (q.assignmentType.equals("Quiz")) q.pointValue = 2;
-			else q.pointValue = 10;
-			q.assignmentType = "Exam";		
-		}
-		ofy().save().entities(questions);
-	}
-	
-	String editVideoForm(HttpServletRequest request) {
-		Video v = null;
-		try {
-			v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-		} catch (Exception e) {
-			return "Video was not found, sorry.";
-		}
-		int segment = 0;		
-		try {
-			segment = Integer.parseInt(request.getParameter("Segment"));
-		}catch (Exception e) {
-			segment = v.breaks==null?0:v.breaks.length;  // default to create a new breakpoint and segment
-		}
-		return editVideoForm(v,segment);
-	}
-	
-	String editVideoForm(Video v, int segment) {
-		StringBuffer buf = new StringBuffer("<section class='bg-gradient-primary text-white' style='max-width:500px'>"
-				+ "      <div class='container py-5'>"
-				+ "          <div class='col-lg-7'>"
-				+ "            <h1 class='display-5 fw-semibold mb-3'>Editors</h1>"
-				+ "          </div>"
-				+ "        </div>"
-				+ "    </section><p>");
-		if (v.breaks == null) {
-			v.breaks = new int[0];
-			v.nQuestions = new int[0];
-			v.questionKeys = new ArrayList<Key<Question>>();
-		}
-		
-		try {
-			buf.append("<h2>Embed quiz questions in a video</h2>");
-
-			buf.append("Video: " + v.title + "<p>");
-			
-			buf.append("Use the form below to create or edit breakpoints in this video where 2-question quizlets will be "
-					+ "presented to the viewer. Each segment must be edited separately, and breakpoints must be created in "
-					+ "increasing order of seconds from the start of the video. You may (optionally) create a quiz at the "
-					+ "end of the video by entering 'end' or by leaving the breakpoint time blank.<ol>"
-					+ "<li>Select a topic appropriate to the subject of the video (for selecting the questions)</li>"
-					+ "<li>Select one of the existing video segments or create a new one</li>"
-					+ "<li>If you selected an existing segment, wait for the page to reload</li>"
-					+ "<li>Enter the breakpoint (in seconds from the start of the video) or 'end'</li>"
-					+ "<li>Select several questions from below to be drawn at random for the quizlet</li>"
-					+ "<li>Click the 'Update Video' button to submit the breakpoint value and question items</li>"
-					+ "</ol>");
-
-			buf.append("<form method=post action=/Edit>");  // This starts the master form for editing a single break point for hte video
-			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
-			buf.append("<input type=hidden name=Segment value=" + segment + ">");
-
-			buf.append("Topic: " + topicSelectBox(v.topicId,true) + "<p>");				
-
-			if (v.topicId == 0L) {
-				buf.append("<input type=hidden name=UserRequest value='Update Quizlet'>");
-			} else {
-				// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
-				// The number of table rows should be v.breaks.length if the last break is at the end of the video
-				// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
-				int nRows = v.breaks.length;
-				boolean addNew = (segment==v.breaks.length && (segment==0 || v.breaks[v.breaks.length-1]>0));
-				if (addNew) nRows++;
-
-				buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
-
-				for (int i=0;i<nRows;i++) {
-					buf.append("<tr style='text-align:center'>"
-							+ "<td>" + (i==segment?"edit&rarr;":"<a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id + "&Segment=" + i + ">select</a>") + "</td>"
-							+ "<td>" + (i==v.breaks.length && i==segment?"new":i) + "</td>"
-							+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
-							+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
-							+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
-							+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> ") + (i==v.breaks.length-1?"<input type=submit name=UserRequest value='Delete Quizlet'> ":"") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
-							+ "</tr>");
-				}
-				buf.append("</table><p>");
-
-				if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
-				else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
-
-				buf.append("You may create/edit questions <a href=Edit?TopicId=" + v.topicId + "&AssignmentType=Video>here</a>.<p>");
-
-				// Make a List of all of the available video questions
-				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",v.topicId).list();
-
-				// Now make a list of all the current questions for this quizlet, if any:
-				List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
-				int nPriorQuestions = 0;
-				if (v.nQuestions.length>segment) {
-					for (int j=0;j<segment;j++) nPriorQuestions += v.nQuestions[j];  // add up the number of questions in preceding quizlets
-					for (int j=nPriorQuestions;j<nPriorQuestions+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
-				}
-
-				// Make a table of available questions, marking the current questions as already selected
-				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-				int k=0;
-				for (Question q : questions) {
-					k++;
-					q.setParameters();
-					buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">"));
-					buf.append("<b>&nbsp;" + k + ".</b></TD>");
-					buf.append("\n<TD>" + q.printAll() + "</TD>");
-					buf.append("</TR>");
-				}
-				buf.append("</TABLE>");
-			}
-			buf.append("</form>");
-		} catch (Exception e) {
-			return buf.toString() + e.getMessage();
-		}
-		return buf.toString();
-	}
-	
 	class SortByQuestionText implements Comparator<Key<Question>> {
 		public int compare(Key<Question> k1,Key<Question> k2) {
 			Question q1 = questions.get(k1);
