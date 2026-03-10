@@ -115,6 +115,12 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-recaptchaenterprise</artifactId>
     </dependency>
+
+  <!-- Google Cloud Vertex AI (Gemini) -->
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-vertexai</artifactId>
+    </dependency>
   
   </dependencies>
     

@@ -36,6 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.cloud.vertexai.VertexAI;
+import com.google.cloud.vertexai.api.GenerateContentResponse;
+import com.google.cloud.vertexai.generativeai.GenerativeModel;
+import com.google.cloud.vertexai.generativeai.ResponseHandler;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -57,7 +61,10 @@ import jakarta.servlet.http.HttpServletResponse;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	private static final String VERTEX_AI_LOCATION = "us-central1";
+	private static final String VERTEX_AI_MODEL = "gemini-2.5-flash";  // or gemini-2.5-pro
 	private static final String CORRECT_ANSWER_PROMPT_ID = "pmpt_69aca16a881081938f557752ab5ef5a107c7ea937e14ff76";
+	private static final String AI_VALIDATOR_PROVIDER = System.getProperty("cv.ai.validator", "gemini").trim().toLowerCase(); // gemini | chatgpt
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
@@ -1824,7 +1831,9 @@ void assignToConcept(User user, HttpServletRequest request) {
 			long parameterSeed = Long.parseLong(request.getParameter("ParameterSeed"));
 			Question q = ofy().load().type(Question.class).id(questionId).safe();
 			if (q.requiresParser()) q.setParameters(parameterSeed);
-			String aiGeneratedAnswer = requestCorrectAnswerFromChatGPT(q);
+			String aiGeneratedAnswer = "chatgpt".equals(AI_VALIDATOR_PROVIDER)
+					? requestCorrectAnswerFromChatGPT(q)
+					: requestCorrectAnswerFromGemini(q);
 			
 			if (extractCorrectAnswerValue(aiGeneratedAnswer)) {
 				q.checkedByAI = true;
@@ -1908,6 +1917,27 @@ void assignToConcept(User user, HttpServletRequest request) {
 			String line;
 			while ((line = br.readLine()) != null) sb.append(line).append('\n');
 			return sb.toString().trim();
+		}
+	}
+
+	private String requestCorrectAnswerFromGemini(Question q) throws Exception {
+		String questionItem = q.printForSage();
+		if (questionItem == null || questionItem.isEmpty()) throw new Exception("Question text is empty");
+
+		String prompt = "You are validating whether the instructor-provided student answer is correct for the chemistry question item below. "
+				+ "Return only JSON with this exact schema: {\"correct_answer\": true|false}. "
+				+ "Do not include markdown, explanations, or any additional fields.\n\n"
+				+ "question_item:\n" + questionItem + "\n\n"
+				+ "student_answer:\n" + q.getCorrectAnswer();
+
+		try (VertexAI vertexAI = new VertexAI(Subject.getProjectId(), VERTEX_AI_LOCATION)) {
+			GenerativeModel model = new GenerativeModel(VERTEX_AI_MODEL, vertexAI);
+			GenerateContentResponse response = model.generateContent(prompt);
+			String text = ResponseHandler.getText(response);
+			if (text == null || text.trim().isEmpty()) throw new Exception("Vertex AI response did not contain answer text.");
+			return text.trim();
+		} catch (Exception e) {
+			throw new Exception("Vertex AI API error: " + (e.getMessage() == null ? e.toString() : e.getMessage()));
 		}
 	}
 
