@@ -137,6 +137,9 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				out.println(reviewProposedQuestion(user,request));
 				break;
+			case "ValidateAssignmentWithAI":
+				out.println(validateAssignmentWithAI(request)); // interactive validation that displays results on the page
+				break;
 			case "Refresh":
 				questions.clear();
 			default: out.println(editorsPage(user,request));
@@ -288,11 +291,15 @@ public class Edit extends HttpServlet {
 				assignKeyConcepts(user,request);
 				out.println(editorsPage(user,request));
 				break;
+			case "ValidateAssignmentWithAI":
+				validateAssignmentWithAI(request); // initiates a Cloud Task; results are emailed to the administrator and not displayed on the page
+				break;
 			default: out.println(editorsPage(user,request));
 			}
 
 		} catch (Exception e) {
 			out.println("Error: " + e.getMessage()==null?e.toString():e.getMessage());
+			Utilities.sendEmail("ChemVantage Administrator", "admin@chemvantage.org", "Error in Edit servlet", "An error occurred in the Edit servlet:\n\n" + e.getMessage()==null?e.toString():e.getMessage());
 		}
 		out.println(Subject.footer);
 	}
@@ -789,7 +796,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append(("Custom".equals(q.assignmentType)?"":"Concept:" + conceptSelectBox(q.conceptId) + "<br/>"));
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br/>");
-			buf.append("<input type=checkbox name=CheckedByAI value=true " + (q.checkedByAI?" checked":"") + " /> Checked by AI<br/>");
+			buf.append("<label><input type=checkbox name=CheckedByAI value=true " + (q.checkedByAI?" checked":"") + " /> Checked by AI</label><br/>");
 
 			buf.append(q.edit());
 			
@@ -997,7 +1004,7 @@ void assignToConcept(User user, HttpServletRequest request) {
 				buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
 				buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
 				buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
-				buf.append("<form><label>Assignment ID: <input type=text name=AssignmentId value=0></label> <input type=submit value=Select></form>");
+				buf.append("<form><label>Assignment ID: <input type=text name=AssignmentId /></label> <input type=submit value=Select></form>");
 			}
 
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
@@ -2113,6 +2120,72 @@ void assignToConcept(User user, HttpServletRequest request) {
 		v.title = request.getParameter("Title");
 		v.orderBy = request.getParameter("OrderBy");
 		ofy().save().entity(v).now();
+	}
+
+	String validateAssignmentWithAI(HttpServletRequest request) throws Exception {
+		// This method performs a remote task to validate all of the question items in a new Assignment
+		if (Subject.getProjectId().equals("dev-vantage-hrd")) return "Validation skipped for dev server.";  // skip validation for dev environment
+		
+		Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+		String subject = "ChemVantage AI Validation Report for Assignment " + a.id;
+		StringBuilder buf = new StringBuilder("<h1>" + subject + "</h1>");
+		
+		// Get the Assignment and its question items
+		if (a.questionKeys.size()==0) return buf.append("There are no question items for this assignment.").toString();
+		if (!a.assignmentType.equals("Homework")) return buf.append("The assignmrent type must be Homework.").toString(); // only validate homework assignments for now
+		// For each question in the assignment, send the question text and correct answer to the AI and ask if the correct answer is correct.
+		// If any answer is deemed incorrect by the AI, send email to the ChemVantage administrator with a list of links to edit the questions.
+		List<Key<Question>> faultyQuestionKeys = new ArrayList<Key<Question>>();
+		List<Key<Question>> failedQuestionKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : a.questionKeys) {
+			Question q = ofy().load().key(k).now();
+			if (q==null || q.checkedByAI || q.getQuestionType() > 5) continue;
+			try {
+				String aiGeneratedAnswer = "chatgpt".equals(AI_VALIDATOR_PROVIDER)
+						? requestCorrectAnswerFromChatGPT(q)
+						: requestCorrectAnswerFromGemini(q);
+				if (extractCorrectAnswerValue(aiGeneratedAnswer)) {
+					q.checkedByAI = true;
+					ofy().save().entity(q);
+				} else {
+					faultyQuestionKeys.add(k);
+				}
+			} catch (Exception e) {
+				failedQuestionKeys.add(k);
+				continue;
+			}
+		}
+		if (faultyQuestionKeys.size()==0 && failedQuestionKeys.size()==0) return buf.append("All questions in this assignment passed AI validation.").toString();
+		
+		String message = "<a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?AssignmentId=" + a.id + ">View Assignment</a><br/><br/>";
+		if (faultyQuestionKeys.size()>0) {
+			message += "The following questions in Assignment " + a.id + " were flagged by the AI validator as potentially having incorrect answers:<br/><br/>";
+			for (Key<Question> k : faultyQuestionKeys) {
+				Long questionId = k.getId();
+				message += "Question ID: " + questionId + " <a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?UserRequest=Edit&AssignmentId=" + a.id + "&QuestionId=" + questionId + ">Edit</a><br/>";
+			}
+		} else {
+			message += "The AI validator did not flag any questions in Assignment " + a.id + " as potentially having incorrect answers.<br/><br/>";
+		}
+
+		if (failedQuestionKeys.size()>0) {
+			message += "The AI validator encountered errors when validating the following questions in Assignment " + a.id + ":<br/><br/>";
+			for (Key<Question> k : failedQuestionKeys) {
+				Long questionId = k.getId();
+				message += "Question ID: " + questionId + " <a href=https://" + (Subject.getProjectId().equals("chem-vantage-hrd")?"www.chemvantage.org":"dev-vantage-hrd.appspot.com") + "/Edit?UserRequest=Edit&AssignmentId=" + a.id + "&QuestionId=" + questionId + ">Edit</a><br/>";
+			}
+		} else {
+			message += "The AI validator did not encounter any errors when validating questions in Assignment " + a.id + ".";
+		}
+
+		try {
+			Utilities.sendEmail("ChemVantage Administrator", "admin@chemvantage.org", subject, message);
+		} catch (IOException e) {
+			System.err.println("Failed to send AI validation report email: " + e.getMessage());
+		}
+
+		buf.append(message);
+		return buf.toString();
 	}
 
 	private void validateCorrectAnswerWithAI(HttpServletRequest request,HttpServletResponse response) throws IOException {

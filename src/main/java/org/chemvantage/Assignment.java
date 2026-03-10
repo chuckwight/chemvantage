@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 import static com.googlecode.objectify.ObjectifyService.key;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -108,6 +109,12 @@ public class Assignment implements java.lang.Cloneable {
 			} catch (Exception e) {
 				if (conceptId != null) this.conceptIds.remove(conceptId);
 			}
+		}
+		// Create a Task to validate the question items for this assignment asynchronously, since there may be many questions and it can take a long time to validate them all
+		try {
+			Utilities.createTask("/Edit", "UserRequest=ValidateAssignmentWithAI&AssignmentId="+this.id, 10);
+		} catch (IOException e) {
+			System.err.println("Failed to create task for AI validation: " + e.getMessage());
 		}
 		ofy().save().entity(this).now();	
 	}
