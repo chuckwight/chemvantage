@@ -1,0 +1,105 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
+
+    Preamble
+
+The GNU General Public License is a free, copyleft license for software
+and other kinds of works.
+
+The licenses for most software are designed to take away your freedom to
+share and change it. By contrast, the GNU General Public License is
+intended to guarantee your freedom to share and change all versions of
+a program—to make sure it remains free software for all its users.
+
+When we speak of free software, we are referring to freedom, not
+price. Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software and share your changes with
+others, and that you know you can do these things.
+
+To protect your rights, we need to make restrictions that forbid
+you to deprive others of these rights. Therefore, you have to abide
+by the terms of the GPL if you distribute copies of the software, or
+if you modify it. 
+
+For example, if you distribute copies of such a program,
+you must pass on the same freedoms to the recipients that you
+received. You must make sure that they, too, receive or can get the
+source code. And you must show them these terms so they know their
+rights.
+
+We protect your rights with two steps: (1) copy this license
+and (2) add some information about who owns the copyright and
+who gives out this license.  Also, for each author's protection
+we want to make sure that everyone understands that there is no
+warranty for this free software.  If the software is modified
+by someone else and passed on, we want its recipients to know
+that what they have is not the original, so that any problems
+introduced by others will not reflect on the original authors' reputations.
+
+    1.  Source Code.
+
+The source code for a work means the preferred form of the work for
+making modifications to it.  It is a common convention to make the
+source code available in a standardized form that is suitable for
+modification.  A program is only a derivative of another if it can
+be modified or changed into it; that is, if it is the same kind of
+work as the original or can easily be combined with it.
+
+    2.  Basic Permissions.
+
+You may use the Program under the terms of this License.
+You will be able to run it for all practical purposes and you can
+take the Program, copy it, and distribute it, give it to anyone,
+look at it, change it, and improve it, and distribute copies of your
+modified versions.
+
+For the practical purposes of this License, any arrangement to
+make the Program available to the public, such as the practice of
+making it available on the Internet, is a form of distribution.
+
+In addition, you can do so only if you pass on the same freedoms
+that you received.
+
+    3.  Copyleft.
+
+This is a key aspect of the GPL: when you distribute copies or
+you modify the software, you must pass on the same freedoms that
+you received.  This means that you can not make a closed-source
+version of this software; all copies and derivative works
+must stay open-source.  This can be somewhat confusing, so we
+include some examples of how this works in practice.
+
+    4.  Surrendering Rights.
+
+You are not allowed to surrender any of your rights under this
+License.
+
+    5.  Disclaimer of Warranty.
+
+There is no warranty for this free software.  Column III of the
+ordinary GPL gives you a certain warranty and almost all
+options require a warranty, however, as you are able to make
+any arbitrary action with this free software,
+there is no warranty.
+
+    6.  Termination.
+
+If you do not abide by the terms of this License, all rights
+which are granted to you under this License shall terminate
+instantly.  However, if you do abide by this License, your
+rights continue.
+
+If you wish to integrate this license into your own software,
+you need to finalize the terms of your contract with FSF.
+(There are some other licenses, such as the Lesser GPL and the
+Apache License, which allow integrating open-source software.
+Check the FSF website for more information on how to integrate
+your software.)
+
+For complete licenses, visit https://www.gnu.org/licenses/.
