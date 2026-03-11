@@ -60,13 +60,6 @@ public class Assignment implements java.lang.Cloneable {
 
 	Assignment() {}
 
-	Assignment(String platformDeploymentId,String resourceLinkId,String lti_nrps_context_memberships_url) {
-		this.domain = platformDeploymentId;
-		this.resourceLinkId = resourceLinkId;
-		this.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
-		this.created = new Date();
-	}
-
 	Assignment(String assignmentType, String platform_deployment_id) {
 		this.assignmentType = assignmentType;
 		this.domain = platform_deployment_id;

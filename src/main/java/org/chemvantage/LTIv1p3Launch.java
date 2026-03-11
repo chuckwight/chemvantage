@@ -370,7 +370,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			// Strategy 6: Create a new assignment
 			if (myAssignment == null) {
 				debug.append("Creating new assignment. ");
-				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+				myAssignment = new Assignment();
+				myAssignment.domain = d.platform_deployment_id;
+				myAssignment.resourceLinkId = resourceLinkId;
+				myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+				myAssignment.created = new Date();
 			}
 			
 			// At this point we should have a valid (but possibly incomplete) Assignment entity
