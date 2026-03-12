@@ -302,6 +302,7 @@ public class Homework extends HttpServlet {
 					+ "<h2>" + a.title + "</h2>"
 					+ "<h3>Instructor Page</h3>"
 					+ "<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn btn-primary'>Show This Assignment</a><br/><br/>"
+					+ "Assignment ID: " + a.id + "<br/>"
 					+ "<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<label><b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' /></label>&nbsp;"

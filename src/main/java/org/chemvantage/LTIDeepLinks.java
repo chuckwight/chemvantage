@@ -630,6 +630,7 @@ public class LTIDeepLinks extends HttpServlet {
 									if (!conceptQuestionKeys.isEmpty()) a.questionKeys.addAll(conceptQuestionKeys);
 								}
 							}
+							if (a.assignmentType.equals("Homework")) a.validateQuestionItemsWithAI();
 							break;
 						}
 					}
