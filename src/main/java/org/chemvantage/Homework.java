@@ -42,7 +42,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
-import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -58,10 +57,6 @@ public class Homework extends HttpServlet {
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
-	}
-
-	public void init (ServletConfig config) throws ServletException {
-		super.init(config);
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -1046,26 +1041,6 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String tooManyAttempts(User user, Assignment hwa, Long questionId) {
-		StringBuffer buf = new StringBuffer();
-		// Return null if anonymous user or instructor or attemptsAllowed==null or this is an optional question
-		if (hwa==null || user.isInstructor() || hwa.attemptsAllowed == null || !hwa.questionKeys.contains(key(Question.class,questionId))) return null;
-		
-		List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
-		List<HWTransaction> priorAttempts = new ArrayList<HWTransaction>();
-		for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
-		if (priorAttempts.size() < hwa.attemptsAllowed) return null;
-		
-		// Make a List of prior attempts with a message
-		buf.append("<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
-		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-		buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
-		for (HWTransaction hwt : priorAttempts) buf.append("<tr><td>" + hwt.id + "</td><td>" + df.format(hwt.graded) + "</td><td align=center>" + hwt.score +  "</td></tr>");
-		buf.append("</table><br/>");
-
-		return buf.toString();
-	}
-	
 	String attemptTooSoon(User user,Assignment hwa,Question q,String qn,String showWork,String studentAnswer) {
 		StringBuffer buf = new StringBuffer();
 		Date now = new Date();
@@ -1475,6 +1450,26 @@ public class Homework extends HttpServlet {
 			return false;
 		}
 		return true;
+	}
+	
+	String tooManyAttempts(User user, Assignment hwa, Long questionId) {
+		StringBuffer buf = new StringBuffer();
+		// Return null if anonymous user or instructor or attemptsAllowed==null or this is an optional question
+		if (hwa==null || user.isInstructor() || hwa.attemptsAllowed == null || !hwa.questionKeys.contains(key(Question.class,questionId))) return null;
+		
+		List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
+		List<HWTransaction> priorAttempts = new ArrayList<HWTransaction>();
+		for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
+		if (priorAttempts.size() < hwa.attemptsAllowed) return null;
+		
+		// Make a List of prior attempts with a message
+		buf.append("<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
+		for (HWTransaction hwt : priorAttempts) buf.append("<tr><td>" + hwt.id + "</td><td>" + df.format(hwt.graded) + "</td><td align=center>" + hwt.score +  "</td></tr>");
+		buf.append("</table><br/>");
+
+		return buf.toString();
 	}
 	
 	class SortBySuccessPct implements Comparator<Question> {
