@@ -26,6 +26,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -38,9 +39,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseServiceClient;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -51,6 +49,8 @@ import com.google.recaptchaenterprise.v1.CreateAssessmentRequest;
 import com.google.recaptchaenterprise.v1.Event;
 import com.google.recaptchaenterprise.v1.ProjectName;
 import com.google.recaptchaenterprise.v1.RiskAnalysis.ClassificationReason;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
@@ -100,17 +100,19 @@ public class LTIRegistration extends HttpServlet {
 			if ("config".contentEquals(userRequest)) {
 				response.setContentType("application/json");
 				out.println(getConfigurationJson(iss,request.getParameter("lms")));
-			} else if (request.getParameter("token")!=null) {
+			} else if (request.getParameter("reg_code")!=null) {
 				response.setContentType("text/html");
-				String token = request.getParameter("token");
-				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-				JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
+				String reg_code = request.getParameter("reg_code");
+				RegistrationCode rc = ofy().load().type(RegistrationCode.class).id(reg_code).now();
+				if (rc==null || rc.expires.before(new Date())) {
+					throw new Exception("The registration code is invalid or has expired. Please request a new code.");
+				}
+				out.println(Subject.header("LTI Registration") + clientIdForm(rc) + Subject.footer);
 			} else {
 				out.println(Subject.header() + registrationForm(request,null) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendError(401, e.getMessage());
+			out.println(Subject.header() + "<h1>Registration Failed</h1>" + e.getMessage() + Subject.footer);
 		}
 	}
 	
@@ -124,21 +126,18 @@ public class LTIRegistration extends HttpServlet {
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 
-		String iss = "https://" + request.getServerName();
 		boolean dynamicRegistration = request.getParameter("openid_configuration")!=null;
 		
 		try {
 			if ("finalize".contentEquals(userRequest)) {				
-				String token = request.getParameter("Token");
-				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-				JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage Registration</h1>" + createDeployment(request) + Subject.footer);			
+				String reg_code = request.getParameter("reg_code");
+				RegistrationCode rc = ofy().load().type(RegistrationCode.class).id(reg_code).safe();
+				out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage Registration</h1>" + createDeployment(request, rc) + Subject.footer);			
 			} else {
-				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
-				String token = validateApplicationFormContents(request);
+				RegistrationCode rc = validateApplicationFormContents(request);
 				debug.append("Debug:0<br/>");
 				if (dynamicRegistration) {
-					debug.append("Token:<br/>"+token+"<br/>");
+					debug.append("Registration code:<br/>" + rc.code + "<br/>");
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					debug.append("OpenIdConfiguration:<br/>"+openIdConfiguration.toString()+"<br/>");
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
@@ -158,17 +157,20 @@ public class LTIRegistration extends HttpServlet {
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
 				} else {
-					sendRegistrationEmail(token,request);
-					out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage</h1>" + "<h2>Registration Success</h2>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
+					sendRegistrationEmail(rc);
+					out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage</h1>" + "<h2>Success</h2>Thank you. A registration code has been sent to your email address.<p>"
+						+ "If you don't receive the email within a few minutes, please check your spam folder or contact us at admin@chemvantage.org<br/><br/>"
+						+ "<a href=/lti/registration>Return to the registration page to enter the code.</a><br/><br/>" 
+						+ Subject.footer);			
 				}
 			}
 		} catch (Exception e) {
 			String message = (e.getMessage()==null?e.toString():e.getMessage());
 			if (dynamicRegistration) {
 				String emailmessage = message + "<br/>"
-						+ "Name: " + request.getParameter("sub") + "<br/>"
+						+ "Name: " + request.getParameter("name") + "<br/>"
 						+ "Email: " + request.getParameter("email") + "<br/>"
-						+ "Org: " + request.getParameter("aud") + "<br/>"
+						+ "Org: " + request.getParameter("org") + "<br/>"
 						+ "URL: " + request.getParameter("url") + "<br/>"
 						+ "LMS: " + request.getParameter("lms") + "<br/>"
 						+ debug.toString();
@@ -179,13 +181,12 @@ public class LTIRegistration extends HttpServlet {
 	}
 		
 	String registrationForm(HttpServletRequest request, String message) {
-		String sub = request.getParameter("sub");
+		String name = request.getParameter("name");
 		String email = request.getParameter("email");
-		String aud = request.getParameter("aud");
+		String org = request.getParameter("org");
 		String url = request.getParameter("url");
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
-		String reg_code = request.getParameter("reg_code");
 		String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
 		String openid_configuration = request.getParameter("openid_configuration");
 		String registration_token = request.getParameter("registration_token");
@@ -199,19 +200,27 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("<h1>LTI Advantage " + (dynamic?"Dynamic ":"") + "Registration</h1>");
 		
-		buf.append("<form id=regform method=post action=/lti/registration>"
+		buf.append("<div id=reg_code style='display:" + (message==null?"block":"none") + "'>"
+				+ "<form method=get action=/lti/registration><br/>"		
+				+ "If you already have a ChemVantage registration code, please enter it here: <input type=text name=reg_code /><input type=submit value=Submit />"
+				+ "</form><p>"
+				+ "Otherwise, you may <a href=# onClick=document.getElementById('reg_code').style.display='none';document.getElementById('reg_form').style.display='block';>request a new code here</a>.<br/><br/>"
+				+ "</div>");
+
+		buf.append("<div id=reg_form style='display:" + (message==null?"none":"block") + "'>"
+				+ "<form id=regform method=post action=/lti/registration>"
 				+ "Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage "
 				+ "that is convenient, secure and <a href=https://site.imsglobal.org/certifications/chemvantage/chemvantage>certified by 1EdTech</a>. "
 				+ "When you submit the form, ChemVantage will send "
-				+ (dynamic?"a back-end registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration. ")
+				+ (dynamic?"a back-end registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a registration code to complete the registration process.")
 				+ "<br/><br/>\n");
 		
-		buf.append("Please tell us how to contact you if there is ever a problem with your account (see our <a href=/privacy_policy.html>Privacy Policy</a>):<br/>"
-				+ "<label>Your Name: <input type=text required name=sub size=40 value='" + (sub==null?"":sub) + "' /> </label><br/>"
-				+ "<label>Your Email: <input type=text required name=email size=40 value='" + (email==null?"":email) + "' /> </label><br/><br/>\n");
+		buf.append("Contact information for the LMS administrator or office responsible for LMS administration:<br/>"
+				+ "<label>Name: <input type=text required name=name size=40 value='" + (name==null?"":name) + "' /> </label><br/>"
+				+ "<label>Email: <input type=text required name=email size=40 value='" + (email==null?"":email) + "' /> </label><br/><br/>\n");
 		
-		buf.append("Please tell us about your school, business or organization:<br/>"
-				+ "<label>Org Name: <input type=text required name=aud  value='" + (aud==null?"":aud) + "' /> </label><br/>\n"
+		buf.append("Your school, business or organization:<br/>"
+				+ "<label>Org Name: <input type=text required name=org  value='" + (org==null?"":org) + "' /> </label><br/>\n"
 				+ "<label>Home Page: <input type=text required name=url placeholder='https://myschool.edu' value='" + (url==null?"":url) + "' /></label><br/><br/>\n");
 		
 		if (dynamic) {
@@ -231,54 +240,66 @@ public class LTIRegistration extends HttpServlet {
 					+ "<br/><br/>");
 		}
 
-		if (Subject.getProjectId().equals("dev-vantage-hrd")) {
-			buf.append("Enter your registration code here: <input type=text required name=reg_code value='" + (reg_code==null?"":reg_code) + "' /><br/>"
-					+ "To purchase a registration code, please contact us at admin@chemvantage.org<br/><br/>");
-		} else {
-			buf.append("Pricing:"
-					+ "<ul>"
-					+ "	<li>LTI registration and instructor accounts are free.</li>"
-					+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
-					+ "	<li>Institutions can purchase 1-year student licenses for $5 USD/each (10 license minimum). Contact admin@chemvantage.org for an invoice.</li>"
-					+ "</ul>\n");
-		}
+		buf.append("Pricing:"
+				+ "<ul>"
+				+ "	<li>LTI registration and instructor accounts are free.</li>"
+				+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
+				+ "	<li>Institutions can purchase 1-year student licenses for $5 USD/each (10 license minimum). Contact admin@chemvantage.org for an invoice.</li>"
+				+ " <li>All ChemVantage subscription fees are non-refundable.</li>"
+				+ "</ul>\n");
+
 		buf.append("<label><input type=checkbox required name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
 
 		if (dynamic) {
 			buf.append("<INPUT CLASS='btn btn-primary' TYPE=SUBMIT VALUE='Submit Registration'></FORM><br/>");
 		} else { // use reCAPTCHA v2 for manual registration
-			buf.append("Note: This page is protected by reCAPTCHA to prevent abuse. The reCAPTCHA service is provided by Google and is subject to Google's <a href=https://policies.google.com/privacy>Privacy Policy</a> and <a href=https://policies.google.com/terms>Terms of Service</a>.<br/><br/>"
-				+ "<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
-				+ "<script>"
-				+ "  function onSubmit(token) { "
-				+ "    document.getElementById('g-recaptcha-response').value = token; "
-				+ "    document.getElementById('regform').submit(); "
-				+ "  }"
-    			+ "</script>"
-				+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />"
-				+ "<button class='btn btn-primary g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitRegistration'>"
-				+ "Submit Registration"
-				+ "</button></FORM><br/>");				
+			if (!request.getServerName().contains("localhost")) { // Skip reCAPTCHA for local testing
+				buf.append("Note: This page is protected by reCAPTCHA to prevent abuse. The reCAPTCHA service is provided by Google and is subject to Google's <a href=https://policies.google.com/privacy>Privacy Policy</a> and <a href=https://policies.google.com/terms>Terms of Service</a>.<br/><br/>"
+					+ "<script src='https://www.google.com/recaptcha/enterprise.js?render=" + Subject.getReCaptchaKey() + "'></script>\n"
+					+ "<script>"
+					+ "  function onSubmit(token) { "
+					+ "    document.getElementById('g-recaptcha-response').value = token; "
+					+ "    document.getElementById('regform').submit(); "
+					+ "  }"
+					+ "</script>"
+					+ "<input type='hidden' id='g-recaptcha-response' name='g-recaptcha-response' />");
+			}
+			buf.append("<button class='btn btn-primary g-recaptcha' data-sitekey='" + Subject.getReCaptchaKey() + "' data-callback='onSubmit' data-action='submitRegistration'>"
+					+ "Request Registration Code"
+					+ "</button></FORM><br/>");
 		}
-
+		buf.append("</div><br/>"); // end of reg_form
 		return buf.toString();
 	}
 	
-	String validateApplicationFormContents(HttpServletRequest request) throws Exception {
-		String sub = request.getParameter("sub");
+	RegistrationCode validateApplicationFormContents(HttpServletRequest request) throws Exception {
+		String name = request.getParameter("name");
 		String email = request.getParameter("email");
-		String aud = request.getParameter("aud");
+		String org = request.getParameter("org");
 		String url = request.getParameter("url");
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
 		boolean dynamic = openid_configuration != null;
 		
-		if (sub.isEmpty() || email.isEmpty()) throw new Exception("All form fields are required. ");
+		if (name==null) name = "";
+		else name = name.trim();
+		if (name.isEmpty()) throw new Exception("Name is required.");
+		
+		if (email==null) email = "";
+		email = email.trim();
+		if (email.isEmpty()) throw new Exception("Email is required.");
+		
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
-		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
+		
+		if (org==null) org = "";
+		org = org.trim();
+		if (org.isEmpty()) throw new Exception("Please enter your organization name.");
+		
+		if (url==null) url = "";
+		url = url.trim();
 		if (url.isEmpty()) throw new Exception("Please enter the URL for your organization's home page.");
 		
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
@@ -294,46 +315,23 @@ public class LTIRegistration extends HttpServlet {
 			if ("other".equals(lms)) lms = lms_other;
 			float riskScore = -1.0f;
 			String token = request.getParameter("g-recaptcha-response");
-			if (token == null || token.isEmpty()) {
-				throw new Exception("reCAPTCHA token missing");
-			}
-			riskScore = createAssessment(token, "submitRegistration");
-			if (riskScore < 0.3) {
-				throw new Exception("Sorry, the reCAPTCHA risk score was too low: " + riskScore);
-			}
-		}
-		
-		if (Subject.getProjectId().equals("dev-vantage-hrd") ) {
-			String reg_code = request.getParameter("reg_code");
-			Date now = new Date();
-			try {
-				Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
-				Date oneYearFromNow = new Date(now.getTime() + 31536000000L);
-				if (exp.before(now) || exp.after(oneYearFromNow)) throw new Exception();
-			} catch (Exception e) {
-				throw new Exception("Registration code was missing, invalid, or expired. Contact admin@chemvantage.org for assistance.");
+			if (!request.getServerName().contains("localhost")) {
+				if ((token == null || token.isEmpty())) {
+					throw new Exception("reCAPTCHA token missing");
+				}
+				riskScore = createAssessment(token, "submitRegistration");
+				if (riskScore < 0.3) {
+					throw new Exception("Sorry, the reCAPTCHA risk score was too low: " + riskScore);
+				}
 			}
 		}
-		
+
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
 
-		// Construct a new registration token
-		Date now = new Date();
-		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
-		String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-		Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-		String token = JWT.create()
-				.withIssuer(iss)
-				.withSubject(sub)
-				.withAudience(aud)
-				.withExpiresAt(exp)
-				.withIssuedAt(now)
-				.withClaim("email",email)
-				.withClaim("url", url)
-				.withClaim("lms", lms)
-				.sign(algorithm);
-		
-		return token;
+		// Save a new registration code
+		RegistrationCode rc = new RegistrationCode(name,email,org,url,lms);
+		ofy().save().entity(rc).now();			
+		return rc;
 	}
 		
 	public static float createAssessment(String token, String recaptchaAction) throws IOException {
@@ -390,83 +388,35 @@ public class LTIRegistration extends HttpServlet {
     	} 
 	}
 	
-	void sendRegistrationEmail(String token, HttpServletRequest request) throws Exception {
-		DecodedJWT jwt = JWT.decode(token);
-		String name = jwt.getSubject();
-		String email = jwt.getClaim("email").asString();
-		String org = jwt.getAudience().get(0);
-		String url = jwt.getClaim("url").asString();
-		String iss = jwt.getIssuer();
-		String lms = jwt.getClaim("lms").asString();
-		
+	void sendRegistrationEmail(RegistrationCode rc) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>ChemVantage Registration</h2>");
-		buf.append("Name: " + name + " (" + email + ")<br/>");
-		buf.append("Organization: " + org + (url.isEmpty()?"":" (" + url + ")") + "<br/>");
-		buf.append("LMS: " + lms + "<br/><br/>");
 		
-		buf.append("Thank you for your ChemVantage registration request.<p>");
+		buf.append("Name: " + rc.name + " (" + rc.email + ")<br/>");
+		buf.append("Organization: " + rc.org + (rc.url.isEmpty()?"":" (" + rc.url + ")") + "<br/>");
+		buf.append("LMS: " + rc.lms + "<br/><br/>");
 		
-		if (iss.contains("dev-vantage-hrd.appspot.com")) {
-			buf.append("ChemVantage is pleased to provide access to our software development server for testing LTI connections. "
-					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
+		
+		if (rc.lms.equals("other")) {
+			buf.append("ChemVantage is committed to working with all LMS platforms that support LTI Advantage. We will review your registration information and contact you within 1-2 business days to discuss next steps.<br/><br/>");
 		} else {
-			buf.append("<h3>Getting Started</h3>"
-					+ "When you complete the registration steps below, your account will be activated immediately. You may create ChemVantage "
-					+ "assignments using Deep Linking to explore and customize placement exams, SmartText assignment, quizzes, homework, practice exams, "
-					+ "video lectures, and in-class polls. In order to access the assignments, students must subscribe to the ChemVantage service "
-					+ "for $" + price + ".00 USD per month (1 month minimum). As a reminder, access to ChemVantage by instructors and LMS account "
-					+ "administrators is always free. ");
+			buf.append("If everything above looks OK, you may proceed with registration. Your registration code is:<p>"
+				+ "<span style='font-weight:bold;font-size:1.2em;'>" + rc.code + "</span><p>"
+				+ "The code is valid for 7 days.<br/><br/>");
 		}
 		
-		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
+		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.<p>"
+			+ "Thank you,<br/>Chuck Wight<br/>ChemVantage LLC"
+		);
 
-		buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
-		buf.append("The next step is to enter the ChemVantage configuration details into your LMS. "
-				+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
-				+ "you must have administrator privileges in your LMS in order to do this. "
-				+ "If you are NOT the LMS administrator, please stop here and forward this message "
-				+ "to an administrator with a request to complete the registration process. The "
-				+ "registration link below will be active for 7 days and expires at " + jwt.getExpiresAt() + ".<p>"
-				+ "<hr>"
-				+ "<br>To the LMS Administrator:<p>"
-				+ "ChemVantage is an Open Education Resource for General Chemistry. Learn more about ChemVantage "
-				+ "<a href=https://www.chemvantage.org>here</a>.<p>"
-				+ "Follow the detailed instructions for installing ChemVantage in your LMS at "
-				+ "<a href=https://www.chemvantage.org/install.html>https://www.chemvantage.org/install.html</a>.");
-		
-		buf.append("<h3>After you finish installing ChemVantage in your LMS</h3>"
-				+ "The installation instructions MAY ask you to click the tokenized link below "
-				+ "to complete the registration by providing the Client ID, Deployment ID and/or "
-				+ "configuration URLs to ChemVantage. If the link expires, click <a href=" + iss + "/lti/registration>here</a> to get anther one.<p>");
-		
-		buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-				+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
-
-		buf.append("If you need additional assistance, please contact me at admin@chemvantage.org. <p>"
-				+ "-Chuck Wight");
-
-		Utilities.sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());
+		Utilities.sendEmail(rc.name,rc.email,"ChemVantage LTI Registration",buf.toString());
 	}
 
-	String clientIdForm(String token) {
+	String clientIdForm(RegistrationCode rc) {
 		StringBuffer buf = new StringBuffer("<h1>ChemVantage Registration</h1>");
-		String iss = null;
-		String sub = null;
-		String email = null;
-		String aud = null;
-		String url = null;
-		String lms = null;
 		
 		try {
-			DecodedJWT jwt = JWT.decode(token);  // registration token is valid for only 3 days
-			iss = jwt.getIssuer();
-			sub = jwt.getSubject();
-			email = jwt.getClaim("email").asString();
-			aud = jwt.getAudience().get(0);
-			url = jwt.getClaim("url").asString();
-			lms = jwt.getClaim("lms").asString();
 			String client_id = "";
 			String deployment_id = "";
 			String platform_id = "";
@@ -481,27 +431,27 @@ public class LTIRegistration extends HttpServlet {
 					+ "provided below, but you may need to edit them for your specific situation.<p>"
 					+ "<form method=post action=/lti/registration>"
 					+ "<input type=hidden name=UserRequest value='finalize'>"
-					+ "<input type=hidden name=Token value='" + token + "'>");
+					+ "<input type=hidden name=reg_code value='" + rc.code + "' />");
 			
-			switch (lms) {
+			switch (rc.lms) {
 			case "blackboard":
-				client_id = (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
+				client_id = (Subject.getProjectId().equals("dev-vantage-hrd")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
 				platform_id = "https://blackboard.com";
 				oidc_auth_url = "https://developer.anthology.com/api/v1/gateway/oidcauth";
 				well_known_jwks_url = "https://developer.anthology.com/.well-known/jwks.json";
 				oauth_access_token_url = "https://developer.anthology.com/api/v1/gateway/oauth2/jwttoken";
 				break;
 			case "schoology":
-				client_id = (iss.equals("https://www.chemvantage.org")?"6558245496":"");
+				client_id = (Subject.getProjectId().equals("chem-vantage-hrd")?"6558245496":"");
 				platform_id = "https://schoology.schoology.com";
 				oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
 				well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
 				oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
 				
 				buf.append("The Schoology admin can get the Deployment ID value for ChemVantage by clicking the "
-						+ "Apps icon > App Center > " + (iss.equals("https://www.chemvantage.org")?"Organization Apps. ":"My Developer Apps. ") 
+						+ "Apps icon > App Center > " + (Subject.getProjectId().equals("chem-vantage-hrd")?"Organization Apps. ":"My Developer Apps. ") 
 						+ "Find ChemVantage and select Configure. The Deployment ID should be two large (~10-digit) numbers separated by a hyphen. "
-						+ (iss.equals("https://dev-vantage-hrd.appspot.com")?"The Client ID value is the first 10-digit number in the Deployment ID.":"") 
+						+ (Subject.getProjectId().equals("dev-vantage-hrd")?"The Client ID value is the first 10-digit number in the Deployment ID.":"") 
 						+ "<p>");
 				break;
 			case "canvas":
@@ -538,11 +488,12 @@ public class LTIRegistration extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("<h3>Registration Failed</h3>"
 					+ e.getMessage() + "<p>"
-					+ "Name: " + sub + "<br>"
-					+ "Email: " + email + "<br>"
-					+ "Organization: " + aud + "<br>"
-					+ "Home Page: " + url + "<p>"
-					+ "The token provided with this link could not be validated. It may have expired (after 3 days) "
+					+ "Name: " + rc.name + "<br/>"
+					+ "Email: " + rc.email + "<br/>"
+					+ "Organization: " + rc.org + "<br>"
+					+ "Home Page: " + rc.url + "<br/>"
+					+ "LMS: " + rc.lms + "<br/><br/>"
+					+ "The registration code provided with this link could not be validated. It may have expired (after 7 days) "
 					+ "or it may not have contained enough information to complete the registration request. You "
 					+ "may <a href=/lti/registration>get a new token</a> by restarting the registration, or contact "
 					+ "Chuck Wight (admin@chemvantage.org) for assistance.");
@@ -550,15 +501,8 @@ public class LTIRegistration extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String createDeployment(HttpServletRequest request) throws Exception {
+	String createDeployment(HttpServletRequest request, RegistrationCode rc) throws Exception {
 		/* Manual Registration */
-		DecodedJWT jwt = JWT.decode(request.getParameter("Token"));
-		String client_name = jwt.getSubject();
-		String email = jwt.getClaim("email").asString();
-		String organization = jwt.getAudience().get(0);
-		String org_url = jwt.getClaim("url").asString();
-		String lms = jwt.getClaim("lms").asString();
-		
 		String client_id = request.getParameter("ClientId");
 		String deployment_id = request.getParameter("DeploymentId");
 		String platform_id = request.getParameter("PlatformId");
@@ -567,13 +511,12 @@ public class LTIRegistration extends HttpServlet {
 		String well_known_jwks_url = request.getParameter("JWKSUrl");
 		
 		if (client_id==null) throw new Exception("Client ID value is required.");
-		//if (deployment_id==null) throw new Exception("Deployment ID value is required.");
 		if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
 		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
 		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
 		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 
-		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,rc.name,rc.email,rc.org,rc.url,rc.lms);
 		d.status = "pending";
 		d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 
@@ -1038,6 +981,30 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			Utilities.sendEmail(d.contact_name,d.email,"ChemVantage Registration",buf.toString());
 		} catch (Exception e) {
+		}
+	}
+
+	@Entity
+	static class RegistrationCode {
+		@Id String code;
+		String name;
+		String email;
+		String org;
+		String url;
+		String lms;
+		Date expires;
+		
+		RegistrationCode() {}
+		RegistrationCode(String name, String email, String org, String url, String lms) {
+			this.code = Long.toHexString(User.encode(new Date().getTime()));
+			this.name = name;
+			this.email = email;
+			this.org = org;
+			this.url = url;
+			this.lms = lms;
+			Calendar c = Calendar.getInstance();
+			c.add(Calendar.DATE, 7);  // registration code is valid for 7 days
+			this.expires = c.getTime();
 		}
 	}
 }
